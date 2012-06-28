@@ -22,7 +22,7 @@ setup(
 	install_requires=[
 		# -*- Extra requirements: -*-
 		'pyoai',
-		'ckanext.harvester'
+		'ckanext-harvester'
 	],
 	tests_require=[
 		'nose',
