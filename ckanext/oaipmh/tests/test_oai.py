@@ -135,8 +135,9 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         harvest_object, harv = self._create_harvester()
         real_content = json.loads(harvest_object.content)
         self.assert_(real_content)
-        self.assert_(harv.import_stage(harvest_object))
         log.debug(real_content)
+        self.assert_(harv.import_stage(harvest_object))
+
         self.assert_(real_content['records'][0][1]['title'][0] == "annakarenina")
 
     def test_harvest_import_creations(self):

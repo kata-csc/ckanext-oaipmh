@@ -24,6 +24,10 @@ setup(
 		'pyoai',
 		'ckanext-harvest'
 	],
+	setup_requires=[
+				'nose>=1.0',
+				'coverage'
+	],
 	tests_require=[
 		'nose',
 		'mock',

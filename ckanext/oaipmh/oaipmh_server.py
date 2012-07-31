@@ -40,7 +40,10 @@ class CKANServer(ResumptionOAIPMH):
         # Fixes the bug on having a large dataset being scrambled to individual
         # letters
         for key, value in meta.items():
-            metadata[str(key)] = [unicode(str(value))] if not isinstance(value,list) else value
+            if not isinstance(value,list):
+                metadata[str(key)] = [value]
+            else:
+                metadata[str(key)] = value
         return (common.Header(dataset.id,
                               dataset.metadata_created,
                               [dataset.name],
@@ -50,8 +53,6 @@ class CKANServer(ResumptionOAIPMH):
 
     def getRecord(self, metadataPrefix, identifier):
         package = Package.get(identifier)
-        if not package:
-            package = Package.by_name(identifier)
         return self._record_for_dataset(package)
 
     def listIdentifiers(self, metadataPrefix, set=None, resumption_token=None):
@@ -108,7 +109,3 @@ class CKANServer(ResumptionOAIPMH):
         for dataset in datasets:
             data.append((dataset.id, dataset.name, dataset.description))
         return data
-
-    def handleVerb(self, verb, params):
-        log.debug(verb)
-        log.debug(params)

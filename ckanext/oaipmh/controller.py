@@ -22,19 +22,20 @@ class OAIPMHController(BaseController):
 
 
     def index(self):
-        verb = request.params['verb'] if request.params['verb'] else None
-        if verb:
-            client = CKANServer()
-            metadata_registry = metadata.MetadataRegistry()
-            metadata_registry.registerReader('oai_dc', oai_dc_reader)
-            metadata_registry.registerWriter('oai_dc', oai_dc_writer)
-            serv = Server(client, metadata_registry=metadata_registry)
-            parms = request.params.mixed()
-            try:
-                res = serv.handleRequest(parms)
-            except common.error.ErrorBase, e:
-                return serv.handleException(parms, (None, e, None))
-            response.headers['content-type'] = 'text/xml; charset=utf-8' 
-            return res
+        if 'verb' in request.params:
+            verb = request.params['verb'] if request.params['verb'] else None
+            if verb:
+                client = CKANServer()
+                metadata_registry = metadata.MetadataRegistry()
+                metadata_registry.registerReader('oai_dc', oai_dc_reader)
+                metadata_registry.registerWriter('oai_dc', oai_dc_writer)
+                serv = Server(client, metadata_registry=metadata_registry)
+                parms = request.params.mixed()
+                try:
+                    res = serv.handleRequest(parms)
+                except common.error.ErrorBase, e:
+                    return serv.handleException(parms, (None, e, None))
+                response.headers['content-type'] = 'text/xml; charset=utf-8' 
+                return res
         else:
             return render('ckanext/oaipmh/oaipmh.xhtml')

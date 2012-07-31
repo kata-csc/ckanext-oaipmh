@@ -86,8 +86,9 @@ class OAIPMHHarvester(SingletonPlugin):
             if 'sets' in config_obj:
                 if not isinstance(config_obj['sets'], list):
                     raise ValueError('Sets setting must be a list')
-            if 'query' and not 'domain' in config_obj:
-                raise ValueError('Query present without domain!')
+            if 'query' in config_obj:
+                if not 'domain' in config_obj:
+                    raise ValueError('Query present without domain!')
             if 'query' and 'sets' in config_obj:
                 raise ValueError('Query present with sets!')
         except ValueError, e:
@@ -168,7 +169,8 @@ class OAIPMHHarvester(SingletonPlugin):
             pass
         for rec in recs:
             header, metadata, _ = rec
-            records.append((header.identifier(), metadata.getMap(), None))
+            if metadata:
+                records.append((header.identifier(), metadata.getMap(), None))
         if len(records):
             sets['records'] = records
             harvest_object.content = json.dumps(sets)
@@ -224,6 +226,7 @@ class OAIPMHHarvester(SingletonPlugin):
                             for tag in value:
                                 log.debug(tag)
                                 if tag:
+                                    tag = tag[:100]
                                     tag_obj = model.Tag.by_name(tag)
                                     if not tag_obj:
                                         tag_obj = model.Tag(name = tag)
@@ -239,7 +242,7 @@ class OAIPMHHarvester(SingletonPlugin):
                 pkg.notes = description
                 pkg.extras = extras
                 pkg.save()
-                resgrp = pkg.resource_groups[0]
+                resgrp = pkg.resource_groups_all[0]
                 url = ''
                 for ids in metadata['identifier']:
                     if ids.startswith('http://'):
@@ -249,8 +252,8 @@ class OAIPMHHarvester(SingletonPlugin):
                 res = Resource.get(title)
                 if not res:
                     res = Resource(name = title, url = url, description = description)
-                resgrp.resources.append(res)
-                Session.add(resgrp)
+                pkg.resources.append(res)
+                Session.add(pkg)
                 group.add_package_by_name(pkg.name)
                 subg_name = "%s - %s" % (domain, set_name)
                 subgroup = Group.by_name(subg_name)
