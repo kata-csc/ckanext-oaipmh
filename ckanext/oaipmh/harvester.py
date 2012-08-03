@@ -32,7 +32,6 @@ class OAIPMHHarvester(SingletonPlugin):
     def _set_config(self, config_str):
         if config_str:
             self.config = json.loads(config_str)
-            log.debug('Using config: %r', self.config)
         else:
             self.config = {}
 
@@ -83,14 +82,9 @@ class OAIPMHHarvester(SingletonPlugin):
             return config
         try:
             config_obj = json.loads(config)
-            if 'sets' in config_obj:
-                if not isinstance(config_obj['sets'], list):
-                    raise ValueError('Sets setting must be a list')
             if 'query' in config_obj:
-                if not 'domain' in config_obj:
-                    raise ValueError('Query present without domain!')
-            if 'query' and 'sets' in config_obj:
-                raise ValueError('Query present with sets!')
+                if not len(config_obj['query']):
+                    raise ValueError('Query must be nonempty!')
         except ValueError, e:
             raise e
         return config
@@ -224,13 +218,11 @@ class OAIPMHHarvester(SingletonPlugin):
                     if len(value) > 0:
                         if key == 'subject' or key == 'type':
                             for tag in value:
-                                log.debug(tag)
                                 if tag:
                                     tag = tag[:100]
                                     tag_obj = model.Tag.by_name(tag)
                                     if not tag_obj:
                                         tag_obj = model.Tag(name = tag)
-                                    log.debug(tag_obj)
                                     if tag_obj:
                                         pkgtag = model.PackageTag(tag = tag_obj, package = pkg)
                                         Session.add(tag_obj)
