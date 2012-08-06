@@ -234,18 +234,13 @@ class OAIPMHHarvester(SingletonPlugin):
                 pkg.notes = description
                 pkg.extras = extras
                 pkg.save()
-                resgrp = pkg.resource_groups_all[0]
                 url = ''
                 for ids in metadata['identifier']:
                     if ids.startswith('http://'):
                         url = ids
                 title = metadata['title'][0] if len(metadata['title']) else ''
                 description = metadata['description'][0] if len(metadata['description']) else ''
-                res = Resource.get(title)
-                if not res:
-                    res = Resource(name = title, url = url, description = description)
-                pkg.resources.append(res)
-                Session.add(pkg)
+                pkg.add_resource(url, '', description, '')
                 group.add_package_by_name(pkg.name)
                 subg_name = "%s - %s" % (domain, set_name)
                 subgroup = Group.by_name(subg_name)
