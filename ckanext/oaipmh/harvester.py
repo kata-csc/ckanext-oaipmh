@@ -240,7 +240,7 @@ class OAIPMHHarvester(SingletonPlugin):
                         url = ids
                 title = metadata['title'][0] if len(metadata['title']) else ''
                 description = metadata['description'][0] if len(metadata['description']) else ''
-                pkg.add_resource(url, '', description, '')
+                pkg.add_resource(url, name=title, description, '')
                 group.add_package_by_name(pkg.name)
                 subg_name = "%s - %s" % (domain, set_name)
                 subgroup = Group.by_name(subg_name)
