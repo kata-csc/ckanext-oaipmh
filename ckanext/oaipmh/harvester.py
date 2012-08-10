@@ -107,13 +107,14 @@ class OAIPMHHarvester(SingletonPlugin):
         self._set_config(harvest_job.source.config)
         sets = []
         harvest_objs = []
-        domain = harvest_job.source.title if harvest_job.source.title != '' else 'OAI-PMH'
-        group = Group.by_name(domain)
-        if not group:
-            group = Group(name = domain, description = domain)
         registry = MetadataRegistry()
         registry.registerReader('oai_dc', oai_dc_reader)
         client = Client(harvest_job.source.url, registry)
+        identifier = client.identify()
+        domain = identifier.repositoryName()
+        group = Group.by_name(domain)
+        if not group:
+            group = Group(name = domain, description = domain)
         query = self.config['query'] if 'query' in self.config else ''
         for set in client.listSets():
             identifier, name, _ = set

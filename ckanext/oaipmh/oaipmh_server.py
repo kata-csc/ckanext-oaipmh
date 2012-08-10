@@ -2,7 +2,7 @@ from datetime import datetime
 
 from ckan.model import Resource, Package, Session, Group, ResourceGroup
 from ckan.lib.helpers import url_for
-
+from pylons import config
 from oaipmh.common import ResumptionOAIPMH
 from oaipmh import common
 
@@ -14,10 +14,10 @@ class CKANServer(ResumptionOAIPMH):
 
     def identify(self):
         return common.Identify(
-            repositoryName='YourServer',
-            baseURL='http://localhost:5000/oai/',
+            repositoryName=config.get('site.title') if config.get('site.title') else 'repository',
+            baseURL=url_for(controller='ckanext.oaipmh.controller:OAIPMHController',action='index'),
             protocolVersion="2.0",
-            adminEmails=['faassen@infrae.com'],
+            adminEmails=[config.get('email_to')],
             earliestDatestamp=datetime(2004, 1, 1),
             deletedRecord='no',
             granularity='YYYY-MM-DDThh:mm:ssZ',
