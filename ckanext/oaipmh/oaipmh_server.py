@@ -5,7 +5,7 @@ from ckan.lib.helpers import url_for
 from pylons import config
 from oaipmh.common import ResumptionOAIPMH
 from oaipmh import common
-
+import time
 import logging
 
 log = logging.getLogger(__name__)
@@ -31,8 +31,11 @@ class CKANServer(ResumptionOAIPMH):
                                                    action='read',
                                                    id = dataset.id),
                                            dataset.url if dataset.url else dataset.id],
-                            'type': [dataset.type],
-                            'description': [dataset.notes]
+                            'type': ['dataset'],
+                            'description': [dataset.notes],
+                            'subject': [tag.name for tag in dataset.get_tags()],
+                            'date': [dataset.latest_related_revision.timestamp.strftime('%Y-%m-%d')],
+                            'rights': [dataset.license.title if dataset.license else ''],
         }
         iters = dataset.extras.items()
         meta = dict(meta.items() + iters)

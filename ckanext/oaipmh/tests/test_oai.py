@@ -5,8 +5,9 @@ import mock
 import urllib2
 from StringIO import StringIO
 import json
+import testdata
 
-from ckan.model import Session, Package, Resource, Group
+from ckan.model import Session, Package, Resource, Group, Tag
 import ckan.model as model
 from ckan.tests import CreateTestData
 from ckan.lib.helpers import url_for
@@ -80,17 +81,17 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
     def test_list_metadata(self):
         self._oai_get_method_and_validate('?verb=ListMetadataFormats')
 
+    def test_identify(self):
+        self._oai_get_method_and_validate('?verb=Identify')
+
     def test_get_record(self):
         metadata_reg = MetadataRegistry()
         metadata_reg.registerReader('oai_dc', oai_dc_reader)
-        log.debug(config.get('ckan.site_url')+self.base_url)
         client = Client(config.get('ckan.site_url')+self.base_url, metadata_reg)
-        log.debug(Session.query(Group).all())
         res = self._oai_get_method_and_validate('?verb=ListIdentifiers&metadataPrefix=oai_dc&set=roger')
         urllib2.urlopen = mock.Mock(return_value=StringIO(res))
         ids = client.listIdentifiers(metadataPrefix='oai_dc')
         for id in ids:
-            log.debug(id.identifier())
             offset =  self.base_url + '?verb=GetRecord&identifier=%s&metadataPrefix=oai_dc' % id.identifier()
             res = self.app.get(offset)
             self.assert_(oaischema.validate(etree.fromstring(res.body)))
@@ -109,13 +110,13 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
 
     def _alternate_returns(self, foo):
         if self._first:
-            res = self._oai_get_method_and_validate('?verb=ListSets')
+            res = self._oai_get_method_and_validate('?verb=Identify')
             self._second = True
             self._first = False
             ret = StringIO(res)
             return ret
         else:
-            res = self._oai_get_method_and_validate('?verb=ListRecords&metadataPrefix=oai_dc&set=roger')
+            res = testdata.listsets
             self._second = False
             self._first = True
             ret = StringIO(res)
@@ -125,28 +126,20 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         urllib2.urlopen = mock.Mock(side_effect=self._alternate_returns)
         harvest_job, harv = self._create_harvester_info()
         harvest_obj_list = harv.gather_stage(harvest_job)
-        log.debug(harvest_obj_list)
         harvest_object = HarvestObject.get(harvest_obj_list[0])
+        urllib2.urlopen = mock.Mock(return_value=StringIO(testdata.listrecords))
         harv.fetch_stage(harvest_object)
-        log.debug(harvest_object)
         return harvest_object, harv
 
     def test_harvester_import(self, mocked=True):
+        prev_datasets = len(Session.query(Package).all())
         harvest_object, harv = self._create_harvester()
         real_content = json.loads(harvest_object.content)
-        self.assert_(real_content)
         log.debug(real_content)
+        self.assert_(real_content)
         self.assert_(harv.import_stage(harvest_object))
+        new_datasets = len(Session.query(Package).all())
+        self.assert_(real_content['records'][0][1]['title'][0] == "bunshin")
+        self.assert_(len(real_content['records'][0][1]['subject']) == 3)
+        self.assert_(new_datasets == prev_datasets + 1)
 
-        self.assert_(real_content['records'][0][1]['title'][0] == "annakarenina")
-
-    def test_harvest_import_creations(self):
-        prev_sets = len(Session.query(Group).all())
-        prev_resources = len(Session.query(Package).all())
-        harvest_object, harv = self._create_harvester()
-        self.assert_(harv.import_stage(harvest_object))
-
-        now_sets = len(Session.query(Group).all())
-        now_resources = len(Session.query(Package).all())
-        '''self.assert_equal(prev_sets, now_sets)
-        self.assert_equal(prev_resources, now_resources)'''
