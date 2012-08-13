@@ -7,10 +7,11 @@ from StringIO import StringIO
 import json
 import testdata
 
-from ckan.model import Session, Package, Resource, Group, Tag
+from ckan.model import Session, Package, User
 import ckan.model as model
 from ckan.tests import CreateTestData
 from ckan.lib.helpers import url_for
+from ckan.logic.auth.get import package_show
 from ckan.tests.functional.base import FunctionalTestCase
 
 from lxml import etree
@@ -142,4 +143,11 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         self.assert_(real_content['records'][0][1]['title'][0] == "bunshin")
         self.assert_(len(real_content['records'][0][1]['subject']) == 3)
         self.assert_(new_datasets == prev_datasets + 1)
+        pkg = Session.query(Package).all()[0]
+        # Test user access
+        user = User.get('tester')
+        context = {'user': user.name, 'model': model}
+        data_dict = {'id': pkg.id}
+        auth_dict = package_show(context,data_dict)
+        self.assert_(auth_dict['success'])
 

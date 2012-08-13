@@ -13,6 +13,7 @@ from ckan import model
 
 from ckanext.harvest.interfaces import IHarvester
 from ckanext.harvest.model import HarvestObject, HarvestJob
+from ckan.model.authz import setup_default_user_roles
 
 from oaipmh.client import Client
 from oaipmh.metadata import MetadataRegistry, oai_dc_reader
@@ -236,6 +237,7 @@ class OAIPMHHarvester(SingletonPlugin):
                 pkg.notes = description
                 pkg.extras = extras
                 pkg.save()
+                setup_default_user_roles(pkg)
                 url = ''
                 for ids in metadata['identifier']:
                     if ids.startswith('http://'):
