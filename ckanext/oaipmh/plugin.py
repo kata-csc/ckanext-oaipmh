@@ -29,5 +29,4 @@ class OAIPMHPlugin(SingletonPlugin):
     def before_map(self, map):
         controller='ckanext.oaipmh.controller:OAIPMHController'
         map.connect('oai', '/oai', controller=controller, action='index')
-        log.debug(map)
         return map

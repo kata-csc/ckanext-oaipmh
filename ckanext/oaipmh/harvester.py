@@ -253,5 +253,7 @@ class OAIPMHHarvester(SingletonPlugin):
                 subgroup.add_package_by_name(pkg.name)
                 Session.add(group)
                 Session.add(subgroup)
+                setup_default_user_roles(group)
+                setup_default_user_roles(subgroup)
         model.repo.commit()
         return True
