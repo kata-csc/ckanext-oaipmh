@@ -49,7 +49,7 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         """
         Session.remove()
         package_dicts = [{'name':u'abraham', 'title':u'Abraham'},
-                {'name':u'homer', 'title':u'Homer'},
+                {'name':u'homer', 'title':u'Homer', 'tags':['foo', 'bar', 'baz']},
                 {'name':u'homer_derived', 'title':u'Homer Derived'},
                 {'name':u'beer', 'title':u'Beer'},
                 {'name':u'bart', 'title':u'Bart'},
@@ -176,8 +176,6 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         metadata_reg.registerReader('oai_dc', oai_dc_reader)
         client = Client(config.get('ckan.site_url')+self.base_url, metadata_reg)
         res = self._oai_get_method_and_validate('?verb=ListIdentifiers&metadataPrefix=oai_dc&set=roger')
-        # remove the resumption token
-        res = res.replace('<resumptionToken>cursor%3D10%26set%3Droger%26metadataPrefix%3Doai_dc</resumptionToken>','')
         urllib2.urlopen = mock.Mock(return_value=StringIO(res))
         ids = client.listIdentifiers(metadataPrefix='oai_dc')
         offset =  self.base_url + '?verb=GetRecord&identifier=%s&metadataPrefix=oai_dc' % ids.next().identifier()
@@ -205,7 +203,7 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
             ret = StringIO(res)
             return ret
         else:
-            res = testdata.listsets
+            res = self._oai_get_method_and_validate('?verb=ListSets')
             self._second = False
             self._first = True
             ret = StringIO(res)
@@ -216,7 +214,10 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         harvest_job, harv = self._create_harvester_info()
         harvest_obj_list = harv.gather_stage(harvest_job)
         harvest_object = HarvestObject.get(harvest_obj_list[0])
-        urllib2.urlopen = mock.Mock(return_value=StringIO(testdata.listrecords))
+        res = self._oai_get_method_and_validate('?verb=ListRecords&metadataPrefix=oai_dc&set=roger')
+        # remove the resumption token
+        res = res.replace('<resumptionToken>cursor%3D10%26set%3Droger%26metadataPrefix%3Doai_dc</resumptionToken>','')
+        urllib2.urlopen = mock.Mock(return_value=StringIO(res))
         harv.fetch_stage(harvest_object)
         return harvest_object, harv
 
@@ -226,12 +227,10 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         self.assert_(real_content)
         self.assert_(harv.import_stage(harvest_object))
 
-        the_package = Session.query(Package).filter(Package.title == u"Perunan typpilannoitus luonnonmukaisessa viljelyssä")
+        the_package = Session.query(Package).filter(Package.title == u"homer")
         the_package = the_package[0]
-        self.assert_(the_package.url == "http://helda.helsinki.fi/oai/request?verb=getRecord&identifier=oai:helda.helsinki.fi:1975/7634&metadataPrefix=oai_dc")
-        self.assert_(len(the_package.get_tags()) == 7)
-        self.assert_(len(the_package.get_groups()) == 2)
-        self.assert_(the_package.author == "Tall, Anna")
-        pkg = Session.query(Package).all()[0]
-
+        self.assert_(the_package)
+        self.assert_(len(the_package.get_tags()) == 4)
+        self.assert_(len(the_package.get_groups()) == 3)
+        self.assert_(the_package.url == "http://helda.helsinki.fi/oai/request?verb=getRecord&identifier=%s&metadataPrefix=oai_dc" % the_package.id)
 
