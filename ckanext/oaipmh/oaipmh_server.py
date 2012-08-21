@@ -1,12 +1,17 @@
 from datetime import datetime
 
-from ckan.model import Resource, Package, Session, Group, ResourceGroup
+from ckan.model import Package, Session, Group, PackageRevision
 from ckan.lib.helpers import url_for
+
 from pylons import config
+
+from sqlalchemy import DateTime, cast, between
+
 from oaipmh.common import ResumptionOAIPMH
 from oaipmh import common
-import time
+
 import logging
+from ckan.model.package import PackageRevision
 
 log = logging.getLogger(__name__)
 
@@ -20,7 +25,7 @@ class CKANServer(ResumptionOAIPMH):
             adminEmails=[config.get('email_to')],
             earliestDatestamp=datetime(2004, 1, 1),
             deletedRecord='no',
-            granularity='YYYY-MM-DDThh:mm:ssZ',
+            granularity='YYYY-MM-DD',
             compression=['identity'])
 
     def _record_for_dataset(self, dataset):
@@ -34,7 +39,7 @@ class CKANServer(ResumptionOAIPMH):
                             'type': ['dataset'],
                             'description': [dataset.notes],
                             'subject': [tag.name for tag in dataset.get_tags()],
-                            'date': [dataset.latest_related_revision.timestamp.strftime('%Y-%m-%d')],
+                            'date': [dataset.metadata_created.strftime('%Y-%m-%d')],
                             'rights': [dataset.license.title if dataset.license else ''],
         }
         iters = dataset.extras.items()
@@ -58,15 +63,31 @@ class CKANServer(ResumptionOAIPMH):
         package = Package.get(identifier)
         return self._record_for_dataset(package)
 
-    def listIdentifiers(self, metadataPrefix, set=None, resumption_token=None):
+    def listIdentifiers(self, metadataPrefix, set=None, resumption_token=None, from_=None, until=None):
         data = []
         packages = []
         if not set:
-            packages = Session.query(Package).all()
+            if not from_ and not until:
+                packages = Session.query(Package).all()
+            else:
+                if from_:
+                    packages = Session.query(Package).filter(PackageRevision.revision_timestamp > from_).all()
+                if until:
+                    packages = Session.query(Package).filter(PackageRevision.revision_timestamp < until).all()
+                if from_ and until:
+                    packages = Session.query(Package).filter(between(PackageRevision.revision_timestamp,from_,until)).all()
         else:
             group = Group.get(set)
             if group:
-                packages = group.active_packages()
+                if not from_ and not until:
+                    packages = group.active_packages()
+                if from_:
+                    packages = Session.query(Package).filter(PackageRevision.revision_timestamp > from_)
+                if until:
+                    packages = Session.query(Package).filter(PackageRevision.revision_timestamp < until)
+                if from_ and until:
+                    packages = Session.query(Package).filter(between(PackageRevision.revision_timestamp,from_,until))
+                packages = packages.all()
         if resumption_token:
             res_token = urllib2.unquote(resumption_token)
             cursor = res_token.split('&')[0]
@@ -84,15 +105,23 @@ class CKANServer(ResumptionOAIPMH):
                 'http://www.openarchives.org/OAI/2.0/oai_dc.xsd',
                 'http://www.openarchives.org/OAI/2.0/oai_dc/')]
 
-    def listRecords(self, metadataPrefix, set=None, resumption_token=None):
+    def listRecords(self, metadataPrefix, set=None, resumption_token=None, from_=None, until=None):
         data = []
         packages = []
         if not set:
-            packages = Session.query(Package).all()
+            if not from_ and not until:
+                packages = Session.query(Package).all()
+            else:
+                if from_:
+                    packages = Session.query(Package).filter(PackageRevision.revision_timestamp > from_).all()
+                if until:
+                    packages = Session.query(Package).filter(PackageRevision.revision_timestamp < until).all()
+                if from_ and until:
+                    packages = Session.query(Package).filter(between(PackageRevision.revision_timestamp,from_,until)).all()
         else:
             group = Group.get(set)
             if group:
-                packages = group.active_packages()
+                packages = group.active_packages().all()
         if resumption_token:
             res_token = urllib2.unquote(resumption_token)
             cursor = res_token.split('&')[0]

@@ -6,6 +6,8 @@ import mock
 import urllib2
 from StringIO import StringIO
 import json
+from datetime import datetime, timedelta
+
 import testdata
 
 from ckan.model import Session, Package, User
@@ -46,7 +48,48 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         Remove any initial sessions.
         """
         Session.remove()
-        CreateTestData.create()
+        package_dicts = [{'name':u'abraham', 'title':u'Abraham'},
+                {'name':u'homer', 'title':u'Homer'},
+                {'name':u'homer_derived', 'title':u'Homer Derived'},
+                {'name':u'beer', 'title':u'Beer'},
+                {'name':u'bart', 'title':u'Bart'},
+                {'name':u'lisa', 'title':u'Lisa'},
+                {'name':u'marge', 'title':u'Marge'},
+                {'name':u'marge1', 'title':u'Marge'},
+                {'name':u'marge11', 'title':u'Marge'},
+                {'name':u'marge121', 'title':u'Marge'},
+                {'name':u'marge311', 'title':u'Marge'},
+                {'name':u'marge24', 'title':u'Marge'},
+                {'name':u'marget1', 'title':u'Marge'},
+                {'name':u'marge31', 'title':u'Marge'},
+                {'name':u'marge1121', 'title':u'Marge'},
+                {'name':u'marge1t', 'title':u'Marge'},
+                {'name':u'marge1b', 'title':u'Marge'},
+                {'name':u'marge1a', 'title':u'Marge'},
+                ]
+        
+        CreateTestData.create_arbitrary(package_dicts)
+        package_dicts = [u'abraham',
+                u'homer',
+                u'homer_derived',
+                u'beer',
+                u'bart',
+                u'lisa',
+                u'marge',
+                u'marge1',
+                u'marge11',
+                u'marge121',
+                u'marge311',
+                u'marge24',
+                u'marget1',
+                u'marge31',
+                u'marge1121',
+                u'marge1t',
+                u'marge1b',
+                u'marge1a',
+                ]
+        group_dicts = [{'name':'roger', 'title':'roger', 'description':'','packages': package_dicts}]
+        CreateTestData.create_groups(group_dicts)
         setup()
         cls._first = True
         cls._second = False
@@ -66,19 +109,61 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         return res.body
 
     def test_list_sets(self):
-        self._oai_get_method_and_validate('?verb=ListSets')
+        body = self._oai_get_method_and_validate('?verb=ListSets')
+        self.assert_('roger' in body)
 
     def test_list_records(self):
-        self._oai_get_method_and_validate('?verb=ListRecords&metadataPrefix=oai_dc&set=roger')
+        # Good set
+        body = self._oai_get_method_and_validate('?verb=ListRecords&metadataPrefix=oai_dc&set=roger')
+        self.assert_("homer" in body)
+        # Bad set
+        body = self._oai_get_method_and_validate('?verb=ListRecords&metadataPrefix=oai_dc&set=foo')
+        self.assert_("noRecordsMatch" in body)
+        
+        # A good from
+        body = self._oai_get_method_and_validate('?verb=ListRecords&metadataPrefix=oai_dc&from=1998-01-15')
+        self.assert_("homer" in body)
+        # A bad from, in the future
+        dates = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+        body = self._oai_get_method_and_validate('?verb=ListRecords&metadataPrefix=oai_dc&from=%s' % dates)
+        self.assert_("noRecordsMatch" in body)
+        
+        # A good until, in the future
+        body = self._oai_get_method_and_validate('?verb=ListRecords&metadataPrefix=oai_dc&until=%s' % dates)
+        self.assert_("homer" in body)
+        # A bad until, in the past
+        body = self._oai_get_method_and_validate('?verb=ListRecords&metadataPrefix=oai_dc&until=1998-01-15')
+        self.assert_("noRecordsMatch")
+        
+        # A bad between, in the past
+        body = self._oai_get_method_and_validate('?verb=ListRecords&metadataPrefix=oai_dc&from=1998-01-15&until=2000-01-15')
+        self.assert_("noRecordsMatch" in body)
+        # A good between
+        dates = ((datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d"), 
+                 (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d"))
+        body = self._oai_get_method_and_validate('?verb=ListRecords&metadataPrefix=oai_dc&from=%s&until=%s' % dates)
+        self.assert_("homer" in body)
+        # A bad between, in the future
+        dates = ((datetime.now() + timedelta(days=3)).strftime("%Y-%m-%d"), 
+                 (datetime.now() + timedelta(days=4)).strftime("%Y-%m-%d"))
+        body = self._oai_get_method_and_validate('?verb=ListRecords&metadataPrefix=oai_dc&from=%s&until=%s' % dates)
+        self.assert_("noRecordsMatch" in body)
 
-    def test_list_records_null(self):
-        self._oai_get_method_and_validate('?verb=ListRecords&metadataPrefix=oai_dc&set=foo')
+
+
 
     def test_list_identifiers(self):
-        self._oai_get_method_and_validate('?verb=ListIdentifiers&metadataPrefix=oai_dc&set=annakarenina')
-
-    def test_list_identifiers_null(self):
-        self._oai_get_method_and_validate('?verb=ListIdentifiers&metadataPrefix=oai_dc&set=foo')
+        body = self._oai_get_method_and_validate('?verb=ListIdentifiers&metadataPrefix=oai_dc&set=roger')
+        body = self._oai_get_method_and_validate('?verb=ListIdentifiers&metadataPrefix=oai_dc')
+        self.assert_("homer" in body)
+        body = self._oai_get_method_and_validate('?verb=ListIdentifiers&metadataPrefix=oai_dc&set=foo')
+        self.assert_("noRecordsMatch" in body)
+        body = self._oai_get_method_and_validate('?verb=ListIdentifiers&metadataPrefix=oai_dc&set=roger&from=1992-01-15')
+        self.assert_("homer" in body)
+        body = self._oai_get_method_and_validate('?verb=ListIdentifiers&metadataPrefix=oai_dc&until=1992-01-15')
+        self.assert_("noRecordsMatch")
+        body = self._oai_get_method_and_validate('?verb=ListIdentifiers&metadataPrefix=oai_dc&from=1998-01-15&until=2000-01-15')
+        self.assert_("noRecordsMatch")
 
     def test_list_metadata(self):
         self._oai_get_method_and_validate('?verb=ListMetadataFormats')
@@ -91,12 +176,14 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         metadata_reg.registerReader('oai_dc', oai_dc_reader)
         client = Client(config.get('ckan.site_url')+self.base_url, metadata_reg)
         res = self._oai_get_method_and_validate('?verb=ListIdentifiers&metadataPrefix=oai_dc&set=roger')
+        # remove the resumption token
+        res = res.replace('<resumptionToken>cursor%3D10%26set%3Droger%26metadataPrefix%3Doai_dc</resumptionToken>','')
         urllib2.urlopen = mock.Mock(return_value=StringIO(res))
         ids = client.listIdentifiers(metadataPrefix='oai_dc')
-        for id in ids:
-            offset =  self.base_url + '?verb=GetRecord&identifier=%s&metadataPrefix=oai_dc' % id.identifier()
-            res = self.app.get(offset)
-            self.assert_(oaischema.validate(etree.fromstring(res.body)))
+        offset =  self.base_url + '?verb=GetRecord&identifier=%s&metadataPrefix=oai_dc' % ids.next().identifier()
+        res = self.app.get(offset)
+        self.assert_(oaischema.validate(etree.fromstring(res.body)))
+        self.assert_("abraham" in res.body)
 
     def _create_harvester_info(self):
         rev = model.repo.new_revision()
@@ -146,10 +233,5 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         self.assert_(len(the_package.get_groups()) == 2)
         self.assert_(the_package.author == "Tall, Anna")
         pkg = Session.query(Package).all()[0]
-        # Test user access
-        user = User.get('tester')
-        context = {'user': user.name, 'model': model}
-        data_dict = {'id': pkg.id}
-        auth_dict = package_show(context,data_dict)
-        self.assert_(auth_dict['success'])
+
 
