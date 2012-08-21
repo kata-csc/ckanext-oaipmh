@@ -1,3 +1,4 @@
+# coding: utf-8
 import logging
 import os
 import unittest
@@ -103,7 +104,7 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         harvest_job = HarvestJob()
         harvest_job.source = HarvestSource()
         harvest_job.source.title = "Test"
-        harvest_job.source.url = self.base_url
+        harvest_job.source.url = "http://helda.helsinki.fi/oai/request"
         harvest_job.source.config = '{"query":""}'
         harvest_job.source.type = "OAI-PMH"
         Session.add(harvest_job)
@@ -133,16 +134,17 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         return harvest_object, harv
 
     def test_harvester_import(self, mocked=True):
-        prev_datasets = len(Session.query(Package).all())
         harvest_object, harv = self._create_harvester()
         real_content = json.loads(harvest_object.content)
-        log.debug(real_content)
         self.assert_(real_content)
         self.assert_(harv.import_stage(harvest_object))
-        new_datasets = len(Session.query(Package).all())
-        self.assert_(real_content['records'][0][1]['title'][0] == "bunshin")
-        self.assert_(len(real_content['records'][0][1]['subject']) == 3)
-        self.assert_(new_datasets == prev_datasets + 1)
+
+        the_package = Session.query(Package).filter(Package.title == u"Perunan typpilannoitus luonnonmukaisessa viljelyssä")
+        the_package = the_package[0]
+        self.assert_(the_package.url == "http://helda.helsinki.fi/oai/request?verb=getRecord&identifier=oai:helda.helsinki.fi:1975/7634&metadataPrefix=oai_dc")
+        self.assert_(len(the_package.get_tags()) == 7)
+        self.assert_(len(the_package.get_groups()) == 2)
+        self.assert_(the_package.author == "Tall, Anna")
         pkg = Session.query(Package).all()[0]
         # Test user access
         user = User.get('tester')

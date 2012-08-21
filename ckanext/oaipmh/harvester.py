@@ -236,6 +236,8 @@ class OAIPMHHarvester(SingletonPlugin):
                 pkg.title = title
                 pkg.notes = description
                 pkg.extras = extras
+                pkg.url = "%s?verb=getRecord&identifier=%s&metadataPrefix=oai_dc" % (harvest_object.job.source.url,
+                                                  identifier)
                 pkg.save()
                 setup_default_user_roles(pkg)
                 url = ''
