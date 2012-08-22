@@ -353,7 +353,7 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         self.assert_(the_package)
         self.assert_(len(the_package.get_tags()) == 4)
         self.assert_(len(the_package.get_groups()) == 3)
-        self.assert_(the_package.url == "http://helda.helsinki.fi/oai/request?verb=getRecord&identifier=%s&metadataPrefix=oai_dc" % the_package.id)
+        self.assert_(the_package.url == "http://helda.helsinki.fi/oai/request?verb=GetRecord&identifier=%s&metadataPrefix=oai_dc" % the_package.id)
         # Test with empty request
         Session.remove()
         CreateTestData.delete()
