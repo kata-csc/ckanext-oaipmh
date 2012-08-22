@@ -8,7 +8,7 @@ from ckan.model import Resource, Package
 
 from pylons import request, response
 
-from oaipmh.server import XMLTreeServer, Resumption, Server, oai_dc_writer
+from oaipmh.server import XMLTreeServer, Resumption, BatchingServer, oai_dc_writer
 from oaipmh import metadata, server
 from oaipmh.metadata import oai_dc_reader
 from oaipmh.tests import fakeclient
@@ -29,7 +29,7 @@ class OAIPMHController(BaseController):
                 metadata_registry = metadata.MetadataRegistry()
                 metadata_registry.registerReader('oai_dc', oai_dc_reader)
                 metadata_registry.registerWriter('oai_dc', oai_dc_writer)
-                serv = Server(client, metadata_registry=metadata_registry)
+                serv = BatchingServer(client, metadata_registry=metadata_registry)
                 parms = request.params.mixed()
                 try:
                     res = serv.handleRequest(parms)

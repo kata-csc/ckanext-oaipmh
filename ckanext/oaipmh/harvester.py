@@ -14,7 +14,7 @@ from ckan import model
 from ckanext.harvest.interfaces import IHarvester
 from ckanext.harvest.model import HarvestObject, HarvestJob
 from ckan.model.authz import setup_default_user_roles
-
+import oaipmh
 from oaipmh.client import Client
 from oaipmh.metadata import MetadataRegistry, oai_dc_reader
 from oaipmh.error import NoRecordsMatchError, BadVerbError
@@ -71,25 +71,6 @@ class OAIPMHHarvester(SingletonPlugin):
                 'description': 'A server which has a OAI-PMH interface available.'
                 }
     
-    def validate_config(self, config):
-        '''
-        Harvesters can provide this method to validate the configuration entered in the
-        form. It should return a single string, which will be stored in the database.
-        Exceptions raised will be shown in the form's error messages.
-        
-        returns A string with the validated configuration options
-        '''
-        if not config:
-            return config
-        try:
-            config_obj = json.loads(config)
-            if 'query' in config_obj:
-                if not len(config_obj['query']):
-                    raise ValueError('Query must be nonempty!')
-        except ValueError, e:
-            raise e
-        return config
-    
     def gather_stage(self, harvest_job):
         '''
         The gather stage will recieve a HarvestJob object and will be
@@ -110,7 +91,7 @@ class OAIPMHHarvester(SingletonPlugin):
         harvest_objs = []
         registry = MetadataRegistry()
         registry.registerReader('oai_dc', oai_dc_reader)
-        client = Client(harvest_job.source.url, registry)
+        client = oaipmh.client.Client(harvest_job.source.url, registry)
         identifier = client.identify()
         domain = identifier.repositoryName()
         group = Group.by_name(domain)
@@ -156,7 +137,7 @@ class OAIPMHHarvester(SingletonPlugin):
         sets = json.loads(harvest_object.content)
         registry = MetadataRegistry()
         registry.registerReader('oai_dc', oai_dc_reader)
-        client = Client(harvest_object.job.source.url, registry)
+        client = oaipmh.client.Client(harvest_object.job.source.url, registry)
         records = []
         recs = []
         try:
@@ -197,65 +178,68 @@ class OAIPMHHarvester(SingletonPlugin):
         group = Group.get(domain)
         if not group:
             group = Group(name = domain, description = domain)
-        records = master_data['records']
-        set_name = master_data['set_name']
-        for rec in records:
-            identifier, metadata, _ = rec
-            if metadata:
-                name = metadata['title'][0] if len(metadata['title']) else identifier
-                title = name
-                norm_title = unicodedata.normalize('NFKD', name)\
-                             .encode('ASCII', 'ignore')\
-                             .lower().replace(' ','_')[:35]
-                slug = ''.join(e for e in norm_title if e in string.ascii_letters+'_')
-                name = slug
-                creator = metadata['creator'][0] if len(metadata['creator']) else ''
-                description = metadata['description'][0] if len(metadata['description']) else ''
-                pkg = Package.by_name(name)
-                if not pkg:
-                    pkg = Package(name = name, title = title)
-                extras = {}
-                for met in metadata.items():
-                    key, value = met
-                    if len(value) > 0:
-                        if key == 'subject' or key == 'type':
-                            for tag in value:
-                                if tag:
-                                    tag = tag[:100]
-                                    tag_obj = model.Tag.by_name(tag)
-                                    if not tag_obj:
-                                        tag_obj = model.Tag(name = tag)
-                                    if tag_obj:
-                                        pkgtag = model.PackageTag(tag = tag_obj, package = pkg)
-                                        Session.add(tag_obj)
-                                        Session.add(pkgtag)
-                        else:
-                            extras[key] = ' '.join(value)
-                pkg.author = creator
-                pkg.author_email = creator
-                pkg.title = title
-                pkg.notes = description
-                pkg.extras = extras
-                pkg.url = "%s?verb=getRecord&identifier=%s&metadataPrefix=oai_dc" % (harvest_object.job.source.url,
-                                                  identifier)
-                pkg.save()
-                setup_default_user_roles(pkg)
-                url = ''
-                for ids in metadata['identifier']:
-                    if ids.startswith('http://'):
-                        url = ids
-                title = metadata['title'][0] if len(metadata['title']) else ''
-                description = metadata['description'][0] if len(metadata['description']) else ''
-                pkg.add_resource(url, description=description, name=title)
-                group.add_package_by_name(pkg.name)
-                subg_name = "%s - %s" % (domain, set_name)
-                subgroup = Group.by_name(subg_name)
-                if not subgroup:
-                    subgroup = Group(name = subg_name, description = subg_name)
-                subgroup.add_package_by_name(pkg.name)
-                Session.add(group)
-                Session.add(subgroup)
-                setup_default_user_roles(group)
-                setup_default_user_roles(subgroup)
-        model.repo.commit()
+        if 'records' in master_data:
+            records = master_data['records']
+            set_name = master_data['set_name']
+            for rec in records:
+                identifier, metadata, _ = rec
+                if metadata:
+                    name = metadata['title'][0] if len(metadata['title']) else identifier
+                    title = name
+                    norm_title = unicodedata.normalize('NFKD', name)\
+                                 .encode('ASCII', 'ignore')\
+                                 .lower().replace(' ','_')[:35]
+                    slug = ''.join(e for e in norm_title if e in string.ascii_letters+'_')
+                    name = slug
+                    creator = metadata['creator'][0] if len(metadata['creator']) else ''
+                    description = metadata['description'][0] if len(metadata['description']) else ''
+                    pkg = Package.by_name(name)
+                    if not pkg:
+                        pkg = Package(name = name, title = title)
+                    extras = {}
+                    for met in metadata.items():
+                        key, value = met
+                        if len(value) > 0:
+                            if key == 'subject' or key == 'type':
+                                for tag in value:
+                                    if tag:
+                                        tag = tag[:100]
+                                        tag_obj = model.Tag.by_name(tag)
+                                        if not tag_obj:
+                                            tag_obj = model.Tag(name = tag)
+                                        if tag_obj:
+                                            pkgtag = model.PackageTag(tag = tag_obj, package = pkg)
+                                            Session.add(tag_obj)
+                                            Session.add(pkgtag)
+                            else:
+                                extras[key] = ' '.join(value)
+                    pkg.author = creator
+                    pkg.author_email = creator
+                    pkg.title = title
+                    pkg.notes = description
+                    pkg.extras = extras
+                    pkg.url = "%s?verb=getRecord&identifier=%s&metadataPrefix=oai_dc" % (harvest_object.job.source.url,
+                                                      identifier)
+                    pkg.save()
+                    setup_default_user_roles(pkg)
+                    url = ''
+                    for ids in metadata['identifier']:
+                        if ids.startswith('http://'):
+                            url = ids
+                    title = metadata['title'][0] if len(metadata['title']) else ''
+                    description = metadata['description'][0] if len(metadata['description']) else ''
+                    pkg.add_resource(url, description=description, name=title)
+                    group.add_package_by_name(pkg.name)
+                    subg_name = "%s - %s" % (domain, set_name)
+                    subgroup = Group.by_name(subg_name)
+                    if not subgroup:
+                        subgroup = Group(name = subg_name, description = subg_name)
+                    subgroup.add_package_by_name(pkg.name)
+                    Session.add(group)
+                    Session.add(subgroup)
+                    setup_default_user_roles(group)
+                    setup_default_user_roles(subgroup)
+            model.repo.commit()
+        else:
+            return False
         return True
