@@ -32,6 +32,7 @@ from ckanext.harvest.model import HarvestJob, HarvestSource, HarvestObject,\
                                   setup
 
 from ckanext.oaipmh.oaipmh_server import CKANServer
+from ckanext.oaipmh.rdftools import rdf_reader, rdf_writer
 
 def fileInTestDir(name):
     _testdir = os.path.split(__file__)[0]
@@ -40,6 +41,7 @@ def fileInTestDir(name):
 log = logging.getLogger(__name__)
 
 oaischema = etree.XMLSchema(etree.parse(fileInTestDir('OAI-PMH.xsd')))
+oairdfschema = etree.XMLSchema(etree.parse(fileInTestDir('rdf.xsd')))
 
 realopen = urllib2.urlopen
 
@@ -61,7 +63,7 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
                 {'name':u'homer_derived', 'title':u'Homer Derived'},
                 {'name':u'beer', 'title':u'Beer'},
                 {'name':u'bart', 'title':u'Bart'},
-                {'name':u'lisa', 'title':u'Lisa'},
+                {'name':u'lisa', 'title':u'Lisa', 'extras': {'fezina':'foo'}},
                 {'name':u'marge', 'title':u'Marge'},
                 {'name':u'marge1', 'title':u'Marge'},
                 {'name':u'marge11', 'title':u'Marge'},
@@ -127,13 +129,16 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
     def _oai_get_method_and_validate(self, url):
         offset =  self.base_url + url
         res = self.app.get(offset)
-        if res.body.startswith('<xml'):
+        if res.body.startswith('<?xml'):
             self.assert_(oaischema.validate(etree.fromstring(res.body)))
         return res.body
 
     def test_list_sets(self):
         body = self._oai_get_method_and_validate('?verb=ListSets')
         self.assert_('roger' in body)
+
+    def test_cover_import(self):
+        import ckanext.oaipmh
 
     def test_list_records(self):
         # All or nothing
@@ -308,25 +313,6 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         Session.add(harvest_job)
         return harvest_job, harv
 
-    def _alternate_returns(self, foo):
-        if self._first == 1:
-            log.debug("first")
-            res = self._oai_get_method_and_validate('?verb=Identify')
-            self._first = 2
-            ret = StringIO(res)
-            return ret
-        elif self._first == 2:
-            log.debug("second")
-            res = self._oai_get_method_and_validate('?verb=ListSets')
-            self._first = 3
-            ret = StringIO(res)
-            return ret
-        elif self._first == 3:
-            log.debug("third")
-            res = self._oai_get_method_and_validate('?verb=ListSets')
-            self._first = 1
-            ret = StringIO(res)
-            return ret
 
     def _create_harvester(self,config=True):
         client = CKANServer()
@@ -362,3 +348,36 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         real_content = json.loads(harvest_object.content)
         self.assert_(harv.import_stage(harvest_object) == False)
 
+    def test_rdf_reader_writer(self):
+        client = CKANServer()
+        metadata_registry = metadata.MetadataRegistry()
+        metadata_registry.registerReader('rdf', rdf_reader)
+        metadata_registry.registerWriter('rdf', rdf_writer)
+        serv = BatchingServer(client, metadata_registry=metadata_registry)
+        client = ServerClient(serv, metadata_registry=metadata_registry)
+        recs = client.listRecords(metadataPrefix='rdf')
+        _, met, _ = recs.next()
+        metmap = met.getMap()
+        self.assert_(len(metmap.items()) > 0)
+        self.assert_(metmap.keys() == ['publisher', 'description', 'language',
+                                        'format', 'type', 'rights', 'date',
+                                        'relation', 'source', 'coverage',
+                                        'contributor', 'title', 'identifier',
+                                        'creator', 'subject'])
+
+    def test_rdf_read_url(self):
+        rdfbody = self.app.get(self.base_url + '?verb=GetRecord&identifier=homer&metadataPrefix=rdf').body
+        self.assert_(rdfbody)
+        self.assert_(oaischema.validate(etree.fromstring(rdfbody)))
+
+    def test_rdf_harvester(self):
+        client = CKANServer()
+        metadata_registry = metadata.MetadataRegistry()
+        metadata_registry.registerReader('rdf', rdf_reader)
+        metadata_registry.registerWriter('rdf', rdf_writer)
+        serv = BatchingServer(client, metadata_registry=metadata_registry)
+        oaipmh.client.Client = mock.Mock(return_value=ServerClient(serv,metadata_registry))
+        harvest_object, harv = self._create_harvester()
+        self.assert_(harv.info()['name'] == 'OAI-PMH')
+        real_content = json.loads(harvest_object.content)
+        self.assert_(real_content)

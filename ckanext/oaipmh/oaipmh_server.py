@@ -11,7 +11,6 @@ from oaipmh.common import ResumptionOAIPMH
 from oaipmh import common
 
 import logging
-from ckan.model.package import PackageRevision
 
 log = logging.getLogger(__name__)
 
@@ -99,7 +98,10 @@ class CKANServer(ResumptionOAIPMH):
     def listMetadataFormats(self):
         return [('oai_dc',
                 'http://www.openarchives.org/OAI/2.0/oai_dc.xsd',
-                'http://www.openarchives.org/OAI/2.0/oai_dc/')]
+                'http://www.openarchives.org/OAI/2.0/oai_dc/'),
+                ('rdf',
+                 'http://www.openarchives.org/OAI/2.0/rdf.xsd',
+                 'http://www.openarchives.org/OAI/2.0/rdf/')]
 
     def listRecords(self, metadataPrefix, set=None, cursor=None, from_=None, until=None, batch_size=None):
         data = []

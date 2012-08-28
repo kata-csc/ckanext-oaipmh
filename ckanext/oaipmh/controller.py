@@ -15,6 +15,7 @@ from oaipmh.tests import fakeclient
 from oaipmh import common
 
 from oaipmh_server import CKANServer
+from rdftools import rdf_reader, rdf_writer
 
 log = logging.getLogger(__name__)
 
@@ -27,14 +28,19 @@ class OAIPMHController(BaseController):
             if verb:
                 client = CKANServer()
                 metadata_registry = metadata.MetadataRegistry()
-                metadata_registry.registerReader('oai_dc', oai_dc_reader)
-                metadata_registry.registerWriter('oai_dc', oai_dc_writer)
+                if 'metadataPrefix' in request.params:
+                    if request.params['metadataPrefix'] == 'oai_dc':
+                        metadata_registry.registerReader('oai_dc', oai_dc_reader)
+                        metadata_registry.registerWriter('oai_dc', oai_dc_writer)
+                    else:
+                        metadata_registry.registerReader('rdf', rdf_reader)
+                        metadata_registry.registerWriter('rdf', rdf_writer)
+                else:
+                    metadata_registry.registerReader('oai_dc', oai_dc_reader)
+                    metadata_registry.registerWriter('oai_dc', oai_dc_writer)
                 serv = BatchingServer(client, metadata_registry=metadata_registry)
                 parms = request.params.mixed()
-                try:
-                    res = serv.handleRequest(parms)
-                except common.error.ErrorBase, e:
-                    return serv.handleException(parms, (None, e, None))
+                res = serv.handleRequest(parms)
                 response.headers['content-type'] = 'text/xml; charset=utf-8' 
                 return res
         else:
