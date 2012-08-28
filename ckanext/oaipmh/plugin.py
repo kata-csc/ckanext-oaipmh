@@ -5,6 +5,7 @@ from ckan.plugins import IRoutes, IConfigurer
 
 log = logging.getLogger(__name__)
 
+
 class OAIPMHPlugin(SingletonPlugin):
     implements(IRoutes, inherit=True)
     implements(IConfigurer)
@@ -27,6 +28,6 @@ class OAIPMHPlugin(SingletonPlugin):
                 config.get('extra_template_paths', '')])
 
     def before_map(self, map):
-        controller='ckanext.oaipmh.controller:OAIPMHController'
+        controller = 'ckanext.oaipmh.controller:OAIPMHController'
         map.connect('oai', '/oai', controller=controller, action='index')
         return map

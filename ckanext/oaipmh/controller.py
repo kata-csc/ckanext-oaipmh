@@ -19,8 +19,8 @@ from rdftools import rdf_reader, rdf_writer
 
 log = logging.getLogger(__name__)
 
-class OAIPMHController(BaseController):
 
+class OAIPMHController(BaseController):
 
     def index(self):
         if 'verb' in request.params:
@@ -41,7 +41,7 @@ class OAIPMHController(BaseController):
                 serv = BatchingServer(client, metadata_registry=metadata_registry)
                 parms = request.params.mixed()
                 res = serv.handleRequest(parms)
-                response.headers['content-type'] = 'text/xml; charset=utf-8' 
+                response.headers['content-type'] = 'text/xml; charset=utf-8'
                 return res
         else:
             return render('ckanext/oaipmh/oaipmh.xhtml')

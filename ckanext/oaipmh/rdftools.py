@@ -25,15 +25,17 @@ rdf_reader = MetadataReader(
     'relation':    ('textList', 'rdf:RDF/ow:Publication/dc:relation/text()'),
     'coverage':    ('textList', 'rdf:RDF/ow:Publication/dc:coverage/text()'),
     'rights':      ('textList', 'rdf:RDF/ow:Publication/dc:rights/text()')
-    },namespaces={
+    }, namespaces={
                   'rdf': NSRDF,
                   'ow': NSOW,
                   'dc': NS_DC
-    }
+                  }
     )
+
+
 def rdf_writer(element, metadata):
     e_rdf = SubElement(element, nsrdf('RDF'),
-                       nsmap={'rdf':NSRDF, 'ow':NSOW, 'xsi':NS_XSI})
+                       nsmap={'rdf': NSRDF, 'ow': NSOW, 'xsi': NS_XSI})
     e_rdf.set('{%s}schemaLocation' % NS_XSI,
              '%s http://www.openarchives.org/OAI/2.0/rdf.xsd' % RDF_SCHEMA)
     rdf_pub = SubElement(e_rdf, nsow('Publication'))
@@ -49,8 +51,10 @@ def rdf_writer(element, metadata):
             e = SubElement(rdf_pub, nsdc(name))
             e.text = value
 
+
 def nsrdf(name):
     return '{%s}%s' % (NSRDF, name)
+
 
 def nsow(name):
     return '{%s}%s' % (NSOW, name)

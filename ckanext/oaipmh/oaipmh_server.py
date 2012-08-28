@@ -14,6 +14,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
+
 class CKANServer(ResumptionOAIPMH):
 
     def identify(self):
@@ -33,7 +34,7 @@ class CKANServer(ResumptionOAIPMH):
                             'creator': [dataset.author],
                             'identifier': [config.get('ckan.site_url') + url_for(controller="package",
                                                    action='read',
-                                                   id = dataset.id),
+                                                   id=dataset.id),
                                            dataset.url if dataset.url else dataset.id],
                             'type': ['dataset'],
                             'description': [dataset.notes],
@@ -47,14 +48,14 @@ class CKANServer(ResumptionOAIPMH):
         # Fixes the bug on having a large dataset being scrambled to individual
         # letters
         for key, value in meta.items():
-            if not isinstance(value,list):
+            if not isinstance(value, list):
                 metadata[str(key)] = [value]
             else:
                 metadata[str(key)] = value
         return (common.Header(dataset.id,
                               dataset.metadata_created,
                               [dataset.name],
-                              False), 
+                              False),
                 common.Metadata(metadata),
                 None)
 
@@ -74,7 +75,7 @@ class CKANServer(ResumptionOAIPMH):
                 if until:
                     packages = Session.query(Package).filter(PackageRevision.revision_timestamp < until).all()
                 if from_ and until:
-                    packages = Session.query(Package).filter(between(PackageRevision.revision_timestamp,from_,until)).all()
+                    packages = Session.query(Package).filter(between(PackageRevision.revision_timestamp, from_, until)).all()
         else:
             group = Group.get(set)
             if group:
@@ -84,7 +85,7 @@ class CKANServer(ResumptionOAIPMH):
                 if until and not from_:
                     packages = packages.filter(PackageRevision.revision_timestamp < until)
                 if from_ and until:
-                    packages = packages.filter(between(PackageRevision.revision_timestamp,from_,until))
+                    packages = packages.filter(between(PackageRevision.revision_timestamp, from_, until))
                 packages = packages.all()
         if cursor:
             packages = packages[:cursor]

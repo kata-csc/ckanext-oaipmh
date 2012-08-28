@@ -41,7 +41,7 @@ class OAIPMHHarvester(SingletonPlugin):
         Harvesting implementations must provide this method, which will return a
         dictionary containing different descriptors of the harvester. The
         returned dictionary should contain:
-        
+
         * name: machine-readable name. This will be the value stored in the
           database, and the one used by ckanext-harvest to call the appropiate
           harvester.
@@ -53,16 +53,16 @@ class OAIPMHHarvester(SingletonPlugin):
           values in the database must provide this key. The only supported value is
           'Text'. This will enable the configuration text box in the form. See also
           the ``validate_config`` method.
-        
+
         A complete example may be::
-        
+
             {
                 'name': 'csw',
                 'title': 'CSW Server',
                 'description': 'A server that implements OGC\'s Catalog Service
                                 for the Web (CSW) standard'
             }
-        
+
         returns: A dictionary with the harvester descriptors
         '''
         return {
@@ -70,7 +70,7 @@ class OAIPMHHarvester(SingletonPlugin):
                 'title': 'OAI-PMH',
                 'description': 'A server which has a OAI-PMH interface available.'
                 }
-    
+
     def gather_stage(self, harvest_job):
         '''
         The gather stage will recieve a HarvestJob object and will be
@@ -82,10 +82,10 @@ class OAIPMHHarvester(SingletonPlugin):
             - creating and storing any suitable HarvestGatherErrors that may
               occur.
             - returning a list with all the ids of the created HarvestObjects.
-        
+
         :param harvest_job: HarvestJob object
         :returns: A list of HarvestObject ids
-        ''' 
+        '''
         self._set_config(harvest_job.source.config)
         sets = []
         harvest_objs = []
@@ -96,7 +96,7 @@ class OAIPMHHarvester(SingletonPlugin):
         domain = identifier.repositoryName()
         group = Group.by_name(domain)
         if not group:
-            group = Group(name = domain, description = domain)
+            group = Group(name=domain, description=domain)
         query = self.config['query'] if 'query' in self.config else ''
         for set in client.listSets():
             identifier, name, _ = set
@@ -104,10 +104,10 @@ class OAIPMHHarvester(SingletonPlugin):
                 if query in name:
                     sets.append((identifier, name))
             else:
-                sets.append((identifier,name))
+                sets.append((identifier, name))
         ids = []
         for set_id, set_name in sets:
-            harvest_obj = HarvestObject(job = harvest_job)
+            harvest_obj = HarvestObject(job=harvest_job)
             harvest_obj.content = json.dumps(
                                              {
                                               'set': set_id, \
@@ -119,7 +119,7 @@ class OAIPMHHarvester(SingletonPlugin):
             harvest_objs.append(harvest_obj.id)
         model.repo.commit()
         return harvest_objs
-    
+
     def fetch_stage(self, harvest_object):
         '''
         The fetch stage will receive a HarvestObject object and will be
@@ -130,7 +130,7 @@ class OAIPMHHarvester(SingletonPlugin):
             - creating and storing any suitable HarvestObjectErrors that may
               occur.
             - returning True if everything went as expected, False otherwise.
-        
+
         :param harvest_object: HarvestObject object
         :returns: True if everything went right, False if errors were found
         '''
@@ -168,7 +168,7 @@ class OAIPMHHarvester(SingletonPlugin):
             - creating and storing any suitable HarvestObjectErrors that may
               occur.
             - returning True if everything went as expected, False otherwise.
-        
+
         :param harvest_object: HarvestObject object
         :returns: True if everything went right, False if errors were found
         '''
@@ -177,7 +177,7 @@ class OAIPMHHarvester(SingletonPlugin):
         domain = master_data['domain']
         group = Group.get(domain)
         if not group:
-            group = Group(name = domain, description = domain)
+            group = Group(name=domain, description=domain)
         if 'records' in master_data:
             records = master_data['records']
             set_name = master_data['set_name']
@@ -195,7 +195,7 @@ class OAIPMHHarvester(SingletonPlugin):
                     description = metadata['description'][0] if len(metadata['description']) else ''
                     pkg = Package.by_name(name)
                     if not pkg:
-                        pkg = Package(name = name, title = title)
+                        pkg = Package(name=name, title=title)
                     extras = {}
                     for met in metadata.items():
                         key, value = met

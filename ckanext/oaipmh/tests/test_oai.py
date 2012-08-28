@@ -34,6 +34,7 @@ from ckanext.harvest.model import HarvestJob, HarvestSource, HarvestObject,\
 from ckanext.oaipmh.oaipmh_server import CKANServer
 from ckanext.oaipmh.rdftools import rdf_reader, rdf_writer
 
+
 def fileInTestDir(name):
     _testdir = os.path.split(__file__)[0]
     return os.path.join(_testdir, name)
@@ -45,13 +46,15 @@ oairdfschema = etree.XMLSchema(etree.parse(fileInTestDir('rdf.xsd')))
 
 realopen = urllib2.urlopen
 
+
 class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
 
-    base_url = url_for(controller='ckanext.oaipmh.controller:OAIPMHController', 
+    base_url = url_for(controller='ckanext.oaipmh.controller:OAIPMHController',
                        action='index')
     _first = 1
     _second = False
     _third = False
+
     @classmethod
     def setup_class(cls):
         """
@@ -59,7 +62,8 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         """
         Session.remove()
         package_dicts = [{'name':u'abraham', 'title':u'Abraham'},
-                {'name':u'homer', 'title':u'Homer', 'tags':['foo', 'bar', 'baz']},
+                {'name':u'homer', 'title':u'Homer', 'tags':['foo', 'bar',
+                                                            'baz']},
                 {'name':u'homer_derived', 'title':u'Homer Derived'},
                 {'name':u'beer', 'title':u'Beer'},
                 {'name':u'bart', 'title':u'Bart'},
@@ -77,7 +81,6 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
                 {'name':u'marge1b', 'title':u'Marge'},
                 {'name':u'marge1a', 'title':u'Marge'},
                 ]
-        
         CreateTestData.create_arbitrary(package_dicts)
         package_dicts = [u'abraham',
                 u'homer',
@@ -98,7 +101,8 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
                 u'marge1b',
                 u'marge1a',
                 ]
-        group_dicts = [{'name':'roger', 'title':'roger', 'description':'','packages': package_dicts},
+        group_dicts = [{'name':'roger', 'title':'roger', 'description':'',
+                        'packages': package_dicts},
                        {'name':'roger1', 'title':'roger', 'description':''},
                        {'name':'roger2', 'title':'roger', 'description':''},
                        {'name':'roger3', 'title':'roger', 'description':''},
@@ -127,7 +131,7 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         Session.remove()
 
     def _oai_get_method_and_validate(self, url):
-        offset =  self.base_url + url
+        offset = self.base_url + url
         res = self.app.get(offset)
         if res.body.startswith('<?xml'):
             self.assert_(oaischema.validate(etree.fromstring(res.body)))
@@ -136,9 +140,6 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
     def test_list_sets(self):
         body = self._oai_get_method_and_validate('?verb=ListSets')
         self.assert_('roger' in body)
-
-    def test_cover_import(self):
-        import ckanext.oaipmh
 
     def test_list_records(self):
         # All or nothing
@@ -150,7 +151,6 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         # Bad set
         body = self._oai_get_method_and_validate('?verb=ListRecords&metadataPrefix=oai_dc&set=foo')
         self.assert_("noRecordsMatch" in body)
-        
         # A good from
         body = self._oai_get_method_and_validate('?verb=ListRecords&metadataPrefix=oai_dc&from=1998-01-15')
         self.assert_("homer" in body)
@@ -158,14 +158,12 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         dates = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
         body = self._oai_get_method_and_validate('?verb=ListRecords&metadataPrefix=oai_dc&from=%s' % dates)
         self.assert_("noRecordsMatch" in body)
-        
         # A good until, in the future
         body = self._oai_get_method_and_validate('?verb=ListRecords&metadataPrefix=oai_dc&until=%s' % dates)
         self.assert_("homer" in body)
         # A bad until, in the past
         body = self._oai_get_method_and_validate('?verb=ListRecords&metadataPrefix=oai_dc&until=1998-01-15')
         self.assert_("noRecordsMatch")
-        
         # A bad between, in the past
         body = self._oai_get_method_and_validate('?verb=ListRecords&metadataPrefix=oai_dc&from=1998-01-15&until=2000-01-15')
         self.assert_("noRecordsMatch" in body)
@@ -179,7 +177,7 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
                  (datetime.now() + timedelta(days=4)).strftime("%Y-%m-%d"))
         body = self._oai_get_method_and_validate('?verb=ListRecords&metadataPrefix=oai_dc&from=%s&until=%s' % dates)
         self.assert_("noRecordsMatch" in body)
-        
+
         dates = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
         # A good until, in the future, with set roger
         body = self._oai_get_method_and_validate('?verb=ListRecords&metadataPrefix=oai_dc&until=%s&set=roger' % dates)
@@ -193,9 +191,6 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         body = self._oai_get_method_and_validate('?verb=ListRecords&metadataPrefix=oai_dc&from=%s&until=%s&set=roger' % dates)
         self.assert_("homer" in body)
 
-
-
-
     def test_list_identifiers(self):
         # All or nothing
         body = self._oai_get_method_and_validate('?verb=ListIdentifiers&metadataPrefix=oai_dc')
@@ -206,7 +201,7 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         # Bad set
         body = self._oai_get_method_and_validate('?verb=ListIdentifiers&metadataPrefix=oai_dc&set=foo')
         self.assert_("noRecordsMatch" in body)
-        
+
         # A good from
         body = self._oai_get_method_and_validate('?verb=ListIdentifiers&metadataPrefix=oai_dc&from=1998-01-15')
         self.assert_("homer" in body)
@@ -214,14 +209,14 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         dates = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
         body = self._oai_get_method_and_validate('?verb=ListIdentifiers&metadataPrefix=oai_dc&from=%s' % dates)
         self.assert_("noRecordsMatch" in body)
-        
+
         # A good until, in the future
         body = self._oai_get_method_and_validate('?verb=ListIdentifiers&metadataPrefix=oai_dc&until=%s' % dates)
         self.assert_("homer" in body)
         # A bad until, in the past
         body = self._oai_get_method_and_validate('?verb=ListIdentifiers&metadataPrefix=oai_dc&until=1998-01-15')
         self.assert_("noRecordsMatch")
-        
+
         # A bad between, in the past
         body = self._oai_get_method_and_validate('?verb=ListIdentifiers&metadataPrefix=oai_dc&from=1998-01-15&until=2000-01-15')
         self.assert_("noRecordsMatch" in body)
@@ -235,7 +230,7 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
                  (datetime.now() + timedelta(days=4)).strftime("%Y-%m-%d"))
         body = self._oai_get_method_and_validate('?verb=ListIdentifiers&metadataPrefix=oai_dc&from=%s&until=%s' % dates)
         self.assert_("noRecordsMatch" in body)
-        
+
         dates = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
         # A good until, in the future, with set roger
         body = self._oai_get_method_and_validate('?verb=ListIdentifiers&metadataPrefix=oai_dc&until=%s&set=roger' % dates)
@@ -249,7 +244,6 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         body = self._oai_get_method_and_validate('?verb=ListIdentifiers&metadataPrefix=oai_dc&from=%s&until=%s&set=roger' % dates)
         self.assert_("homer" in body)
 
-    
     def test_resumption_records(self):
         metadata_reg = MetadataRegistry()
         metadata_reg.registerReader('oai_dc', oai_dc_reader)
@@ -267,7 +261,7 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
     def test_resumption_identifiers(self):
         metadata_reg = MetadataRegistry()
         metadata_reg.registerReader('oai_dc', oai_dc_reader)
-        urllib2.urlopen = realopen#mock.Mock(return_value=resio)
+        urllib2.urlopen = realopen
         client = CKANServer()
         metadata_registry = metadata.MetadataRegistry()
         metadata_registry.registerReader('oai_dc', oai_dc_reader)
@@ -287,11 +281,11 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
     def test_get_record(self):
         metadata_reg = MetadataRegistry()
         metadata_reg.registerReader('oai_dc', oai_dc_reader)
-        client = Client(config.get('ckan.site_url')+self.base_url, metadata_reg)
+        client = Client(config.get('ckan.site_url') + self.base_url, metadata_reg)
         res = self._oai_get_method_and_validate('?verb=ListIdentifiers&metadataPrefix=oai_dc&set=roger')
         urllib2.urlopen = mock.Mock(return_value=StringIO(res))
         ids = client.listIdentifiers(metadataPrefix='oai_dc')
-        offset =  self.base_url + '?verb=GetRecord&identifier=%s&metadataPrefix=oai_dc' % ids.next().identifier()
+        offset = self.base_url + '?verb=GetRecord&identifier=%s&metadataPrefix=oai_dc' % ids.next().identifier()
         res = self.app.get(offset)
         self.assert_(oaischema.validate(etree.fromstring(res.body)))
         self.assert_("abraham" in res.body)
@@ -312,7 +306,6 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         harvest_job.source.type = "OAI-PMH"
         Session.add(harvest_job)
         return harvest_job, harv
-
 
     def _create_harvester(self,config=True):
         client = CKANServer()
