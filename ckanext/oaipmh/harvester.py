@@ -11,7 +11,7 @@ from ckan.model import Session, Package, Resource, Group, Member
 from ckan.plugins.core import SingletonPlugin, implements
 from ckan import model
 
-from ckanext.harvest.interfaces import IHarvester
+from ckanext.harvest.harvesters.base import HarvesterBase
 from ckanext.harvest.model import HarvestObject, HarvestJob
 from ckan.model.authz import setup_default_user_roles
 import oaipmh
@@ -22,11 +22,10 @@ from oaipmh.error import NoRecordsMatchError, BadVerbError
 log = logging.getLogger(__name__)
 
 
-class OAIPMHHarvester(SingletonPlugin):
+class OAIPMHHarvester(HarvesterBase):
     '''
     OAI-PMH Harvester for ckanext-harvester.
     '''
-    implements(IHarvester)
 
     config = None
 
@@ -98,13 +97,17 @@ class OAIPMHHarvester(SingletonPlugin):
         if not group:
             group = Group(name=domain, description=domain)
         query = self.config['query'] if 'query' in self.config else ''
-        for set in client.listSets():
-            identifier, name, _ = set
-            if 'query' in self.config:
-                if query in name:
+        try:
+            for set in client.listSets():
+                identifier, name, _ = set
+                if 'query' in self.config:
+                    if query in name:
+                        sets.append((identifier, name))
+                else:
                     sets.append((identifier, name))
-            else:
-                sets.append((identifier, name))
+        except oaipmh.error.NoSetHierarchyError:
+            sets.append(('1', 'Default'))
+            self._save_gather_error('Could not fetch sets!', harvest_job)
         ids = []
         for set_id, set_name in sets:
             harvest_obj = HarvestObject(job=harvest_job)
@@ -152,6 +155,7 @@ class OAIPMHHarvester(SingletonPlugin):
             sets['records'] = records
             harvest_object.content = json.dumps(sets)
         else:
+            self._save_object_error('Could not find any records!', harvest_object)
             return False
         return True
 
@@ -221,6 +225,8 @@ class OAIPMHHarvester(SingletonPlugin):
                     pkg.url = "%s?verb=GetRecord&identifier=%s&metadataPrefix=oai_dc" % (harvest_object.job.source.url,
                                                       identifier)
                     pkg.save()
+                    harvest_object.package = pkg
+                    Session.add(harvest_object)
                     setup_default_user_roles(pkg)
                     url = ''
                     for ids in metadata['identifier']:
@@ -241,5 +247,6 @@ class OAIPMHHarvester(SingletonPlugin):
                     setup_default_user_roles(subgroup)
             model.repo.commit()
         else:
+            self._save_object_error('Could not receive any objects from fetch!', harvest_object, stage='Import')
             return False
         return True

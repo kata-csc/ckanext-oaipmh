@@ -59,3 +59,40 @@ listidentifiers="""<?xml version='1.0' encoding='UTF-8'?>
 </OAI-PMH>
 
 """
+nohierarchy="""<?xml version="1.0" encoding="UTF-8" ?>
+<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/" 
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/
+         http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
+  <responseDate>2012-08-29T17:31:59Z</responseDate>
+  <request verb="ListSets">http://jultika.oulu.fi/OAI/Server</request>
+    <error code="noSetHierarchy">Sets not supported</error></OAI-PMH>
+"""
+identify="""<?xml version="1.0" encoding="UTF-8" ?>
+<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/" 
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/
+         http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
+  <responseDate>2012-08-29T17:38:19Z</responseDate>
+  <request verb="Identify">http://jultika.oulu.fi/OAI/Server</request>
+    <Identify>
+    <repositoryName>University of Oulu Repository - Jultika</repositoryName>
+    <baseURL>http://jultika.oulu.fi/OAI/Server</baseURL>
+    <protocolVersion>2.0</protocolVersion>
+    <earliestDatestamp>2000-01-01T00:00:00Z</earliestDatestamp>
+    <deletedRecord>transient</deletedRecord>
+    <granularity>YYYY-MM-DDThh:mm:ssZ</granularity>
+    <adminEmail>ville.varjonen@oulu.fi</adminEmail>
+          <description>
+        <oai-identifier xmlns="http://www.openarchives.org/OAI/2.0/oai-identifier"
+                        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                        xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai-identifier
+                                            http://www.openarchives.org/OAI/2.0/oai-identifier.xsd">
+          <scheme>oai</scheme>
+          <repositoryIdentifier>oulu.fi</repositoryIdentifier>
+          <delimiter>:</delimiter>
+          <sampleIdentifier>oai:oulu.fi:isbn978-951-42-9519-5</sampleIdentifier>
+        </oai-identifier>
+      </description>
+      </Identify></OAI-PMH>
+"""

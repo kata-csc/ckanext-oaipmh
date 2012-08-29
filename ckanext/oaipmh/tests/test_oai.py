@@ -307,18 +307,36 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         Session.add(harvest_job)
         return harvest_job, harv
 
-    def _create_harvester(self,config=True):
+    def _create_harvester(self, config=True):
         client = CKANServer()
         metadata_registry = metadata.MetadataRegistry()
         metadata_registry.registerReader('oai_dc', oai_dc_reader)
         metadata_registry.registerWriter('oai_dc', oai_dc_writer)
         serv = BatchingServer(client, metadata_registry=metadata_registry)
-        oaipmh.client.Client = mock.Mock(return_value=ServerClient(serv,metadata_registry))
+        oaipmh.client.Client = mock.Mock(return_value=ServerClient(serv, metadata_registry))
         harvest_job, harv = self._create_harvester_info(config=config)
         harvest_obj_list = harv.gather_stage(harvest_job)
         harvest_object = HarvestObject.get(harvest_obj_list[0])
         harv.fetch_stage(harvest_object)
         return harvest_object, harv
+
+    def _side_effect_identify_listsets(self, foo):
+        if self._first == 1:
+            self._first = 2
+            return StringIO(testdata.identify)
+        if self._first == 2:
+            self.first = 1
+            return StringIO(testdata.nohierarchy)
+
+    def test_no_sets(self):
+        job, harv = self._create_harvester_info()
+        urllib2.urlopen = mock.Mock(side_effect=self._side_effect_identify_listsets)
+        gathered = harv.gather_stage(job)
+        self.assert_(len(gathered) == 1)
+        harv_obj = HarvestObject.get(gathered[0])
+        real_dict = json.loads(harv_obj.content)
+        self.assert_(real_dict['set_name'] == 'Default')
+        urllib2.urlopen = realopen
 
     def test_zharvester_import(self, mocked=True):
         harvest_object, harv = self._create_harvester()
