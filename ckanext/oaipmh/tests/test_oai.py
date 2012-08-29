@@ -29,7 +29,7 @@ from pylons import config
 
 from ckanext.oaipmh.harvester import OAIPMHHarvester
 from ckanext.harvest.model import HarvestJob, HarvestSource, HarvestObject,\
-                                  setup
+                                  HarvestGatherError, HarvestObjectError, setup
 
 from ckanext.oaipmh.oaipmh_server import CKANServer
 from ckanext.oaipmh.rdftools import rdf_reader, rdf_writer
@@ -358,6 +358,10 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         harvest_object, harv = self._create_harvester(config=False)
         real_content = json.loads(harvest_object.content)
         self.assert_(harv.import_stage(harvest_object) == False)
+        errs = Session.query(HarvestGatherError).all()
+        self.assert_(len(errs) == 1)
+        errs = Session.query(HarvestObjectError).all()
+        self.assert_(len(errs) == 2)
 
     def test_rdf_reader_writer(self):
         client = CKANServer()
