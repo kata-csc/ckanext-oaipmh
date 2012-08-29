@@ -338,6 +338,15 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         self.assert_(real_dict['set_name'] == 'Default')
         urllib2.urlopen = realopen
 
+    def test_gather_urlerrors(self):
+        job, harv = self._create_harvester_info()
+        job.source.url = "http://foo"
+        urllib2.urlopen = realopen
+        gathered = harv.gather_stage(job)
+        self.assert_(gathered == None)
+        errs = Session.query(HarvestGatherError).all()
+        self.assert_(errs[0].message == 'Could not gather anything!')
+
     def test_zharvester_import(self, mocked=True):
         harvest_object, harv = self._create_harvester()
         self.assert_(harv.info()['name'] == 'OAI-PMH')
@@ -359,7 +368,7 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         real_content = json.loads(harvest_object.content)
         self.assert_(harv.import_stage(harvest_object) == False)
         errs = Session.query(HarvestGatherError).all()
-        self.assert_(len(errs) == 1)
+        self.assert_(len(errs) == 2)
         errs = Session.query(HarvestObjectError).all()
         self.assert_(len(errs) == 2)
 

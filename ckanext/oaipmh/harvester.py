@@ -6,6 +6,7 @@ import logging
 import json
 import unicodedata
 import string
+import urllib2
 
 from ckan.model import Session, Package, Resource, Group, Member
 from ckan.plugins.core import SingletonPlugin, implements
@@ -91,7 +92,11 @@ class OAIPMHHarvester(HarvesterBase):
         registry = MetadataRegistry()
         registry.registerReader('oai_dc', oai_dc_reader)
         client = oaipmh.client.Client(harvest_job.source.url, registry)
-        identifier = client.identify()
+        try:
+            identifier = client.identify()
+        except urllib2.URLError:
+            self._save_gather_error('Could not gather anything!', harvest_job)
+            return None
         domain = identifier.repositoryName()
         group = Group.by_name(domain)
         if not group:
