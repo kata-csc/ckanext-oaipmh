@@ -230,7 +230,7 @@ class OAIPMHHarvester(HarvesterBase):
                     pkg.url = "%s?verb=GetRecord&identifier=%s&metadataPrefix=oai_dc" % (harvest_object.job.source.url,
                                                       identifier)
                     pkg.save()
-                    harvest_object.package = pkg
+                    harvest_object.package_id = pkg.id
                     Session.add(harvest_object)
                     setup_default_user_roles(pkg)
                     url = ''
