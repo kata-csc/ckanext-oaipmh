@@ -95,7 +95,7 @@ class OAIPMHHarvester(HarvesterBase):
         try:
             identifier = client.identify()
         except urllib2.URLError:
-            self._save_gather_error('Could not gather anything!', harvest_job)
+            self._save_gather_error('Could not gather anything from %s!' % harvest_job.source.url, harvest_job)
             return None
         domain = identifier.repositoryName()
         group = Group.by_name(domain)
@@ -160,7 +160,7 @@ class OAIPMHHarvester(HarvesterBase):
             sets['records'] = records
             harvest_object.content = json.dumps(sets)
         else:
-            self._save_object_error('Could not find any records!', harvest_object)
+            self._save_object_error('Could not find any records for set %s!' % sets['set'], harvest_object)
             return False
         return True
 
