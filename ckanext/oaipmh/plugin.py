@@ -7,6 +7,10 @@ log = logging.getLogger(__name__)
 
 
 class OAIPMHPlugin(SingletonPlugin):
+    '''OAI-PMH plugin, maps the controller and uses the template configuration
+    stanza to have the template render in case there is no parameters to the
+    interface.
+    '''
     implements(IRoutes, inherit=True)
     implements(IConfigurer)
 
@@ -28,6 +32,8 @@ class OAIPMHPlugin(SingletonPlugin):
                 config.get('extra_template_paths', '')])
 
     def before_map(self, map):
+        '''Map the controller to be used for OAI-PMH.
+        '''
         controller = 'ckanext.oaipmh.controller:OAIPMHController'
         map.connect('oai', '/oai', controller=controller, action='index')
         return map

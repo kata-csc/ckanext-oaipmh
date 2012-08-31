@@ -345,7 +345,7 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         gathered = harv.gather_stage(job)
         self.assert_(gathered == None)
         errs = Session.query(HarvestGatherError).all()
-        self.assert_(errs[0].message == 'Could not gather anything!')
+        self.assert_(errs[0].message == 'Could not gather anything from http://foo!')
 
     def test_zharvester_import(self, mocked=True):
         harvest_object, harv = self._create_harvester()

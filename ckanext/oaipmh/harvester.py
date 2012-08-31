@@ -8,17 +8,14 @@ import unicodedata
 import string
 import urllib2
 
-from ckan.model import Session, Package, Resource, Group, Member
-from ckan.plugins.core import SingletonPlugin, implements
+from ckan.model import Session, Package, Group
 from ckan import model
 
-from ckanext.harvest.harvesters.base import HarvesterBase
-from ckanext.harvest.model import HarvestObject, HarvestJob
+from ckanext.harvest.harvesters.base import HarvesterBase, munge_tag
+from ckanext.harvest.model import HarvestObject
 from ckan.model.authz import setup_default_user_roles
 import oaipmh
-from oaipmh.client import Client
 from oaipmh.metadata import MetadataRegistry, oai_dc_reader
-from oaipmh.error import NoRecordsMatchError, BadVerbError
 
 log = logging.getLogger(__name__)
 
@@ -31,6 +28,8 @@ class OAIPMHHarvester(HarvesterBase):
     config = None
 
     def _set_config(self, config_str):
+        '''Set the configuration string.
+        '''
         if config_str:
             self.config = json.loads(config_str)
         else:
@@ -38,32 +37,7 @@ class OAIPMHHarvester(HarvesterBase):
 
     def info(self):
         '''
-        Harvesting implementations must provide this method, which will return a
-        dictionary containing different descriptors of the harvester. The
-        returned dictionary should contain:
-
-        * name: machine-readable name. This will be the value stored in the
-          database, and the one used by ckanext-harvest to call the appropiate
-          harvester.
-        * title: human-readable name. This will appear in the form's select box
-          in the WUI.
-        * description: a small description of what the harvester does. This will
-          appear on the form as a guidance to the user.
-        * form_config_interface [optional]: Harvesters willing to store configuration
-          values in the database must provide this key. The only supported value is
-          'Text'. This will enable the configuration text box in the form. See also
-          the ``validate_config`` method.
-
-        A complete example may be::
-
-            {
-                'name': 'csw',
-                'title': 'CSW Server',
-                'description': 'A server that implements OGC\'s Catalog Service
-                                for the Web (CSW) standard'
-            }
-
-        returns: A dictionary with the harvester descriptors
+        Return information about this harvester.
         '''
         return {
                 'name': 'OAI-PMH',
@@ -95,7 +69,8 @@ class OAIPMHHarvester(HarvesterBase):
         try:
             identifier = client.identify()
         except urllib2.URLError:
-            self._save_gather_error('Could not gather anything from %s!' % harvest_job.source.url, harvest_job)
+            self._save_gather_error('Could not gather anything from %s!' %
+                                    harvest_job.source.url, harvest_job)
             return None
         domain = identifier.repositoryName()
         group = Group.by_name(domain)
@@ -113,7 +88,7 @@ class OAIPMHHarvester(HarvesterBase):
         except oaipmh.error.NoSetHierarchyError:
             sets.append(('1', 'Default'))
             self._save_gather_error('Could not fetch sets!', harvest_job)
-        ids = []
+
         for set_id, set_name in sets:
             harvest_obj = HarvestObject(job=harvest_job)
             harvest_obj.content = json.dumps(
@@ -160,7 +135,8 @@ class OAIPMHHarvester(HarvesterBase):
             sets['records'] = records
             harvest_object.content = json.dumps(sets)
         else:
-            self._save_object_error('Could not find any records for set %s!' % sets['set'], harvest_object)
+            self._save_object_error('Could not find any records for set %s!' %
+                                    sets['set'], harvest_object)
             return False
         return True
 
@@ -193,15 +169,19 @@ class OAIPMHHarvester(HarvesterBase):
             for rec in records:
                 identifier, metadata, _ = rec
                 if metadata:
-                    name = metadata['title'][0] if len(metadata['title']) else identifier
+                    name = metadata['title'][0] if len(metadata['title'])\
+                                                else identifier
                     title = name
                     norm_title = unicodedata.normalize('NFKD', name)\
                                  .encode('ASCII', 'ignore')\
-                                 .lower().replace(' ','_')[:35]
-                    slug = ''.join(e for e in norm_title if e in string.ascii_letters+'_')
+                                 .lower().replace(' ', '_')[:35]
+                    slug = ''.join(e for e in norm_title
+                                    if e in string.ascii_letters + '_')
                     name = slug
-                    creator = metadata['creator'][0] if len(metadata['creator']) else ''
-                    description = metadata['description'][0] if len(metadata['description']) else ''
+                    creator = metadata['creator'][0]\
+                                if len(metadata['creator']) else ''
+                    description = metadata['description'][0]\
+                                if len(metadata['description']) else ''
                     pkg = Package.by_name(name)
                     if not pkg:
                         pkg = Package(name=name, title=title)
@@ -212,12 +192,14 @@ class OAIPMHHarvester(HarvesterBase):
                             if key == 'subject' or key == 'type':
                                 for tag in value:
                                     if tag:
-                                        tag = tag[:100]
+                                        tag = munge_tag(tag)
                                         tag_obj = model.Tag.by_name(tag)
                                         if not tag_obj:
-                                            tag_obj = model.Tag(name = tag)
+                                            tag_obj = model.Tag(name=tag)
                                         if tag_obj:
-                                            pkgtag = model.PackageTag(tag = tag_obj, package = pkg)
+                                            pkgtag = model.PackageTag(
+                                                                  tag=tag_obj,
+                                                                  package=pkg)
                                             Session.add(tag_obj)
                                             Session.add(pkgtag)
                             else:
@@ -227,8 +209,9 @@ class OAIPMHHarvester(HarvesterBase):
                     pkg.title = title
                     pkg.notes = description
                     pkg.extras = extras
-                    pkg.url = "%s?verb=GetRecord&identifier=%s&metadataPrefix=oai_dc" % (harvest_object.job.source.url,
-                                                      identifier)
+                    pkg.url = \
+                    "%s?verb=GetRecord&identifier=%s&metadataPrefix=oai_dc"\
+                                % (harvest_object.job.source.url, identifier)
                     pkg.save()
                     harvest_object.package_id = pkg.id
                     Session.add(harvest_object)
@@ -237,14 +220,16 @@ class OAIPMHHarvester(HarvesterBase):
                     for ids in metadata['identifier']:
                         if ids.startswith('http://'):
                             url = ids
-                    title = metadata['title'][0] if len(metadata['title']) else ''
-                    description = metadata['description'][0] if len(metadata['description']) else ''
+                    title = metadata['title'][0] if len(metadata['title'])\
+                                                    else ''
+                    description = metadata['description'][0]\
+                                    if len(metadata['description']) else ''
                     pkg.add_resource(url, description=description, name=title)
                     group.add_package_by_name(pkg.name)
                     subg_name = "%s - %s" % (domain, set_name)
                     subgroup = Group.by_name(subg_name)
                     if not subgroup:
-                        subgroup = Group(name = subg_name, description = subg_name)
+                        subgroup = Group(name=subg_name, description=subg_name)
                     subgroup.add_package_by_name(pkg.name)
                     Session.add(group)
                     Session.add(subgroup)
@@ -252,6 +237,7 @@ class OAIPMHHarvester(HarvesterBase):
                     setup_default_user_roles(subgroup)
             model.repo.commit()
         else:
-            self._save_object_error('Could not receive any objects from fetch!', harvest_object, stage='Import')
+            self._save_object_error('Could not receive any objects from fetch!'
+                                    , harvest_object, stage='Import')
             return False
         return True
