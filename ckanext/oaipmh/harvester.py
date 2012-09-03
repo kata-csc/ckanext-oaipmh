@@ -11,7 +11,8 @@ import urllib2
 from ckan.model import Session, Package, Group
 from ckan import model
 
-from ckanext.harvest.harvesters.base import HarvesterBase, munge_tag
+from ckanext.harvest.harvesters.base import HarvesterBase
+from ckan.lib.munge import  munge_tag
 from ckanext.harvest.model import HarvestObject
 from ckan.model.authz import setup_default_user_roles
 import oaipmh
@@ -192,7 +193,7 @@ class OAIPMHHarvester(HarvesterBase):
                             if key == 'subject' or key == 'type':
                                 for tag in value:
                                     if tag:
-                                        tag = munge_tag(tag)
+                                        tag = munge_tag(tag[:100])
                                         tag_obj = model.Tag.by_name(tag)
                                         if not tag_obj:
                                             tag_obj = model.Tag(name=tag)
