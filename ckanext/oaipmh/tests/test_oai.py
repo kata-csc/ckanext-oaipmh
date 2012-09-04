@@ -24,7 +24,7 @@ from oaipmh.client import Client, ServerClient
 from oaipmh.server import BatchingServer, oai_dc_writer
 from oaipmh.metadata import MetadataRegistry, oai_dc_reader
 from oaipmh import metadata
-import oaipmh
+import oaipmh.client
 from pylons import config
 
 from ckanext.oaipmh.harvester import OAIPMHHarvester
@@ -355,6 +355,7 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         self.assert_(harv.import_stage(harvest_object))
 
         the_package = Session.query(Package).filter(Package.title == u"homer")
+        print the_package
         the_package = the_package[0]
         self.assert_(the_package)
         self.assert_(len(the_package.get_tags()) == 4)

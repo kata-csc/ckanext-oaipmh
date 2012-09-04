@@ -15,8 +15,10 @@ from ckanext.harvest.harvesters.base import HarvesterBase
 from ckan.lib.munge import  munge_tag
 from ckanext.harvest.model import HarvestObject
 from ckan.model.authz import setup_default_user_roles
-import oaipmh
+
+import oaipmh.client
 from oaipmh.metadata import MetadataRegistry, oai_dc_reader
+from oaipmh.error import NoSetHierarchyError
 
 log = logging.getLogger(__name__)
 
@@ -86,7 +88,7 @@ class OAIPMHHarvester(HarvesterBase):
                         sets.append((identifier, name))
                 else:
                     sets.append((identifier, name))
-        except oaipmh.error.NoSetHierarchyError:
+        except NoSetHierarchyError:
             sets.append(('1', 'Default'))
             self._save_gather_error('Could not fetch sets!', harvest_job)
 
