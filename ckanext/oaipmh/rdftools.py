@@ -35,7 +35,8 @@ rdf_reader = MetadataReader(
 
 def rdf_writer(element, metadata):
     e_rdf = SubElement(element, nsrdf('RDF'),
-                       nsmap={'rdf': NSRDF, 'ow': NSOW, 'xsi': NS_XSI})
+                       nsmap={'rdf': NSRDF, 'ow': NSOW, 'xsi': NS_XSI,
+                              'dc': NS_DC})
     e_rdf.set('{%s}schemaLocation' % NS_XSI,
              '%s http://www.openarchives.org/OAI/2.0/rdf.xsd' % RDF_SCHEMA)
     rdf_pub = SubElement(e_rdf, nsow('Publication'))
