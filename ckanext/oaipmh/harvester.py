@@ -227,7 +227,11 @@ class OAIPMHHarvester(HarvesterBase):
                                                     else ''
                     description = metadata['description'][0]\
                                     if len(metadata['description']) else ''
-                    pkg.add_resource(url, description=description, name=title)
+                    if url != '':
+                        pkg.add_resource(url,
+                                         description=description,
+                                         name=title,
+                                         format='html' if url.startswith('http://') else '')
                     group.add_package_by_name(pkg.name)
                     subg_name = "%s - %s" % (domain, set_name)
                     subgroup = Group.by_name(subg_name)
