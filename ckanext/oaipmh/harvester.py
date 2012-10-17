@@ -208,7 +208,6 @@ class OAIPMHHarvester(HarvesterBase):
                             else:
                                 extras[key] = ' '.join(value)
                     pkg.author = creator
-                    pkg.author_email = creator
                     pkg.title = title
                     pkg.notes = description
                     pkg.extras = extras
