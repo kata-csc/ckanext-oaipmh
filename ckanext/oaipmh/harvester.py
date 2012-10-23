@@ -224,10 +224,11 @@ class OAIPMHHarvester(HarvesterBase):
                     label = "%s/%s.xml" % (\
                         nowstr,
                         identifier)
-                    ofs.put_stream(BUCKET, label, urllib2.urlopen(pkg.url), {})
+                    f = urllib2.urlopen(pkg.url)
+                    ofs.put_stream(BUCKET, label, f, {})
                     fileurl = config.get('ckan.site_url') + h.url_for('storage_file', label=label)
                     pkg.add_resource(url=fileurl, description="Original metadata record",
-                             format="xml", size=len(f))
+                             format="xml", size=len(f.read()))
                     harvest_object.package_id = pkg.id
                     Session.add(harvest_object)
                     setup_default_user_roles(pkg)
