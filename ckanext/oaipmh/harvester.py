@@ -7,6 +7,7 @@ import json
 import unicodedata
 import string
 import urllib2
+import datetime
 
 from ckan.model import Session, Package, Group
 from ckan import model
@@ -15,6 +16,9 @@ from ckanext.harvest.harvesters.base import HarvesterBase
 from ckan.lib.munge import  munge_tag
 from ckanext.harvest.model import HarvestObject
 from ckan.model.authz import setup_default_user_roles
+from ckan.controllers.storage import BUCKET, get_ofs
+from ckan.lib import helpers as h
+from pylons import config
 
 import oaipmh.client
 from oaipmh.metadata import MetadataRegistry, oai_dc_reader
@@ -205,7 +209,7 @@ class OAIPMHHarvester(HarvesterBase):
                                                                   package=pkg)
                                             Session.add(tag_obj)
                                             Session.add(pkgtag)
-                            else:
+                            elif key != 'title':
                                 extras[key] = ' '.join(value)
                     pkg.author = creator
                     pkg.title = title
@@ -215,6 +219,15 @@ class OAIPMHHarvester(HarvesterBase):
                     "%s?verb=GetRecord&identifier=%s&metadataPrefix=oai_dc"\
                                 % (harvest_object.job.source.url, identifier)
                     pkg.save()
+                    ofs = get_ofs()
+                    nowstr = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')
+                    label = "%s/%s.xml" % (\
+                        nowstr,
+                        identifier)
+                    ofs.put_stream(BUCKET, label, urllib2.urlopen(pkg.url), {})
+                    fileurl = config.get('ckan.site_url') + h.url_for('storage_file', label=label)
+                    pkg.add_resource(url=fileurl, description="Original metadata record",
+                             format="xml", size=len(f))
                     harvest_object.package_id = pkg.id
                     Session.add(harvest_object)
                     setup_default_user_roles(pkg)
