@@ -14,7 +14,7 @@ from ckan import model
 
 from ckanext.harvest.harvesters.base import HarvesterBase
 from ckan.lib.munge import  munge_tag
-from ckanext.harvest.model import HarvestObject
+from ckanext.harvest.model import HarvestObject, HarvestJob
 from ckan.model.authz import setup_default_user_roles
 from ckan.controllers.storage import BUCKET, get_ofs
 from ckan.lib import helpers as h
@@ -33,6 +33,7 @@ class OAIPMHHarvester(HarvesterBase):
     '''
 
     config = None
+    incremental = None
 
     def _set_config(self, config_str):
         '''Set the configuration string.
@@ -68,6 +69,16 @@ class OAIPMHHarvester(HarvesterBase):
         :returns: A list of HarvestObject ids
         '''
         self._set_config(harvest_job.source.config)
+        from_ = None
+        previous_job = Session.query(HarvestJob) \
+                .filter(HarvestJob.source==harvest_job.source) \
+                .filter(HarvestJob.gather_finished!=None) \
+                .filter(HarvestJob.id!=harvest_job.id) \
+                .order_by(HarvestJob.gather_finished.desc()) \
+                .limit(1).first()
+        if previous_job:
+            self.incremental = True
+            from_ = previous_job.gather_started
         sets = []
         harvest_objs = []
         registry = MetadataRegistry()
@@ -102,7 +113,8 @@ class OAIPMHHarvester(HarvesterBase):
                                              {
                                               'set': set_id, \
                                               'set_name': set_name, \
-                                              'domain': domain
+                                              'domain': domain,
+                                              'incremental': from_.strftime('%Y-%m-%dT%H:%M:%S') if from_ else None,
                                               }
                                              )
             harvest_obj.save()
@@ -130,9 +142,12 @@ class OAIPMHHarvester(HarvesterBase):
         client = oaipmh.client.Client(harvest_object.job.source.url, registry)
         records = []
         recs = []
+        from_ = datetime.datetime.strptime(sets['incremental'], '%Y-%m-%dT%H:%M:%S') if sets['incremental'] else None
         try:
-            recs = client.listRecords(metadataPrefix='oai_dc', set=sets['set'])
-        except:
+            recs = client.listRecords(metadataPrefix='oai_dc', set=sets['set'],
+                                      from_=from_)
+        except Exception, e:
+            self._save_object_error('%r' % e, harvest_object)
             pass
         for rec in recs:
             header, metadata, _ = rec
@@ -214,6 +229,7 @@ class OAIPMHHarvester(HarvesterBase):
                     pkg.author = creator
                     pkg.title = title
                     pkg.notes = description
+                    extras['lastmod'] = extras['date']
                     pkg.extras = extras
                     pkg.url = \
                     "%s?verb=GetRecord&identifier=%s&metadataPrefix=oai_dc"\

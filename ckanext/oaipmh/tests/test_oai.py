@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 
 import testdata
 
-from ckan.model import Session, Package, User
+from ckan.model import Session, Package, User, Group
 import ckan.model as model
 from ckan.tests import CreateTestData
 from ckan.lib.helpers import url_for
@@ -371,7 +371,7 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         errs = Session.query(HarvestGatherError).all()
         self.assert_(len(errs) == 2)
         errs = Session.query(HarvestObjectError).all()
-        self.assert_(len(errs) == 2)
+        self.assert_(len(errs) == 3)
 
     def test_rdf_reader_writer(self):
         client = CKANServer()
@@ -406,3 +406,35 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         self.assert_(harv.info()['name'] == 'OAI-PMH')
         real_content = json.loads(harvest_object.content)
         self.assert_(real_content)
+
+    def test_zaincremental_harvester(self):
+
+        client = CKANServer()
+        metadata_registry = metadata.MetadataRegistry()
+        metadata_registry.registerReader('oai_dc', oai_dc_reader)
+        metadata_registry.registerWriter('oai_dc', oai_dc_writer)
+        serv = BatchingServer(client, metadata_registry=metadata_registry)
+        oaipmh.client.Client = mock.Mock(return_value=ServerClient(serv, metadata_registry))
+        harv = OAIPMHHarvester()
+        harvest_job = HarvestJob()
+        harvest_job.source = HarvestSource()
+        harvest_job.source.title = "Test"
+        harvest_job.source.url = "http://helda.helsinki.fi/oai/request"
+        harvest_job.gather_started = ((datetime.now() + timedelta(days=1)))
+        harvest_job.source.config = '{"incremental":"True"}'
+        harvest_job.source.type = "OAI-PMH"
+        Session.add(harvest_job)
+        rev = model.repo.new_revision()
+        rev.timestamp = ((datetime.now() + timedelta(days=2)))
+        pkg = Package(name='footest', revision=rev)
+        Session.add(pkg)
+        pkg.save()
+        roger = Group.get('roger')
+        roger.add_package_by_name('footest')
+        Session.add(roger)
+        roger.save()
+        gathered = harv.gather_stage(harvest_job)
+        harvest_object = HarvestObject.get(gathered[0])
+        harv.fetch_stage(harvest_object)
+        harvobj = json.loads(harvest_object.content)
+        self.assert_(harvobj['records'])
