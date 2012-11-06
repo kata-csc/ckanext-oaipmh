@@ -208,6 +208,7 @@ class OAIPMHHarvester(HarvesterBase):
                     if not pkg:
                         pkg = Package(name=name, title=title)
                     extras = {}
+                    lastidx = 0
                     for met in metadata.items():
                         key, value = met
                         if len(value) > 0:
@@ -224,9 +225,13 @@ class OAIPMHHarvester(HarvesterBase):
                                                                   package=pkg)
                                             Session.add(tag_obj)
                                             Session.add(pkgtag)
+                            elif key == 'creator' or key == 'contributor':
+                                for auth in value:
+                                    extras['organization_%d' % lastidx] = ""
+                                    extras['author_%d' % lastidx] = auth
+                                    lastidx += 1
                             elif key != 'title':
                                 extras[key] = ' '.join(value)
-                    pkg.author = creator
                     pkg.title = title
                     pkg.notes = description
                     extras['lastmod'] = extras['date']
