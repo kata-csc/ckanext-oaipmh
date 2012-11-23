@@ -215,16 +215,18 @@ class OAIPMHHarvester(HarvesterBase):
                             if key == 'subject' or key == 'type':
                                 for tag in value:
                                     if tag:
-                                        tag = munge_tag(tag[:100])
-                                        tag_obj = model.Tag.by_name(tag)
-                                        if not tag_obj:
-                                            tag_obj = model.Tag(name=tag)
-                                        if tag_obj:
-                                            pkgtag = model.PackageTag(
-                                                                  tag=tag_obj,
-                                                                  package=pkg)
-                                            Session.add(tag_obj)
-                                            Session.add(pkgtag)
+                                        for tagi in tag.split(','):
+                                            tagi = tagi.strip()
+                                            tagi = munge_tag(tagi[:100])
+                                            tag_obj = model.Tag.by_name(tagi)
+                                            if not tag_obj:
+                                                tag_obj = model.Tag(name=tagi)
+                                            if tag_obj:
+                                                pkgtag = model.PackageTag(
+                                                                      tag=tag_obj,
+                                                                      package=pkg)
+                                                Session.add(tag_obj)
+                                                Session.add(pkgtag)
                             elif key == 'creator' or key == 'contributor':
                                 for auth in value:
                                     extras['organization_%d' % lastidx] = ""
