@@ -7,6 +7,7 @@ import json
 import unicodedata
 import string
 import urllib2
+import urllib
 import datetime
 
 from ckan.model import Session, Package, Group
@@ -191,22 +192,24 @@ class OAIPMHHarvester(HarvesterBase):
             for rec in records:
                 identifier, metadata, _ = rec
                 if metadata:
-                    name = metadata['title'][0] if len(metadata['title'])\
-                                                else identifier
-                    title = name
-                    norm_title = unicodedata.normalize('NFKD', name)\
-                                 .encode('ASCII', 'ignore')\
-                                 .lower().replace(' ', '_')[:35]
-                    slug = ''.join(e for e in norm_title
-                                    if e in string.ascii_letters + '_')
-                    name = slug
-                    creator = metadata['creator'][0]\
-                                if len(metadata['creator']) else ''
+                    title = metadata['title'][0] if len(metadata['title']) else identifier
                     description = metadata['description'][0]\
                                 if len(metadata['description']) else ''
-                    pkg = Package.by_name(name)
+                    name = None
+                    for ident in metadata['identifier']:
+                        if ident.startswith('http://'):
+                            continue
+                        elif ident.startswith('URN'):
+                            name = ident
+                            break
+                        if not name:
+                            name = ident
+                            break
+                    if not name:
+                        name = urllib.quote_plus(identifier)
+                    pkg = Package.get(name)
                     if not pkg:
-                        pkg = Package(name=name, title=title)
+                        pkg = Package(name=name, title=title, id=identifier)
                     extras = {}
                     lastidx = 0
                     for met in metadata.items():
@@ -255,14 +258,14 @@ class OAIPMHHarvester(HarvesterBase):
                     harvest_object.package_id = pkg.id
                     Session.add(harvest_object)
                     setup_default_user_roles(pkg)
-                    url = ''
-                    for ids in metadata['identifier']:
-                        if ids.startswith('http://'):
-                            url = ids
                     title = metadata['title'][0] if len(metadata['title'])\
                                                     else ''
                     description = metadata['description'][0]\
                                     if len(metadata['description']) else ''
+                    url = ''
+                    for ids in metadata['identifier']:
+                        if ids.startswith('http://'):
+                            url = ids
                     if url != '':
                         pkg.add_resource(url,
                                          description=description,
