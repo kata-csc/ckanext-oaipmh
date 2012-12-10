@@ -108,7 +108,7 @@ class CKANServer(ResumptionOAIPMH):
         else:
             group = Group.get(set)
             if group:
-                packages = group.active_packages()
+                packages = group.packages(return_query=True)
                 if from_ and not until:
                     packages = packages.\
                         filter(PackageRevision.revision_timestamp > from_)
@@ -162,7 +162,7 @@ class CKANServer(ResumptionOAIPMH):
         else:
             group = Group.get(set)
             if group:
-                packages = group.active_packages()
+                packages = group.packages(return_query=True)
                 if from_ and not until:
                     packages = packages.\
                         filter(PackageRevision.revision_timestamp > from_).\

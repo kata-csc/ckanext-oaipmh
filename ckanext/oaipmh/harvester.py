@@ -256,6 +256,7 @@ class OAIPMHHarvester(HarvesterBase):
                     pkg.add_resource(url=fileurl, description="Original metadata record",
                              format="xml", size=len(f.read()))
                     harvest_object.package_id = pkg.id
+                    harvest_object.current = True
                     harvest_object.save()
                     Session.add(harvest_object)
                     setup_default_user_roles(pkg)
