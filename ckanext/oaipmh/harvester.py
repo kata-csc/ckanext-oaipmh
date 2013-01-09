@@ -250,11 +250,15 @@ class OAIPMHHarvester(HarvesterBase):
                     label = "%s/%s.xml" % (\
                         nowstr,
                         identifier)
-                    f = urllib2.urlopen(pkg.url)
-                    ofs.put_stream(BUCKET, label, f, {})
-                    fileurl = config.get('ckan.site_url') + h.url_for('storage_file', label=label)
-                    pkg.add_resource(url=fileurl, description="Original metadata record",
-                             format="xml", size=len(f.read()))
+                    try:
+                        f = urllib2.urlopen(pkg.url)
+                        ofs.put_stream(BUCKET, label, f, {})
+                        fileurl = config.get('ckan.site_url') + h.url_for('storage_file', label=label)
+                        pkg.add_resource(url=fileurl, description="Original metadata record",
+                                 format="xml", size=len(f.read()))
+                    except urllib2.HTTPError:
+                        self._save_object_error('Could not get original metadata record!',
+                                                harvest_object, stage='Import')
                     harvest_object.package_id = pkg.id
                     harvest_object.current = True
                     harvest_object.save()
