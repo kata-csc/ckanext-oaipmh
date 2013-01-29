@@ -206,7 +206,7 @@ class OAIPMHHarvester(HarvesterBase):
                             name = ident
                             break
                     if not name:
-                        name = urllib.quote_plus(identifier)
+                        name = identifier
                     pkg = Package.get(name)
                     if not pkg:
                         pkg = Package(name=name, title=title, id=identifier)
