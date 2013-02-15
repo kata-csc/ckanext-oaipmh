@@ -27,6 +27,9 @@ from oaipmh.error import NoSetHierarchyError
 
 log = logging.getLogger(__name__)
 
+import socket
+socket.setdefaulttimeout(5)
+
 
 class OAIPMHHarvester(HarvesterBase):
     '''
