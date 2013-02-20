@@ -198,18 +198,7 @@ class OAIPMHHarvester(HarvesterBase):
                     title = metadata['title'][0] if len(metadata['title']) else identifier
                     description = metadata['description'][0]\
                                 if len(metadata['description']) else ''
-                    name = None
-                    for ident in metadata['identifier']:
-                        if ident.startswith('http://'):
-                            continue
-                        elif ident.startswith('URN'):
-                            name = ident
-                            break
-                        if not name:
-                            name = ident
-                            break
-                    if not name:
-                        name = urllib.quote_plus(urllib.quote_plus(identifier))
+                    name = urllib.quote_plus(urllib.quote_plus(identifier))
                     pkg = Package.get(name)
                     if not pkg:
                         pkg = Package(name=name, title=title, id=identifier)
