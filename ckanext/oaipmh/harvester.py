@@ -9,6 +9,7 @@ import string
 import urllib2
 import urllib
 import datetime
+import sys
 
 from ckan.model import Session, Package, Group
 from ckan import model
@@ -153,10 +154,14 @@ class OAIPMHHarvester(HarvesterBase):
         except Exception, e:
             self._save_object_error('%r' % e, harvest_object)
             pass
-        for rec in recs:
-            header, metadata, _ = rec
-            if metadata:
-                records.append((header.identifier(), metadata.getMap(), None))
+        try:
+            for rec in recs:
+                header, metadata, _ = rec
+                if metadata:
+                    records.append((header.identifier(), metadata.getMap(), None))
+        except socket.error:
+            errno, errstr = sys.exc_info()[:2]
+            self._save_object_error('Socket error OAI-PMH %s, details:\n%s' % (errno, errstr))
         if len(records):
             sets['records'] = records
             harvest_object.content = json.dumps(sets)
@@ -250,6 +255,10 @@ class OAIPMHHarvester(HarvesterBase):
                                  format="xml", size=len(f.read()))
                     except urllib2.HTTPError:
                         self._save_object_error('Could not get original metadata record!',
+                                                harvest_object, stage='Import')
+                    except socket.error:
+                        errno, errstr = sys.exc_info()[:2]
+                        self._save_object_error('Socket error original metadata record %s, details:\n%s' % (errno, errstr),
                                                 harvest_object, stage='Import')
                     harvest_object.package_id = pkg.id
                     harvest_object.current = True
