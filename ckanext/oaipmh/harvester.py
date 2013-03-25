@@ -31,6 +31,7 @@ log = logging.getLogger(__name__)
 import socket
 socket.setdefaulttimeout(30)
 
+import traceback
 
 class OAIPMHHarvester(HarvesterBase):
     '''
@@ -100,19 +101,22 @@ class OAIPMHHarvester(HarvesterBase):
         query = self.config['query'] if 'query' in self.config else ''
         harvest_objs = []
         try:
-            for ident in client.listIdentifiers():
+            for ident in client.listIdentifiers(metadataPrefix="oai_dc"):
                 harvest_obj = HarvestObject(job=harvest_job)
                 harvest_obj.content = json.dumps({
-                    "identifier":ident.identifier(),
+                    "record":ident.identifier(),
                     "metadataPrefix":"oai_dc"})
                 harvest_obj.save()
                 harvest_objs.append(harvest_obj.id)
             model.repo.commit()
-            return harvest_objs
-        except Exception e:
+        except Exception as e:
             # Todo: handle exceptions better.
-            self._save_gather_error(
-                "Could not fetch identifier list.", harvest_job)
+            self._save_gather_error(traceback.format_exc(e), harvest_job)
+            #self._save_gather_error(
+            #    "Could not fetch identifier list.", harvest_job)
+            raise
+        log.info("Gathered %i records." % len(harvest_objs))
+        return harvest_objs
 
     def fetch_stage(self, harvest_object):
         '''
@@ -130,19 +134,18 @@ class OAIPMHHarvester(HarvesterBase):
         '''
         ident = json.loads(harvest_object.content)
         registry = MetadataRegistry()
-        registry.registerReader('oai_dc', oai_dc_reader)
+        registry.registerReader(ident["metadataPrefix"], oai_dc_reader)
         client = oaipmh.client.Client(harvest_object.job.source.url, registry)
-        records = []
-        recs = []
         try:
             header, metadata, _ = client.getRecord(
-                metadataPrefix="oai_dc", identifier=ident["identifier"])
+                metadataPrefix=ident["metadataPrefix"],
+                identifier=ident["record"])
         except socket.error:
             errno, errstr = sys.exc_info()[:2]
             self._save_object_error('Socket error OAI-PMH %s, details:\n%s' % (errno, errstr))
             return False
         if metadata:
-            ident["record"] = (header.identifier(), metadata.getMap(), None,)
+            ident["record"] = (header.identifier(), metadata.getMap(),)
             harvest_object.contents = json.dumps(ident)
             return True
         return False
@@ -164,99 +167,101 @@ class OAIPMHHarvester(HarvesterBase):
         :param harvest_object: HarvestObject object
         :returns: True if everything went right, False if errors were found
         '''
-        model.repo.new_revision()
-        master_data = json.loads(harvest_object.content)
-        domain = master_data['domain']
-        group = Group.get(domain)
-        if not group:
-            group = Group(name=domain, description=domain)
-        if 'record' not in master_data:
-            self._save_object_error('Could not receive any objects from fetch!'
-                                    , harvest_object, stage='Import')
-            return False
-        identifier, metadata, _ = master_data['record']
-        title = metadata['title'][0] if len(metadata['title']) else identifier
-        description = metadata['description'][0] if len(metadata['description']) else ''
-        name = urllib.quote_plus(urllib.quote_plus(identifier))
-        pkg = Package.get(name)
-        if not pkg:
-            pkg = Package(name=name, title=title, id=identifier)
-        extras = {}
-        lastidx = 0
-        for met in metadata.items():
-            key, value = met
-            if len(value) == 0:
-                continue
-            if key == 'subject' or key == 'type':
-                for tag in value:
-                    if not tag:
-                        continue
-                    for tagi in tag.split(','):
-                        tagi = tagi.strip()
-                        tagi = munge_tag(tagi[:100])
-                        tag_obj = model.Tag.by_name(tagi)
-                        if not tag_obj:
-                            tag_obj = model.Tag(name=tagi)
-                        else:
-                            pkgtag = model.PackageTag(tag=tag_obj, package=pkg)
-                            Session.add(tag_obj)
-                            Session.add(pkgtag)
-            elif key == 'creator' or key == 'contributor':
-                for auth in value:
-                    extras['organization_%d' % lastidx] = ""
-                    extras['author_%d' % lastidx] = auth
-                    lastidx += 1
-            elif key != 'title':
-                extras[key] = ' '.join(value)
-        pkg.title = title
-        pkg.notes = description
-        extras['lastmod'] = extras['date']
-        pkg.extras = extras
-        pkg.url = "%s?verb=GetRecord&identifier=%s&metadataPrefix=oai_dc"\
-                    % (harvest_object.job.source.url, identifier)
-        pkg.save()
-        ofs = get_ofs()
-        nowstr = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')
-        label = "%s/%s.xml" % (nowstr, identifier)
         try:
-            f = urllib2.urlopen(pkg.url)
-            ofs.put_stream(BUCKET, label, f, {})
-            fileurl = config.get('ckan.site_url') + h.url_for('storage_file', label=label)
-            pkg.add_resource(url=fileurl,
-                description="Original metadata record",
-                format="xml", size=len(f.read()))
-        except urllib2.HTTPError:
-            self._save_object_error('Could not get original metadata record!',
-                                    harvest_object, stage='Import')
-        except socket.error:
-            errno, errstr = sys.exc_info()[:2]
-            self._save_object_error(
-                'Socket error original metadata record %s, details:\n%s' % (errno, errstr),
-                harvest_object, stage='Import')
-        harvest_object.package_id = pkg.id
-        harvest_object.current = True
-        harvest_object.save()
-        Session.add(harvest_object)
-        setup_default_user_roles(pkg)
-        title = metadata['title'][0] if len(metadata['title']) else ''
-        description = metadata['description'][0]\
-                        if len(metadata['description']) else ''
-        url = ''
-        for ids in metadata['identifier']:
-            if ids.startswith('http://'):
-                url = ids
-        if url != '':
-            pkg.add_resource(url, description=description, name=title,
-                             format='html' if url.startswith('http://') else '')
-        group.add_package_by_name(pkg.name)
-        subg_name = "%s - %s" % (domain, set_name)
-        subgroup = Group.by_name(subg_name)
-        if not subgroup:
-            subgroup = Group(name=subg_name, description=subg_name)
-        subgroup.add_package_by_name(pkg.name)
-        Session.add(group)
-        Session.add(subgroup)
-        setup_default_user_roles(group)
-        setup_default_user_roles(subgroup)
-        model.repo.commit()
+            model.repo.new_revision()
+            master_data = json.loads(harvest_object.content)
+            self._save_object_error(str(master_data), harvest_object)
+            if 'record' not in master_data:
+                self._save_object_error('Could not receive any objects from fetch!'
+                                        , harvest_object, stage='Import')
+                return False
+            identifier, metadata = master_data['record']
+            title = metadata['title'][0] if len(metadata['title']) else identifier
+            description = metadata['description'][0] if len(metadata['description']) else ''
+            name = urllib.quote_plus(urllib.quote_plus(identifier))
+            pkg = Package.get(name)
+            if not pkg:
+                pkg = Package(name=name, title=title, id=identifier)
+            extras = {}
+            lastidx = 0
+            for met in metadata.items():
+                key, value = met
+                if len(value) == 0:
+                    continue
+                if key == 'subject' or key == 'type':
+                    for tag in value:
+                        if not tag:
+                            continue
+                        for tagi in tag.split(','):
+                            tagi = tagi.strip()
+                            tagi = munge_tag(tagi[:100])
+                            tag_obj = model.Tag.by_name(tagi)
+                            if not tag_obj:
+                                tag_obj = model.Tag(name=tagi)
+                            else:
+                                pkgtag = model.PackageTag(tag=tag_obj, package=pkg)
+                                Session.add(tag_obj)
+                                Session.add(pkgtag)
+                elif key == 'creator' or key == 'contributor':
+                    for auth in value:
+                        extras['organization_%d' % lastidx] = ""
+                        extras['author_%d' % lastidx] = auth
+                        lastidx += 1
+                elif key != 'title':
+                    extras[key] = ' '.join(value)
+            pkg.title = title
+            pkg.notes = description
+            extras['lastmod'] = extras['date']
+            pkg.extras = extras
+            pkg.url = "%s?verb=GetRecord&identifier=%s&metadataPrefix=oai_dc"\
+                        % (harvest_object.job.source.url, identifier)
+            pkg.save()
+            ofs = get_ofs()
+            nowstr = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')
+            label = "%s/%s.xml" % (nowstr, identifier)
+            try:
+                f = urllib2.urlopen(pkg.url)
+                ofs.put_stream(BUCKET, label, f, {})
+                fileurl = config.get('ckan.site_url') + h.url_for('storage_file', label=label)
+                pkg.add_resource(url=fileurl,
+                    description="Original metadata record",
+                    format="xml", size=len(f.read()))
+            except urllib2.HTTPError:
+                self._save_object_error('Could not get original metadata record!',
+                                        harvest_object, stage='Import')
+            except socket.error:
+                errno, errstr = sys.exc_info()[:2]
+                self._save_object_error(
+                    'Socket error original metadata record %s, details:\n%s' % (errno, errstr),
+                    harvest_object, stage='Import')
+            harvest_object.package_id = pkg.id
+            harvest_object.current = True
+            harvest_object.save()
+            Session.add(harvest_object)
+            setup_default_user_roles(pkg)
+            title = metadata['title'][0] if len(metadata['title']) else ''
+            description = metadata['description'][0]\
+                            if len(metadata['description']) else ''
+            url = ''
+            for ids in metadata['identifier']:
+                if ids.startswith('http://'):
+                    url = ids
+            if url != '':
+                pkg.add_resource(url, description=description, name=title,
+                                 format='html' if url.startswith('http://') else '')
+            # Someone explain what the group/subgroup is.
+            #group.add_package_by_name(pkg.name)
+            #subg_name = "%s - %s" % (domain, set_name)
+            #subgroup = Group.by_name(subg_name)
+            #if not subgroup:
+            #    subgroup = Group(name=subg_name, description=subg_name)
+            #subgroup.add_package_by_name(pkg.name)
+            #Session.add(group)
+            #Session.add(subgroup)
+            #setup_default_user_roles(group)
+            #setup_default_user_roles(subgroup)
+            model.repo.commit()
+        except Exception as e:
+            self._save_gather_error(traceback.format_exc(e), harvest_object)
+            raise
         return True
