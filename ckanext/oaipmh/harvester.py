@@ -75,13 +75,19 @@ class OAIPMHHarvester(HarvesterBase):
         :returns: A list of HarvestObject ids
         '''
         self._set_config(harvest_job.source.config)
-        from_ = None
-        previous_job = Session.query(HarvestJob) \
-                .filter(HarvestJob.source==harvest_job.source) \
-                .filter(HarvestJob.gather_finished!=None) \
-                .filter(HarvestJob.id!=harvest_job.id) \
-                .order_by(HarvestJob.gather_finished.desc()) \
-                .limit(1).first()
+        from_ = config.get("ckan.test.harvest.from", None)
+        until = config.get("ckan.test.harvest.until", None)
+        previous_jobs = Session.query(HarvestJob) \
+            .filter(HarvestJob.source==harvest_job.source) \
+            .filter(HarvestJob.gather_finished!=None) \
+            .filter(HarvestJob.id!=harvest_job.id) \
+            .order_by(HarvestJob.gather_finished.desc()).all()
+        # Error object with foreign key to this should also be deleted.
+        # Do deletion here or just elsewhere?
+        #if len(previous_jobs) > 1:
+        #    for job in previous_jobs[1:]:
+        #        job.delete()
+        previous_job = previous_jobs[0] if len(previous_jobs) > 0 else None
         if previous_job:
             self.incremental = True
             from_ = previous_job.gather_started
@@ -94,26 +100,33 @@ class OAIPMHHarvester(HarvesterBase):
             self._save_gather_error('Could not gather anything from %s!' %
                                     harvest_job.source.url, harvest_job)
             return None
-        domain = identifier.repositoryName()
-        group = Group.by_name(domain)
-        if not group:
-            group = Group(name=domain, description=domain)
+        #domain = identifier.repositoryName()
+        #group = Group.by_name(domain)
+        #if not group:
+        #    group = Group(name=domain, description=domain)
         query = self.config['query'] if 'query' in self.config else ''
         harvest_objs = []
         try:
-            for ident in client.listIdentifiers(metadataPrefix="oai_dc"):
+            args = { "metadataPrefix":"oai_dc" }
+            if from_:
+                args["from"] = from_
+            if until:
+                args["until"] = until
+            for ident in client.listIdentifiers(**args):
                 harvest_obj = HarvestObject(job=harvest_job)
                 harvest_obj.content = json.dumps({
                     "record":ident.identifier(),
                     "metadataPrefix":"oai_dc"})
                 harvest_obj.save()
                 harvest_objs.append(harvest_obj.id)
+                if len(harvest_objs) > 1000:
+                    break
             model.repo.commit()
         except Exception as e:
             # Todo: handle exceptions better.
-            self._save_gather_error(traceback.format_exc(e), harvest_job)
-            #self._save_gather_error(
-            #    "Could not fetch identifier list.", harvest_job)
+            log.debug(traceback.format_exc(e))
+            self._save_gather_error(
+                "Could not fetch identifier list.", harvest_job)
             raise
         log.info("Gathered %i records." % len(harvest_objs))
         return harvest_objs
@@ -132,6 +145,7 @@ class OAIPMHHarvester(HarvesterBase):
         :param harvest_object: HarvestObject object
         :returns: True if everything went right, False if errors were found
         '''
+        log.debug("Enter fetch_stage %s" % harvest_object.id);
         ident = json.loads(harvest_object.content)
         registry = MetadataRegistry()
         registry.registerReader(ident["metadataPrefix"], oai_dc_reader)
@@ -144,9 +158,12 @@ class OAIPMHHarvester(HarvesterBase):
             errno, errstr = sys.exc_info()[:2]
             self._save_object_error('Socket error OAI-PMH %s, details:\n%s' % (errno, errstr))
             return False
+        except Exception as e:
+            self._save_gather_error(traceback.format_exc(e), harvest_obj)
+            raise
         if metadata:
-            ident["record"] = (header.identifier(), metadata.getMap(),)
-            harvest_object.contents = json.dumps(ident)
+            ident["record"] = [ header.identifier(), metadata.getMap() ]
+            harvest_object.content = json.dumps(ident)
             return True
         return False
 
@@ -168,14 +185,16 @@ class OAIPMHHarvester(HarvesterBase):
         :returns: True if everything went right, False if errors were found
         '''
         try:
+            log.debug("Enter import_stage %s" % harvest_object.id);
             model.repo.new_revision()
             master_data = json.loads(harvest_object.content)
-            self._save_object_error(str(master_data), harvest_object)
             if 'record' not in master_data:
                 self._save_object_error('Could not receive any objects from fetch!'
                                         , harvest_object, stage='Import')
                 return False
-            identifier, metadata = master_data['record']
+            log.debug(str(master_data))
+            identifier = master_data['record'][0]
+            metadata = master_data['record'][1]
             title = metadata['title'][0] if len(metadata['title']) else identifier
             description = metadata['description'][0] if len(metadata['description']) else ''
             name = urllib.quote_plus(urllib.quote_plus(identifier))
@@ -184,6 +203,7 @@ class OAIPMHHarvester(HarvesterBase):
                 pkg = Package(name=name, title=title, id=identifier)
             extras = {}
             lastidx = 0
+            log.debug("  Loop over metadata")
             for met in metadata.items():
                 key, value = met
                 if len(value) == 0:
@@ -209,6 +229,7 @@ class OAIPMHHarvester(HarvesterBase):
                         lastidx += 1
                 elif key != 'title':
                     extras[key] = ' '.join(value)
+            log.debug("  Looped over metadata")
             pkg.title = title
             pkg.notes = description
             extras['lastmod'] = extras['date']
@@ -219,6 +240,7 @@ class OAIPMHHarvester(HarvesterBase):
             ofs = get_ofs()
             nowstr = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')
             label = "%s/%s.xml" % (nowstr, identifier)
+            log.debug("  Get original metadata record")
             try:
                 f = urllib2.urlopen(pkg.url)
                 ofs.put_stream(BUCKET, label, f, {})
@@ -234,6 +256,7 @@ class OAIPMHHarvester(HarvesterBase):
                 self._save_object_error(
                     'Socket error original metadata record %s, details:\n%s' % (errno, errstr),
                     harvest_object, stage='Import')
+            log.debug("  Got original metadata record")
             harvest_object.package_id = pkg.id
             harvest_object.current = True
             harvest_object.save()
@@ -243,6 +266,7 @@ class OAIPMHHarvester(HarvesterBase):
             description = metadata['description'][0]\
                             if len(metadata['description']) else ''
             url = ''
+            log.debug("  Find url")
             for ids in metadata['identifier']:
                 if ids.startswith('http://'):
                     url = ids
@@ -260,8 +284,9 @@ class OAIPMHHarvester(HarvesterBase):
             #Session.add(subgroup)
             #setup_default_user_roles(group)
             #setup_default_user_roles(subgroup)
+            log.debug("  Commit")
             model.repo.commit()
         except Exception as e:
-            self._save_gather_error(traceback.format_exc(e), harvest_object)
+            log.debug(traceback.format_exc(e))
             raise
         return True
