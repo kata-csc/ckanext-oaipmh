@@ -97,6 +97,7 @@ class OAIPMHHarvester(HarvesterBase):
         # and also flag old failed harvest_objects so that they will be ignored.
         # Or perhaps delete them? No point in keeping them around since they
         # do not link to actual objects, I presume.
+        model.repo.new_revision()
         self._set_config(harvest_job.source.config)
         def date_from_config(key):
             return self._datetime_from_str(config.get(key, None))
@@ -120,6 +121,10 @@ class OAIPMHHarvester(HarvesterBase):
             self._save_gather_error('Could not gather anything from %s!' %
                                     harvest_job.source.url, harvest_job)
             return None
+        except socket.error:
+            errno, errstr = sys.exc_info()[:2]
+            self._save_object_error('Socket error OAI-PMH %s, details:\n%s' % (errno, errstr))
+            return None
         #query = self.config['query'] if 'query' in self.config else ''
         domain = identifier.repositoryName()
         harvest_objs = []
@@ -138,7 +143,7 @@ class OAIPMHHarvester(HarvesterBase):
                     "domain":domain})
                 harvest_obj.save()
                 harvest_objs.append(harvest_obj.id)
-            model.repo.commit()
+            #model.repo.commit()
         except NoRecordsMatchError:
             pass # Ok. Just nothing to get.
         except Exception as e:
@@ -147,6 +152,8 @@ class OAIPMHHarvester(HarvesterBase):
             self._save_gather_error(
                 "Could not fetch identifier list.", harvest_job)
             return None
+        log.info(
+            "Gathered %i records from %s." % (len(harvest_objs), domain,))
         # Gathering the set list here. Member identifiers in fetch.
         group = Group.by_name(domain)
         if not group:
@@ -165,7 +172,7 @@ class OAIPMHHarvester(HarvesterBase):
         for set_id, set_name in sets:
             harvest_obj = HarvestObject(job=harvest_job)
             info = { "fetch_type":"set", "set": set_id, "set_name": set_name,
-                "domain": domain,}
+                "metadataPrefix":"oai_dc", "domain": domain, }
             if from_:
                 info["from_"] = from_.strftime('%Y-%m-%dT%H:%M:%S')
             if until:
@@ -207,7 +214,8 @@ class OAIPMHHarvester(HarvesterBase):
             log.debug("Unknown fetch type: %s" % ident["fetch_type"])
         except Exception as e:
             # Guard against miscellaneous stuff. Probably plain bugs.
-            self._save_gather_error(traceback.format_exc(e), harvest_obj)
+            #self._save_gather_error(traceback.format_exc(e), harvest_obj)
+            log.debug(traceback.format_exc(e))
         return False
 
     def _fetch_record(self, harvest_object, ident, client):
@@ -218,9 +226,6 @@ class OAIPMHHarvester(HarvesterBase):
         except socket.error:
             errno, errstr = sys.exc_info()[:2]
             self._save_object_error('Socket error OAI-PMH %s, details:\n%s' % (errno, errstr))
-            return False
-        except Exception as e:
-            self._save_gather_error(traceback.format_exc(e), harvest_obj)
             return False
         if not metadata:
             return False
@@ -238,13 +243,12 @@ class OAIPMHHarvester(HarvesterBase):
         try:
             for identity in client.listIdentifiers(**args):
                 ids.append(identity.identifier())
+        except NoRecordsMatchError:
+            return False # Ok, empty set. Nothing to do.
         except socket.error:
             errno, errstr = sys.exc_info()[:2]
             self._save_object_error('Socket error OAI-PMH %s, details:\n%s' %
                 (errno, errstr,))
-        if len(ids) == 0:
-            # Is this error or just how things are? Keep quiet?
-            log.info("Empty set: %s" % ident["set"])
         ident["record_ids"] = ids
         harvest_object.content = json.dumps(ident)
         return True
@@ -276,20 +280,14 @@ class OAIPMHHarvester(HarvesterBase):
             if data["fetch_type"] == "set":
                 return self._import_set(harvest_object, data, group)
             log.debug("Unknown fetch_type in import: %s" % data["fetch_type"])
-            return False
         except Exception as e:
             log.debug(traceback.format_exc(e))
-            return False
-        return True
+        return False
 
     def _package_name_from_identifier(self, identifier):
         return urllib.quote_plus(urllib.quote_plus(identifier))
 
     def _import_record(self, harvest_object, master_data, group):
-        if 'record' not in master_data:
-            self._save_object_error('Did not receive record from fetch!',
-                harvest_object, stage='Import')
-            return False
         identifier = master_data['record'][0]
         metadata = master_data['record'][1]
         title = metadata['title'][0] if len(metadata['title']) else identifier
@@ -380,6 +378,9 @@ class OAIPMHHarvester(HarvesterBase):
         Session.add(subgroup)
         for ident in master_data["record_ids"]:
             pkg_name = self._package_name_from_identifier(ident)
-            subgroup.add_package_by_name(pkg_name)
+            # Package may have been omitted due to missing metadata.
+            pkg = Package.get(pkg_name)
+            if pkg:
+                subgroup.add_package_by_name(pkg_name)
         return True
 
