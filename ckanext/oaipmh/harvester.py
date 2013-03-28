@@ -228,6 +228,7 @@ class OAIPMHHarvester(HarvesterBase):
             self._save_object_error('Socket error OAI-PMH %s, details:\n%s' % (errno, errstr))
             return False
         if not metadata:
+            # Assume that there is no metadata and not an error.
             return False
         ident["record"] = ( header.identifier(), metadata.getMap(), )
         harvest_object.content = json.dumps(ident)
@@ -271,7 +272,6 @@ class OAIPMHHarvester(HarvesterBase):
         :returns: True if everything went right, False if errors were found
         '''
         try:
-            model.repo.new_revision()
             data = json.loads(harvest_object.content)
             domain = data["domain"]
             group = Group.get(domain) # Checked in gather_stage so exists.
