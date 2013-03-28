@@ -75,6 +75,26 @@ class OAIPMHHarvester(HarvesterBase):
             log.debug("Bad date for %s: %s" % (key, s,))
         return None
 
+    def _add_error(self, harvest_object):
+        pass
+        # Create harvest_object_err and save it with error message set to
+        # "retry".
+
+    def _scan_retries(self, harvest_job):
+        pass
+        # When error objects are searched, set retry count on the harvest_object
+        # to 1 and erase the message.
+        # THat way the retry will not be tried again (there will be another
+        # object if retry fails). So any harvest_object with retry count as 1
+        # and matching error object will not be retried.
+        # Would the error objects be erased after we retry? Use the object only
+        # as a remiander and no-one needs to know about it. There are no errors
+        # stored now and no-one seems to miss them.
+        # If the error is deleted, then retry count could be left as is.
+        # Probably best to erase the errors so that queries will be faster.
+        # Perhaps use stage-field for retry and message as the source so it
+        # will be easier to query.
+
     def gather_stage(self, harvest_job):
         '''
         The gather stage will recieve a HarvestJob object and will be
