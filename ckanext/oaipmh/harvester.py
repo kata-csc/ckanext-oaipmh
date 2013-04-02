@@ -27,6 +27,8 @@ from oaipmh.metadata import MetadataRegistry, oai_dc_reader
 from oaipmh.error import NoSetHierarchyError
 from oaipmh.error import NoRecordsMatchError
 
+from ckanext.harvest.harvesters.retry import HarvesterRetry
+
 log = logging.getLogger(__name__)
 
 import socket
@@ -72,28 +74,29 @@ class OAIPMHHarvester(HarvesterBase):
             t = datetime.datetime.strptime(s, '%Y-%m-%d')
             return t
         except ValueError:
-            log.debug("Bad date for %s: %s" % (key, s,))
+            log.debug('Bad date for %s: %s' % (key, s,))
         return None
 
-    def _add_error(self, harvest_object):
-        pass
-        # Create harvest_object_err and save it with error message set to
-        # "retry".
+    def _add_retry(self, harvest_object):
+        HarvesterRetry.mark_for_retry(harvest_object)
 
     def _scan_retries(self, harvest_job):
-        pass
-        # When error objects are searched, set retry count on the harvest_object
-        # to 1 and erase the message.
-        # THat way the retry will not be tried again (there will be another
-        # object if retry fails). So any harvest_object with retry count as 1
-        # and matching error object will not be retried.
-        # Would the error objects be erased after we retry? Use the object only
-        # as a remiander and no-one needs to know about it. There are no errors
-        # stored now and no-one seems to miss them.
-        # If the error is deleted, then retry count could be left as is.
-        # Probably best to erase the errors so that queries will be faster.
-        # Perhaps use stage-field for retry and message as the source so it
-        # will be easier to query.
+        self._retry = HarvesterRetry()
+        ident2obj = {}
+        ident2set = {}
+        for harvest_object in self._retry.find_all_retries(harvest_job):
+            data = json.loads(harvest_object.content)
+            if data['fetch_type'] == 'record':
+                ident2obj[data['ident']] = None # Not needed now.
+            elif data['fetch_type'] == 'set':
+                ident2set[data['set_name']] = harvest_object
+            else:
+                # This should not happen...
+                log.debug('Unknown retry fetch type: %s' % data['fetch_type'])
+        return (ident2obj, ident2set,)
+
+    def _clear_retries(self):
+        self._retry.clear_retry_marks()
 
     def gather_stage(self, harvest_job):
         '''
@@ -110,19 +113,12 @@ class OAIPMHHarvester(HarvesterBase):
         :param harvest_job: HarvestJob object
         :returns: A list of HarvestObject ids
         '''
-        # Get all previous failed tasks for this source and for each failed
-        # record, put it in one list and for each failed set member list,
-        # put that in another list (or map). Then add to those the new tasks
-        # so that old retries are not duplicated and then create harvest_objects
-        # and also flag old failed harvest_objects so that they will be ignored.
-        # Or perhaps delete them? No point in keeping them around since they
-        # do not link to actual objects, I presume.
         model.repo.new_revision()
         self._set_config(harvest_job.source.config)
         def date_from_config(key):
             return self._datetime_from_str(config.get(key, None))
-        from_ = date_from_config("ckan.test.harvest.from")
-        until = date_from_config("ckan.test.harvest.until")
+        from_ = date_from_config('ckan.test.harvest.from')
+        until = date_from_config('ckan.test.harvest.until')
         previous_job = Session.query(HarvestJob) \
             .filter(HarvestJob.source==harvest_job.source) \
             .filter(HarvestJob.gather_finished!=None) \
@@ -148,32 +144,45 @@ class OAIPMHHarvester(HarvesterBase):
         #query = self.config['query'] if 'query' in self.config else ''
         domain = identifier.repositoryName()
         harvest_objs = []
+        args = { 'metadataPrefix':'oai_dc' }
+        # Get things to retry.
+        ident2rec, ident2set = self._scan_retries(harvest_job)
+        # Create a new harvest object that links to this job for every object.
+        for ident in ident2rec.keys():
+            harvest_obj = HarvestObject(job=harvest_job)
+            harvest_obj.content = json.dumps({
+                'fetch_type':'record',
+                'record':ident,
+                'metadataPrefix':args['metadataPrefix'],
+                'domain':domain})
+            harvest_obj.save()
+            harvest_objs.append(harvest_obj.id)
         try:
-            args = { "metadataPrefix":"oai_dc" }
             if from_ != None:
-                args["from_"] = from_
+                args['from_'] = from_
             if until:
-                args["until"] = until
+                args['until'] = until
             for ident in client.listIdentifiers(**args):
+                if ident.identifier() in ident2rec:
+                    continue # On our retry list already, do not fetch twice.
                 harvest_obj = HarvestObject(job=harvest_job)
                 harvest_obj.content = json.dumps({
-                    "fetch_type":"record",
-                    "record":ident.identifier(),
-                    "metadataPrefix":"oai_dc",
-                    "domain":domain})
+                    'fetch_type':'record',
+                    'record':ident.identifier(),
+                    'metadataPrefix':args['metadataPrefix'],
+                    'domain':domain})
                 harvest_obj.save()
                 harvest_objs.append(harvest_obj.id)
-            #model.repo.commit()
         except NoRecordsMatchError:
             pass # Ok. Just nothing to get.
         except Exception as e:
             # Todo: handle exceptions better.
             log.debug(traceback.format_exc(e))
             self._save_gather_error(
-                "Could not fetch identifier list.", harvest_job)
+                'Could not fetch identifier list.', harvest_job)
             return None
         log.info(
-            "Gathered %i records from %s." % (len(harvest_objs), domain,))
+            'Gathered %i records from %s.' % (len(harvest_objs), domain,))
         # Gathering the set list here. Member identifiers in fetch.
         group = Group.by_name(domain)
         if not group:
@@ -181,28 +190,34 @@ class OAIPMHHarvester(HarvesterBase):
             setup_default_user_roles(group)
         Session.add(group)
         sets = []
+        # Add sets to retry first.
+        for name, obj in ident2set.items():
+            data = json.loads(obj.content)
+            sets.append((data['set_id'], name,))
         try:
             for set_ in client.listSets():
                 identifier, name, _ = set_
+                if name in ident2set:
+                    continue # Set is already due for retry.
                 sets.append((identifier, name,))
         except NoSetHierarchyError:
             # Is this an actual error or just a feature?
             self._save_gather_error('No set hierarchy.', harvest_job)
-            #log.info("No set hierarchy: %s" % harvest_job.source.url)
         for set_id, set_name in sets:
             harvest_obj = HarvestObject(job=harvest_job)
-            info = { "fetch_type":"set", "set": set_id, "set_name": set_name,
-                "metadataPrefix":"oai_dc", "domain": domain, }
+            info = { 'fetch_type':'set', 'set': set_id, 'set_name': set_name,
+                'metadataPrefix':'oai_dc', 'domain': domain, }
             if from_:
-                info["from_"] = from_.strftime('%Y-%m-%dT%H:%M:%S')
+                info['from_'] = from_.strftime('%Y-%m-%dT%H:%M:%S')
             if until:
-                info["until"] = until.strftime('%Y-%m-%dT%H:%M:%S')
+                info['until'] = until.strftime('%Y-%m-%dT%H:%M:%S')
             harvest_obj.content = json.dumps(info)
             harvest_obj.save()
             harvest_objs.append(harvest_obj.id)
         model.repo.commit()
+        self._clear_retries()
         log.info(
-            "Gathered %i records/sets from %s." % (len(harvest_objs), domain,))
+            'Gathered %i records/sets from %s.' % (len(harvest_objs), domain,))
         return harvest_objs
 
     def fetch_stage(self, harvest_object):
@@ -223,15 +238,15 @@ class OAIPMHHarvester(HarvesterBase):
         # kind of info the harvest object contains.
         ident = json.loads(harvest_object.content)
         registry = MetadataRegistry()
-        registry.registerReader(ident["metadataPrefix"], oai_dc_reader)
+        registry.registerReader(ident['metadataPrefix'], oai_dc_reader)
         client = oaipmh.client.Client(harvest_object.job.source.url, registry)
         try:
-            if ident["fetch_type"] == "record":
+            if ident['fetch_type'] == 'record':
                 return self._fetch_record(harvest_object, ident, client)
-            if ident["fetch_type"] == "set":
+            if ident['fetch_type'] == 'set':
                 return self._fetch_set(harvest_object, ident, client)
             # This should not happen...
-            log.debug("Unknown fetch type: %s" % ident["fetch_type"])
+            log.debug('Unknown fetch type: %s' % ident['fetch_type'])
         except Exception as e:
             # Guard against miscellaneous stuff. Probably plain bugs.
             #self._save_gather_error(traceback.format_exc(e), harvest_obj)
@@ -241,25 +256,26 @@ class OAIPMHHarvester(HarvesterBase):
     def _fetch_record(self, harvest_object, ident, client):
         try:
             header, metadata, _ = client.getRecord(
-                metadataPrefix=ident["metadataPrefix"],
-                identifier=ident["record"])
+                metadataPrefix=ident['metadataPrefix'],
+                identifier=ident['record'])
         except socket.error:
             errno, errstr = sys.exc_info()[:2]
             self._save_object_error('Socket error OAI-PMH %s, details:\n%s' % (errno, errstr))
+            self._add_retry(harvest_object)
             return False
         if not metadata:
             # Assume that there is no metadata and not an error.
             return False
-        ident["record"] = ( header.identifier(), metadata.getMap(), )
+        ident['record'] = ( header.identifier(), metadata.getMap(), )
         harvest_object.content = json.dumps(ident)
         return True
 
     def _fetch_set(self, harvest_object, ident, client):
-        args = { "metadataPrefix":ident["metadataPrefix"], "set":ident["set"] }
-        if "from_" in ident:
-            args["from_"] = self._datetime_from_str(ident["from_"])
-        if "until" in ident:
-            args["until"] = self._datetime_from_str(ident["until"])
+        args = { 'metadataPrefix':ident['metadataPrefix'], 'set':ident['set'] }
+        if 'from_' in ident:
+            args['from_'] = self._datetime_from_str(ident['from_'])
+        if 'until' in ident:
+            args['until'] = self._datetime_from_str(ident['until'])
         ids = []
         try:
             for identity in client.listIdentifiers(**args):
@@ -270,7 +286,9 @@ class OAIPMHHarvester(HarvesterBase):
             errno, errstr = sys.exc_info()[:2]
             self._save_object_error('Socket error OAI-PMH %s, details:\n%s' %
                 (errno, errstr,))
-        ident["record_ids"] = ids
+            self._add_retry(harvest_object)
+            return False
+        ident['record_ids'] = ids
         harvest_object.content = json.dumps(ident)
         return True
 
@@ -293,13 +311,13 @@ class OAIPMHHarvester(HarvesterBase):
         '''
         try:
             data = json.loads(harvest_object.content)
-            domain = data["domain"]
+            domain = data['domain']
             group = Group.get(domain) # Checked in gather_stage so exists.
-            if data["fetch_type"] == "record":
+            if data['fetch_type'] == 'record':
                 return self._import_record(harvest_object, data, group)
-            if data["fetch_type"] == "set":
+            if data['fetch_type'] == 'set':
                 return self._import_set(harvest_object, data, group)
-            log.debug("Unknown fetch_type in import: %s" % data["fetch_type"])
+            log.debug('Unknown fetch_type in import: %s' % data['fetch_type'])
         except Exception as e:
             log.debug(traceback.format_exc(e))
         return False
@@ -312,7 +330,6 @@ class OAIPMHHarvester(HarvesterBase):
         metadata = master_data['record'][1]
         title = metadata['title'][0] if len(metadata['title']) else identifier
         description = metadata['description'][0] if len(metadata['description']) else ''
-        #name = urllib.quote_plus(urllib.quote_plus(identifier))
         name = self._package_name_from_identifier(identifier)
         pkg = Package.get(name)
         if not pkg:
@@ -339,7 +356,7 @@ class OAIPMHHarvester(HarvesterBase):
                             Session.add(pkgtag)
             elif key == 'creator' or key == 'contributor':
                 for auth in value:
-                    extras['organization_%d' % lastidx] = ""
+                    extras['organization_%d' % lastidx] = ''
                     extras['author_%d' % lastidx] = auth
                     lastidx += 1
             elif key != 'title':
@@ -348,19 +365,20 @@ class OAIPMHHarvester(HarvesterBase):
         pkg.notes = description
         extras['lastmod'] = extras['date']
         pkg.extras = extras
-        pkg.url = "%s?verb=GetRecord&identifier=%s&metadataPrefix=oai_dc"\
+        pkg.url = '%s?verb=GetRecord&identifier=%s&metadataPrefix=oai_dc'\
                     % (harvest_object.job.source.url, identifier)
         pkg.save()
         ofs = get_ofs()
         nowstr = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')
-        label = "%s/%s.xml" % (nowstr, identifier)
+        label = '%s/%s.xml' % (nowstr, identifier)
+        # Should failure with metadata be considered grounds for retry?
         try:
             f = urllib2.urlopen(pkg.url)
             ofs.put_stream(BUCKET, label, f, {})
             fileurl = config.get('ckan.site_url') + h.url_for('storage_file', label=label)
             pkg.add_resource(url=fileurl,
-                description="Original metadata record",
-                format="xml", size=len(f.read()))
+                description='Original metadata record',
+                format='xml', size=len(f.read()))
         except urllib2.HTTPError:
             self._save_object_error('Could not get original metadata record!',
                                     harvest_object, stage='Import')
@@ -390,13 +408,13 @@ class OAIPMHHarvester(HarvesterBase):
         return True
 
     def _import_set(self, harvest_object, master_data, group):
-        subg_name = "%s - %s" % (group.name, master_data["set_name"],)
+        subg_name = '%s - %s' % (group.name, master_data['set_name'],)
         subgroup = Group.by_name(subg_name)
         if not subgroup:
             subgroup = Group(name=subg_name, description=subg_name)
             setup_default_user_roles(subgroup)
         Session.add(subgroup)
-        for ident in master_data["record_ids"]:
+        for ident in master_data['record_ids']:
             pkg_name = self._package_name_from_identifier(ident)
             # Package may have been omitted due to missing metadata.
             pkg = Package.get(pkg_name)
