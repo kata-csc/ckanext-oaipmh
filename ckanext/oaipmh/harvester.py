@@ -15,7 +15,6 @@ from ckan.model import Session, Package, Group
 from ckan import model
 
 from ckanext.harvest.harvesters.base import HarvesterBase
-from ckan.lib.munge import  munge_tag
 from ckanext.harvest.model import HarvestObject, HarvestJob
 from ckan.model.authz import setup_default_user_roles
 from ckan.controllers.storage import BUCKET, get_ofs
@@ -24,10 +23,10 @@ from pylons import config
 
 import oaipmh.client
 from oaipmh.metadata import MetadataRegistry, oai_dc_reader
-from oaipmh.error import NoSetHierarchyError
-from oaipmh.error import NoRecordsMatchError
+from oaipmh.error import NoSetHierarchyError, NoRecordsMatchError
 
 from ckanext.harvest.harvesters.retry import HarvesterRetry
+from ckanext.kata.dataconverter import oaipmh2ckan
 
 log = logging.getLogger(__name__)
 
@@ -63,6 +62,8 @@ class OAIPMHHarvester(HarvesterBase):
                 }
 
     def _datetime_from_str(self, s):
+        # Used to get date from settings file when testing harvesting with
+        # (semi-open) date interval.
         if s == None:
             return s
         try:
@@ -188,7 +189,7 @@ class OAIPMHHarvester(HarvesterBase):
         if not group:
             group = Group(name=domain, description=domain)
             setup_default_user_roles(group)
-        Session.add(group)
+            group.save()
         sets = []
         # Add sets to retry first.
         for name, obj in ident2set.items():
@@ -214,8 +215,8 @@ class OAIPMHHarvester(HarvesterBase):
             harvest_obj.content = json.dumps(info)
             harvest_obj.save()
             harvest_objs.append(harvest_obj.id)
-        model.repo.commit()
         self._clear_retries()
+        model.repo.commit()
         log.info(
             'Gathered %i records/sets from %s.' % (len(harvest_objs), domain,))
         return harvest_objs
@@ -249,7 +250,6 @@ class OAIPMHHarvester(HarvesterBase):
             log.debug('Unknown fetch type: %s' % ident['fetch_type'])
         except Exception as e:
             # Guard against miscellaneous stuff. Probably plain bugs.
-            #self._save_gather_error(traceback.format_exc(e), harvest_obj)
             log.debug(traceback.format_exc(e))
         return False
 
@@ -326,99 +326,49 @@ class OAIPMHHarvester(HarvesterBase):
         return urllib.quote_plus(urllib.quote_plus(identifier))
 
     def _import_record(self, harvest_object, master_data, group):
-        identifier = master_data['record'][0]
-        metadata = master_data['record'][1]
-        title = metadata['title'][0] if len(metadata['title']) else identifier
-        description = metadata['description'][0] if len(metadata['description']) else ''
-        name = self._package_name_from_identifier(identifier)
-        pkg = Package.get(name)
-        if not pkg:
-            pkg = Package(name=name, title=title, id=identifier)
-        extras = {}
-        lastidx = 0
-        for met in metadata.items():
-            key, value = met
-            if len(value) == 0:
-                continue
-            if key == 'subject' or key == 'type':
-                for tag in value:
-                    if not tag:
-                        continue
-                    for tagi in tag.split(','):
-                        tagi = tagi.strip()
-                        tagi = munge_tag(tagi[:100])
-                        tag_obj = model.Tag.by_name(tagi)
-                        if not tag_obj:
-                            tag_obj = model.Tag(name=tagi)
-                        else:
-                            pkgtag = model.PackageTag(tag=tag_obj, package=pkg)
-                            Session.add(tag_obj)
-                            Session.add(pkgtag)
-            elif key == 'creator' or key == 'contributor':
-                for auth in value:
-                    extras['organization_%d' % lastidx] = ''
-                    extras['author_%d' % lastidx] = auth
-                    lastidx += 1
-            elif key != 'title':
-                extras[key] = ' '.join(value)
-        pkg.title = title
-        pkg.notes = description
-        extras['lastmod'] = extras['date']
-        pkg.extras = extras
-        pkg.url = '%s?verb=GetRecord&identifier=%s&metadataPrefix=oai_dc'\
-                    % (harvest_object.job.source.url, identifier)
-        pkg.save()
-        ofs = get_ofs()
-        nowstr = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')
-        label = '%s/%s.xml' % (nowstr, identifier)
+        # Gather all relevant information into a dictionary.
+        data = {}
+        data['identifier'] = master_data['record'][0]
+        data['metadata'] = master_data['record'][1]
+        data['package_name'] = self._package_name_from_identifier(identifier)
+        data['package_url'] = '%s?verb=GetRecord&identifier=%s&metadataPrefix=%s' % (harvest_object.job.source.url, identifier, master_data['metadataPrefix'])
         # Should failure with metadata be considered grounds for retry?
         try:
-            f = urllib2.urlopen(pkg.url)
+            ofs = get_ofs()
+            nowstr = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')
+            label = '%s/%s.xml' % (nowstr, data['identifier'])
+            f = urllib2.urlopen(data['package_url'])
             ofs.put_stream(BUCKET, label, f, {})
             fileurl = config.get('ckan.site_url') + h.url_for('storage_file', label=label)
-            pkg.add_resource(url=fileurl,
-                description='Original metadata record',
-                format='xml', size=len(f.read()))
+            # This could be a list of dictionaries in case there are more.
+            data['package_resource'] = { 'url':fileurl,
+                'description':'Original metadata record',
+                'format':'xml', 'size':len(f.read()) }
         except urllib2.HTTPError:
             self._save_object_error('Could not get original metadata record!',
                                     harvest_object, stage='Import')
         except socket.error:
             errno, errstr = sys.exc_info()[:2]
             self._save_object_error(
-                'Socket error original metadata record %s, details:\n%s' % (errno, errstr),
-                harvest_object, stage='Import')
-        harvest_object.package_id = pkg.id
-        harvest_object.current = True
-        harvest_object.save()
-        Session.add(harvest_object)
-        setup_default_user_roles(pkg)
-        title = metadata['title'][0] if len(metadata['title']) else ''
-        description = metadata['description'][0]\
-                        if len(metadata['description']) else ''
-        url = ''
-        for ids in metadata['identifier']:
-            if ids.startswith('http://'):
-                url = ids
-        if url != '':
-            pkg.add_resource(url, description=description, name=title,
-                format='html' if url.startswith('http://') else '')
-        # All belong to the main group even if they do not belong to any set.
-        group.add_package_by_name(pkg.name)
-        model.repo.commit()
-        return True
+                'Socket error original metadata record %s, details:\n%s' %
+                    (errno, errstr), harvest_object, stage='Import')
+        return oaipmh2ckan(data, group, harvest_object)
 
     def _import_set(self, harvest_object, master_data, group):
+        model.repo.new_revision()
         subg_name = '%s - %s' % (group.name, master_data['set_name'],)
         subgroup = Group.by_name(subg_name)
         if not subgroup:
             subgroup = Group(name=subg_name, description=subg_name)
             setup_default_user_roles(subgroup)
-        Session.add(subgroup)
+            subgroup.save()
         for ident in master_data['record_ids']:
             pkg_name = self._package_name_from_identifier(ident)
             # Package may have been omitted due to missing metadata.
             pkg = Package.get(pkg_name)
             if pkg:
                 subgroup.add_package_by_name(pkg_name)
+                subgroup.save()
+        model.repo.commit()
         return True
 
