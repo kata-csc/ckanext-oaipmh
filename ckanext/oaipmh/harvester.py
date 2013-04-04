@@ -26,7 +26,7 @@ from oaipmh.metadata import MetadataRegistry, oai_dc_reader
 from oaipmh.error import NoSetHierarchyError, NoRecordsMatchError
 
 from ckanext.harvest.harvesters.retry import HarvesterRetry
-from ckanext.kata.dataconverter import oaipmh2ckan
+from ckanext.kata.dataconverter import oai_dc2ckan
 
 log = logging.getLogger(__name__)
 
@@ -34,6 +34,8 @@ import socket
 socket.setdefaulttimeout(30)
 
 import traceback
+import random
+random.seed()
 
 class OAIPMHHarvester(HarvesterBase):
     '''
@@ -88,7 +90,7 @@ class OAIPMHHarvester(HarvesterBase):
         for harvest_object in self._retry.find_all_retries(harvest_job):
             data = json.loads(harvest_object.content)
             if data['fetch_type'] == 'record':
-                ident2obj[data['ident']] = None # Not needed now.
+                ident2obj[data['record']] = harvest_object
             elif data['fetch_type'] == 'set':
                 ident2set[data['set_name']] = harvest_object
             else:
@@ -149,7 +151,7 @@ class OAIPMHHarvester(HarvesterBase):
         # Get things to retry.
         ident2rec, ident2set = self._scan_retries(harvest_job)
         # Create a new harvest object that links to this job for every object.
-        for ident in ident2rec.keys():
+        for ident, harv in ident2rec.items():
             harvest_obj = HarvestObject(job=harvest_job)
             harvest_obj.content = json.dumps({
                 'fetch_type':'record',
@@ -158,6 +160,7 @@ class OAIPMHHarvester(HarvesterBase):
                 'domain':domain})
             harvest_obj.save()
             harvest_objs.append(harvest_obj.id)
+            log.debug('Retrying record: %s' % harv.id)
         try:
             if from_ != None:
                 args['from_'] = from_
@@ -194,7 +197,8 @@ class OAIPMHHarvester(HarvesterBase):
         # Add sets to retry first.
         for name, obj in ident2set.items():
             data = json.loads(obj.content)
-            sets.append((data['set_id'], name,))
+            sets.append((data['set'], name,))
+            log.debug('Retrying set: %s' % obj.id)
         try:
             for set_ in client.listSets():
                 identifier, name, _ = set_
@@ -254,6 +258,11 @@ class OAIPMHHarvester(HarvesterBase):
         return False
 
     def _fetch_record(self, harvest_object, ident, client):
+        # For testing retry functionality.
+        #if random.random() < 0.1:
+        #    self._add_retry(harvest_object)
+        #    log.debug('Failed record: %s' % harvest_object.id)
+        #    return False
         try:
             header, metadata, _ = client.getRecord(
                 metadataPrefix=ident['metadataPrefix'],
@@ -271,6 +280,11 @@ class OAIPMHHarvester(HarvesterBase):
         return True
 
     def _fetch_set(self, harvest_object, ident, client):
+        # For testing retry functionality.
+        #if random.random() < 0.1:
+        #    self._add_retry(harvest_object)
+        #    log.debug('Failed set: %s' % harvest_object.id)
+        #    return False
         args = { 'metadataPrefix':ident['metadataPrefix'], 'set':ident['set'] }
         if 'from_' in ident:
             args['from_'] = self._datetime_from_str(ident['from_'])
@@ -330,8 +344,8 @@ class OAIPMHHarvester(HarvesterBase):
         data = {}
         data['identifier'] = master_data['record'][0]
         data['metadata'] = master_data['record'][1]
-        data['package_name'] = self._package_name_from_identifier(identifier)
-        data['package_url'] = '%s?verb=GetRecord&identifier=%s&metadataPrefix=%s' % (harvest_object.job.source.url, identifier, master_data['metadataPrefix'])
+        data['package_name'] = self._package_name_from_identifier(data['identifier'])
+        data['package_url'] = '%s?verb=GetRecord&identifier=%s&metadataPrefix=%s' % (harvest_object.job.source.url, data['identifier'], master_data['metadataPrefix'])
         # Should failure with metadata be considered grounds for retry?
         try:
             ofs = get_ofs()
@@ -352,7 +366,7 @@ class OAIPMHHarvester(HarvesterBase):
             self._save_object_error(
                 'Socket error original metadata record %s, details:\n%s' %
                     (errno, errstr), harvest_object, stage='Import')
-        return oaipmh2ckan(data, group, harvest_object)
+        return oai_dc2ckan(data, group, harvest_object)
 
     def _import_set(self, harvest_object, master_data, group):
         model.repo.new_revision()
