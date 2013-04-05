@@ -43,7 +43,9 @@ class OAIPMHHarvester(HarvesterBase):
     '''
 
     config = None
-    incremental = None
+
+    metadata_prefix_key = 'metadataPrefix'
+    metadata_prefix_value = 'oai_dc'
 
     def _set_config(self, config_str):
         '''Set the configuration string.
@@ -63,6 +65,7 @@ class OAIPMHHarvester(HarvesterBase):
                 'description': 'A server which has a OAI-PMH interface available.'
                 }
 
+
     def _datetime_from_str(self, s):
         # Used to get date from settings file when testing harvesting with
         # (semi-open) date interval.
@@ -79,6 +82,9 @@ class OAIPMHHarvester(HarvesterBase):
         except ValueError:
             log.debug('Bad date for %s: %s' % (key, s,))
         return None
+
+    def _str_from_datetime(self, dt):
+        return dt.strftime('%Y-%m-%dT%H:%M:%S')
 
     def _add_retry(self, harvest_object):
         HarvesterRetry.mark_for_retry(harvest_object)
@@ -120,8 +126,8 @@ class OAIPMHHarvester(HarvesterBase):
         self._set_config(harvest_job.source.config)
         def date_from_config(key):
             return self._datetime_from_str(config.get(key, None))
-        from_ = date_from_config('ckan.test.harvest.from')
-        until = date_from_config('ckan.test.harvest.until')
+        from_ = date_from_config('ckanext.harvest.test.from')
+        until = date_from_config('ckanext.harvest.test.until')
         previous_job = Session.query(HarvestJob) \
             .filter(HarvestJob.source==harvest_job.source) \
             .filter(HarvestJob.gather_finished!=None) \
@@ -129,10 +135,14 @@ class OAIPMHHarvester(HarvesterBase):
             .order_by(HarvestJob.gather_finished.desc()).limit(1).first()
         # Settings for debugging override old existing value.
         if previous_job and not from_ and not until:
-            self.incremental = True
             from_ = previous_job.gather_started
+        from_until = {}
+        if from_:
+            from_until['from_'] = from_
+        if until:
+            from_until['until'] = until
         registry = MetadataRegistry()
-        registry.registerReader('oai_dc', oai_dc_reader)
+        registry.registerReader(self.metadata_prefix_value, oai_dc_reader)
         client = oaipmh.client.Client(harvest_job.source.url, registry)
         try:
             identifier = client.identify()
@@ -147,34 +157,28 @@ class OAIPMHHarvester(HarvesterBase):
         #query = self.config['query'] if 'query' in self.config else ''
         domain = identifier.repositoryName()
         harvest_objs = []
-        args = { 'metadataPrefix':'oai_dc' }
+        args = { self.metadata_prefix_key:self.metadata_prefix_value }
         # Get things to retry.
         ident2rec, ident2set = self._scan_retries(harvest_job)
         # Create a new harvest object that links to this job for every object.
         for ident, harv in ident2rec.items():
+            info = json.loads(harv.content)
             harvest_obj = HarvestObject(job=harvest_job)
-            harvest_obj.content = json.dumps({
-                'fetch_type':'record',
-                'record':ident,
-                'metadataPrefix':args['metadataPrefix'],
-                'domain':domain})
+            harvest_obj.content = json.dumps(info)
             harvest_obj.save()
             harvest_objs.append(harvest_obj.id)
             log.debug('Retrying record: %s' % harv.id)
         try:
-            if from_ != None:
-                args['from_'] = from_
-            if until:
-                args['until'] = until
+            args.update(from_until)
             for ident in client.listIdentifiers(**args):
                 if ident.identifier() in ident2rec:
                     continue # On our retry list already, do not fetch twice.
                 harvest_obj = HarvestObject(job=harvest_job)
-                harvest_obj.content = json.dumps({
+                info = {
                     'fetch_type':'record',
                     'record':ident.identifier(),
-                    'metadataPrefix':args['metadataPrefix'],
-                    'domain':domain})
+                    'domain':domain}
+                harvest_obj.content = json.dumps(info)
                 harvest_obj.save()
                 harvest_objs.append(harvest_obj.id)
         except NoRecordsMatchError:
@@ -193,12 +197,30 @@ class OAIPMHHarvester(HarvesterBase):
             group = Group(name=domain, description=domain)
             setup_default_user_roles(group)
             group.save()
-        sets = []
+        def update_until(info, from_until):
+            if 'until' not in info:
+                return # Wanted up to current time earlier.
+            if 'until' not in from_until:
+                del info['until'] # Want up to current time now.
+                return
+            fu = self._str_from_datetime(from_until['until'])
+            if info['until'] < fu: # Keep latest date from the two alternatives.
+                info['until'] = fu
+        def store_times(info, from_until):
+            if 'from_' in from_until:
+                info['from_'] = self._str_from_datetime(from_until['from_'])
+            if 'until' in from_until:
+                info['until'] = self._str_from_datetime(from_until['until'])
         # Add sets to retry first.
         for name, obj in ident2set.items():
-            data = json.loads(obj.content)
-            sets.append((data['set'], name,))
+            info = json.loads(obj.content)
+            update_until(info, from_until)
+            harvest_obj = HarvestObject(job=harvest_job)
+            harvest_obj.content = json.dumps(info)
+            harvest_obj.save()
+            harvest_objs.append(harvest_obj.id)
             log.debug('Retrying set: %s' % obj.id)
+        sets = []
         try:
             for set_ in client.listSets():
                 identifier, name, _ = set_
@@ -206,16 +228,13 @@ class OAIPMHHarvester(HarvesterBase):
                     continue # Set is already due for retry.
                 sets.append((identifier, name,))
         except NoSetHierarchyError:
-            # Is this an actual error or just a feature?
+            # Is this an actual error or just a feature of the source?
             self._save_gather_error('No set hierarchy.', harvest_job)
         for set_id, set_name in sets:
             harvest_obj = HarvestObject(job=harvest_job)
             info = { 'fetch_type':'set', 'set': set_id, 'set_name': set_name,
-                'metadataPrefix':'oai_dc', 'domain': domain, }
-            if from_:
-                info['from_'] = from_.strftime('%Y-%m-%dT%H:%M:%S')
-            if until:
-                info['until'] = until.strftime('%Y-%m-%dT%H:%M:%S')
+                'domain': domain, }
+            store_times(info, from_until)
             harvest_obj.content = json.dumps(info)
             harvest_obj.save()
             harvest_objs.append(harvest_obj.id)
@@ -243,7 +262,7 @@ class OAIPMHHarvester(HarvesterBase):
         # kind of info the harvest object contains.
         ident = json.loads(harvest_object.content)
         registry = MetadataRegistry()
-        registry.registerReader(ident['metadataPrefix'], oai_dc_reader)
+        registry.registerReader(self.metadata_prefix_value, oai_dc_reader)
         client = oaipmh.client.Client(harvest_object.job.source.url, registry)
         try:
             if ident['fetch_type'] == 'record':
@@ -265,7 +284,7 @@ class OAIPMHHarvester(HarvesterBase):
         #    return False
         try:
             header, metadata, _ = client.getRecord(
-                metadataPrefix=ident['metadataPrefix'],
+                metadataPrefix=self.metadata_prefix_value,
                 identifier=ident['record'])
         except socket.error:
             errno, errstr = sys.exc_info()[:2]
@@ -285,7 +304,8 @@ class OAIPMHHarvester(HarvesterBase):
         #    self._add_retry(harvest_object)
         #    log.debug('Failed set: %s' % harvest_object.id)
         #    return False
-        args = { 'metadataPrefix':ident['metadataPrefix'], 'set':ident['set'] }
+        args = { self.metadata_prefix_key:self.metadata_prefix_value,
+            'set':ident['set'] }
         if 'from_' in ident:
             args['from_'] = self._datetime_from_str(ident['from_'])
         if 'until' in ident:
@@ -345,8 +365,11 @@ class OAIPMHHarvester(HarvesterBase):
         data['identifier'] = master_data['record'][0]
         data['metadata'] = master_data['record'][1]
         data['package_name'] = self._package_name_from_identifier(data['identifier'])
-        data['package_url'] = '%s?verb=GetRecord&identifier=%s&metadataPrefix=%s' % (harvest_object.job.source.url, data['identifier'], master_data['metadataPrefix'])
+        data['package_url'] = '%s?verb=GetRecord&identifier=%s&%s=%s' % (
+            harvest_object.job.source.url, data['identifier'],
+            self.metadata_prefix_key, self.metadata_prefix_value,)
         # Should failure with metadata be considered grounds for retry?
+        # This should fetch the data into the dictionary and not create a file.
         try:
             ofs = get_ofs()
             nowstr = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')
