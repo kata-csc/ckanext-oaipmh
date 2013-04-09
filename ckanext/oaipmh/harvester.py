@@ -155,9 +155,7 @@ class OAIPMHHarvester(HarvesterBase):
             self._save_object_error('Socket error OAI-PMH %s, details:\n%s' % (errno, errstr))
             return None
         #query = self.config['query'] if 'query' in self.config else ''
-        domain = identifier.repositoryName()
         harvest_objs = []
-        args = { self.metadata_prefix_key:self.metadata_prefix_value }
         # Get things to retry.
         ident2rec, ident2set = self._scan_retries(harvest_job)
         # Create a new harvest object that links to this job for every object.
@@ -169,6 +167,8 @@ class OAIPMHHarvester(HarvesterBase):
             harvest_objs.append(harvest_obj.id)
             log.debug('Retrying record: %s' % harv.id)
         try:
+            domain = identifier.repositoryName()
+            args = { self.metadata_prefix_key:self.metadata_prefix_value }
             args.update(from_until)
             for ident in client.listIdentifiers(**args):
                 if ident.identifier() in ident2rec:
@@ -181,7 +181,8 @@ class OAIPMHHarvester(HarvesterBase):
                 harvest_obj.content = json.dumps(info)
                 harvest_obj.save()
                 harvest_objs.append(harvest_obj.id)
-        except NoRecordsMatchError:
+        except NoRecordsMatchError as e:
+            log.debug('No records matched: %s' % domain)
             pass # Ok. Just nothing to get.
         except Exception as e:
             # Todo: handle exceptions better.
@@ -189,8 +190,7 @@ class OAIPMHHarvester(HarvesterBase):
             self._save_gather_error(
                 'Could not fetch identifier list.', harvest_job)
             return None
-        log.info(
-            'Gathered %i records from %s.' % (len(harvest_objs), domain,))
+        log.info('Gathered %i records from %s.' % (len(harvest_objs), domain,))
         # Gathering the set list here. Member identifiers in fetch.
         group = Group.by_name(domain)
         if not group:
@@ -229,7 +229,8 @@ class OAIPMHHarvester(HarvesterBase):
                 sets.append((identifier, name,))
         except NoSetHierarchyError:
             # Is this an actual error or just a feature of the source?
-            self._save_gather_error('No set hierarchy.', harvest_job)
+            log.debug('No sets: %s' % domain)
+            #self._save_gather_error('No set hierarchy.', harvest_job)
         for set_id, set_name in sets:
             harvest_obj = HarvestObject(job=harvest_job)
             info = { 'fetch_type':'set', 'set': set_id, 'set_name': set_name,
@@ -277,11 +278,6 @@ class OAIPMHHarvester(HarvesterBase):
         return False
 
     def _fetch_record(self, harvest_object, ident, client):
-        # For testing retry functionality.
-        #if random.random() < 0.1:
-        #    self._add_retry(harvest_object)
-        #    log.debug('Failed record: %s' % harvest_object.id)
-        #    return False
         try:
             header, metadata, _ = client.getRecord(
                 metadataPrefix=self.metadata_prefix_value,
@@ -289,6 +285,10 @@ class OAIPMHHarvester(HarvesterBase):
         except socket.error:
             errno, errstr = sys.exc_info()[:2]
             self._save_object_error('Socket error OAI-PMH %s, details:\n%s' % (errno, errstr))
+            self._add_retry(harvest_object)
+            return False
+        except urllib2.URLError:
+            self._save_gather_error('Failed to fetch record.')
             self._add_retry(harvest_object)
             return False
         if not metadata:
@@ -299,11 +299,6 @@ class OAIPMHHarvester(HarvesterBase):
         return True
 
     def _fetch_set(self, harvest_object, ident, client):
-        # For testing retry functionality.
-        #if random.random() < 0.1:
-        #    self._add_retry(harvest_object)
-        #    log.debug('Failed set: %s' % harvest_object.id)
-        #    return False
         args = { self.metadata_prefix_key:self.metadata_prefix_value,
             'set':ident['set'] }
         if 'from_' in ident:
@@ -384,11 +379,16 @@ class OAIPMHHarvester(HarvesterBase):
         except urllib2.HTTPError:
             self._save_object_error('Could not get original metadata record!',
                                     harvest_object, stage='Import')
+            self._add_retry(harvest_object)
+            return False
         except socket.error:
             errno, errstr = sys.exc_info()[:2]
             self._save_object_error(
                 'Socket error original metadata record %s, details:\n%s' %
                     (errno, errstr), harvest_object, stage='Import')
+            self._add_retry(harvest_object)
+            return False
+        harvest_object.content = '' # Clear now of useless record data.
         return oai_dc2ckan(data, group, harvest_object)
 
     def _import_set(self, harvest_object, master_data, group):
@@ -406,6 +406,7 @@ class OAIPMHHarvester(HarvesterBase):
             if pkg:
                 subgroup.add_package_by_name(pkg_name)
                 subgroup.save()
+        harvest_object.content = '' # Clear list.
         model.repo.commit()
         return True
 
