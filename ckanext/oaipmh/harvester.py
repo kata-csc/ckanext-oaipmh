@@ -26,7 +26,7 @@ from oaipmh.metadata import MetadataRegistry, oai_dc_reader
 from oaipmh.error import NoSetHierarchyError, NoRecordsMatchError
 
 from ckanext.harvest.harvesters.retry import HarvesterRetry
-from ckanext.kata.dataconverter import oai_dc2ckan
+from dataconverter import oai_dc2ckan
 
 log = logging.getLogger(__name__)
 
@@ -388,7 +388,7 @@ class OAIPMHHarvester(HarvesterBase):
                     (errno, errstr), harvest_object, stage='Import')
             self._add_retry(harvest_object)
             return False
-        harvest_object.content = '' # Clear now of useless record data.
+        harvest_object.content = None # Clear now of useless record data.
         return oai_dc2ckan(data, group, harvest_object)
 
     def _import_set(self, harvest_object, master_data, group):
@@ -406,7 +406,7 @@ class OAIPMHHarvester(HarvesterBase):
             if pkg:
                 subgroup.add_package_by_name(pkg_name)
                 subgroup.save()
-        harvest_object.content = '' # Clear list.
+        harvest_object.content = None # Clear list.
         model.repo.commit()
         return True
 
