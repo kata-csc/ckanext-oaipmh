@@ -17,7 +17,6 @@ from ckan import model
 from ckanext.harvest.harvesters.base import HarvesterBase
 from ckanext.harvest.model import HarvestObject, HarvestJob
 from ckan.model.authz import setup_default_user_roles
-from ckan.controllers.storage import BUCKET, get_ofs
 from ckan.lib import helpers as h
 from pylons import config
 
@@ -107,6 +106,41 @@ class OAIPMHHarvester(HarvesterBase):
     def _clear_retries(self):
         self._retry.clear_retry_marks()
 
+    def _get_client_identifier(self, url, harvest_job=None):
+        registry = MetadataRegistry()
+        registry.registerReader(self.metadata_prefix_value, oai_dc_reader)
+        client = oaipmh.client.Client(url, registry)
+        try:
+            identifier = client.identify()
+        except urllib2.URLError:
+            if harvest_job:
+                self._save_gather_error('Could not gather anything from %s!' %
+                                        harvest_job.source.url, harvest_job)
+            return (client, None,)
+        except socket.error:
+            if harvest_job:
+                errno, errstr = sys.exc_info()[:2]
+                self._save_object_error(
+                    'Socket error OAI-PMH %s, details:\n%s' % (errno, errstr))
+            return (client, None,)
+        except Exception as e:
+            # Guard against miscellaneous stuff. Probably plain bugs.
+            log.debug(traceback.format_exc(e))
+            return (client, None,)
+        return (client, identifier,)
+
+    def _get_group(self, domain, in_revision=True):
+        group = Group.by_name(domain)
+        if not group:
+            if not in_revision:
+                model.repo.new_revision()
+            group = Group(name=domain, description=domain)
+            setup_default_user_roles(group)
+            group.save()
+            if not in_revision:
+                model.repo.commit()
+        return group
+
     def gather_stage(self, harvest_job):
         '''
         The gather stage will recieve a HarvestJob object and will be
@@ -141,18 +175,9 @@ class OAIPMHHarvester(HarvesterBase):
             from_until['from_'] = from_
         if until:
             from_until['until'] = until
-        registry = MetadataRegistry()
-        registry.registerReader(self.metadata_prefix_value, oai_dc_reader)
-        client = oaipmh.client.Client(harvest_job.source.url, registry)
-        try:
-            identifier = client.identify()
-        except urllib2.URLError:
-            self._save_gather_error('Could not gather anything from %s!' %
-                                    harvest_job.source.url, harvest_job)
-            return None
-        except socket.error:
-            errno, errstr = sys.exc_info()[:2]
-            self._save_object_error('Socket error OAI-PMH %s, details:\n%s' % (errno, errstr))
+        client, identifier = self._get_client_identifier(
+            harvest_job.source.url, harvest_job)
+        if not identifier:
             return None
         #query = self.config['query'] if 'query' in self.config else ''
         harvest_objs = []
@@ -161,6 +186,8 @@ class OAIPMHHarvester(HarvesterBase):
         # Create a new harvest object that links to this job for every object.
         for ident, harv in ident2rec.items():
             info = json.loads(harv.content)
+            harv.content = None
+            harv.save()
             harvest_obj = HarvestObject(job=harvest_job)
             harvest_obj.content = json.dumps(info)
             harvest_obj.save()
@@ -192,11 +219,7 @@ class OAIPMHHarvester(HarvesterBase):
             return None
         log.info('Gathered %i records from %s.' % (len(harvest_objs), domain,))
         # Gathering the set list here. Member identifiers in fetch.
-        group = Group.by_name(domain)
-        if not group:
-            group = Group(name=domain, description=domain)
-            setup_default_user_roles(group)
-            group.save()
+        group = self._get_group(domain)
         def update_until(info, from_until):
             if 'until' not in info:
                 return # Wanted up to current time earlier.
@@ -214,6 +237,8 @@ class OAIPMHHarvester(HarvesterBase):
         # Add sets to retry first.
         for name, obj in ident2set.items():
             info = json.loads(obj.content)
+            obj.content = None
+            obj.save()
             update_until(info, from_until)
             harvest_obj = HarvestObject(job=harvest_job)
             harvest_obj.content = json.dumps(info)
@@ -366,16 +391,15 @@ class OAIPMHHarvester(HarvesterBase):
         # Should failure with metadata be considered grounds for retry?
         # This should fetch the data into the dictionary and not create a file.
         try:
-            ofs = get_ofs()
             nowstr = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')
             label = '%s/%s.xml' % (nowstr, data['identifier'])
             f = urllib2.urlopen(data['package_url'])
-            ofs.put_stream(BUCKET, label, f, {})
+            x = f.read()
             fileurl = config.get('ckan.site_url') + h.url_for('storage_file', label=label)
-            # This could be a list of dictionaries in case there are more.
+            data['package_xml_save'] = { 'label':label, 'xml':x }
             data['package_resource'] = { 'url':fileurl,
                 'description':'Original metadata record',
-                'format':'xml', 'size':len(f.read()) }
+                'format':'xml', 'size':len(x) }
         except urllib2.HTTPError:
             self._save_object_error('Could not get original metadata record!',
                                     harvest_object, stage='Import')
@@ -388,7 +412,6 @@ class OAIPMHHarvester(HarvesterBase):
                     (errno, errstr), harvest_object, stage='Import')
             self._add_retry(harvest_object)
             return False
-        harvest_object.content = None # Clear now of useless record data.
         return oai_dc2ckan(data, group, harvest_object)
 
     def _import_set(self, harvest_object, master_data, group):
@@ -409,4 +432,37 @@ class OAIPMHHarvester(HarvesterBase):
         harvest_object.content = None # Clear list.
         model.repo.commit()
         return True
+
+    def import_xml(self, source, xml):
+        # Try to get client identifier so group can be found.
+        client, identifier = self._get_client_identifier(source.url)
+        group = None
+        if identifier:
+            domain = identifier.repositoryName()
+            group = self._get_group(domain, False)
+        # Convert XML to data.
+        try:
+            tree = client.parse(xml)
+        except SyntaxError:
+            log.debug('oai_dc XML import syntax error.')
+            return False
+        records, token = client.buildRecords(self.metadata_prefix_value,
+            client.getNamespaces(), client.getMetadataRegistry(), tree);
+        data = {}
+        data['identifier'] = records[0][0].identifier()
+        data['metadata'] = records[0][1].getMap()
+        data['package_name'] = self._package_name_from_identifier(
+            data['identifier'])
+        data['package_url'] = None
+        # Data to use when saving the XMl record.
+        nowstr = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')
+        label = '%s/%s.xml' % (nowstr, data['identifier'])
+        fileurl = config.get('ckan.site_url') + h.url_for('storage_file',
+            label=label)
+        data['package_xml_save'] = { 'label':label, 'xml':xml }
+        data['package_resource'] = { 'url':fileurl,
+            'description':'Original metadata record',
+            'format':'xml', 'size':len(xml) }
+        return oai_dc2ckan(data, group)
+
 

@@ -12,6 +12,7 @@ import traceback
 from ckan import model
 from ckan.model import Package, Group
 from ckan.model.authz import setup_default_user_roles
+from ckan.controllers.storage import BUCKET, get_ofs
 
 from ckan.lib.munge import munge_tag
 
@@ -73,11 +74,14 @@ def _oai_dc2ckan(data, group, harvest_object):
     extras['lastmod'] = extras['date']
     pkg.extras = extras
     pkg.url = data['package_url']
-    # This could be a list of dictionaries in case there are more.
     if 'package_resource' in data:
+        ofs = get_ofs()
+        ofs.put_stream(BUCKET, data['package_xml_save']['label'],
+            data['package_xml_save']['xml'], {})
         pkg.add_resource(**(data['package_resource']))
     if harvest_object != None:
         harvest_object.package_id = pkg.id
+        harvest_object.content = None
         harvest_object.current = True
         harvest_object.save()
     setup_default_user_roles(pkg)
