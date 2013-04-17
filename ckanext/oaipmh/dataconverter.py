@@ -15,17 +15,101 @@ from ckan.model.authz import setup_default_user_roles
 from ckan.controllers.storage import BUCKET, get_ofs
 
 from ckan.lib.munge import munge_tag
+from lxml import etree
+
+import pprint
 
 log = logging.getLogger(__name__)
 
-def oai_dc2ckan(data, group=None, harvest_object=None):
+def oai_dc2ckan(data, namespaces, group=None, harvest_object=None):
     try:
-        return _oai_dc2ckan(data, group, harvest_object)
+        return _oai_dc2ckan(data, namespaces, group, harvest_object)
     except Exception as e:
         log.debug(traceback.format_exc(e))
     return False
 
-def _oai_dc2ckan(data, group, harvest_object):
+# Annoyingly, attribute such as rdf:about is presented with key such as
+# {http://www.w3.org/1999/02/22-rdf-syntax-ns#}about so we have to check the
+# end of the key. 
+def _find_value(node, key_end):
+    for key in node.keys():
+        loc = key.find(key_end)
+        if loc == len(key) - len(key_end):
+            return node.get(key)
+    return None
+
+def _handle_rights(node, namespaces):
+    if node is None:
+        return {}
+    d = {}
+    decls = node.xpath('./*[local-name() = "RightsDeclaration"]',
+        namespaces=namespaces)
+    if len(decls):
+        if len(decls) > 1:
+            log.info('Multiple RightsDeclarations in one record.')
+        for decl in decls:
+            category = decls[0].get('RIGHTSCATEGORY')
+            text = decls[0].text
+            if text:
+                d['accessRights'] = text
+            elif category:
+                d['accessRights'] = category
+    else: # Probably just old-fashioned text. Fix when counter-example found.
+        d['accessRights'] = node.text
+    pprint.pprint(d)
+    return d
+
+def _handle_contributor(node, namespaces):
+    if node is None:
+        return {}
+    d = {}
+    projs = node.xpath('./foaf:Project', namespaces=namespaces)
+    text = True
+    if len(projs):
+        text = False
+        idx = 0
+        for pro in projs:
+            d['contributor_project_about_%i' % idx] = _find_value(pro, 'about')
+            n = pro.xpath('./foaf:name', namespaces=namespaces)
+            if len(n):
+                d['contributor_project_name_%i' % idx] = n[0].text
+            n = pro.xpath('./rdfs:comment', namespaces=namespaces)
+            if len(n):
+                d['contributor_project_comment_%i' % idx] = n[0].text
+                d['contributor_project_comment_lang_%i' % idx] = _find_value(n[0], 'lang')
+            idx += 1
+    # Add iteration over something else when those show up.
+    if text:
+        d['contributor'] = node.text
+    pprint.pprint(d)
+    return d
+
+def _handle_publisher(node, namespaces):
+    if node is None:
+        return {}
+    d = {}
+    persons = node.xpath('./foaf:person', namespaces=namespaces)
+    if len(persons):
+        if len(persons) > 1:
+            log.info('Node with several publishers.')
+        url = _find_value(persons[0], 'about')
+        ns = persons[0].xpath('./foaf:mbox', namespaces=namespaces)
+        email = _find_value(ns[0], 'resource') if len(ns) else None
+        ns = persons[0].xpath('./foaf:phone', namespaces=namespaces)
+        phone = _find_value(ns[0], 'resource') if len(ns) else None
+        if phone == '-':
+            phone = None
+        if url:
+            d['contactURL'] = url
+        if phone:
+            d['phone'] = phone
+        if email:
+            d['package.maintainer_email'] = email
+    # If not persons, then what is this? Just email? Could be anything?
+    pprint.pprint(d)
+    return d 
+
+def _oai_dc2ckan(data, namespaces, group, harvest_object):
     model.repo.new_revision()
     identifier = data['identifier']
     metadata = data['metadata']
@@ -43,31 +127,37 @@ def _oai_dc2ckan(data, group, harvest_object):
             r.state = 'deleted'
     extras = {}
     lastidx = 0
-    for met in metadata.items():
-        key, value = met
-        if len(value) == 0:
+    handled = [ 'title' ]
+    for s in ('subject', 'type',):
+        for tag in metadata.get(s, ''):
+            if not tag:
+                continue
+            for tagi in tag.split(','):
+                tagi = tagi.strip()
+                tagi = munge_tag(tagi[:100])
+                tag_obj = model.Tag.by_name(tagi)
+                if not tag_obj:
+                    tag_obj = model.Tag(name=tagi)
+                else:
+                    pkgtag = model.PackageTag(tag=tag_obj, package=pkg)
+    # Handle creators before contributors so that numbering order is ok.
+    if 'creator' in metadata and len(metadata['creator']):
+        for auth in metadata['creator']:
+            extras['organization_%d' % lastidx] = ''
+            extras['author_%d' % lastidx] = auth
+            lastidx += 1
+    extras.update(_handle_contributor(metadata.get('contributorNode'), namespaces))
+    extras.update(_handle_publisher(metadata.get('publisherNode'), namespaces))
+    # This value belongs to elsewhere.
+    if 'package.maintainer_email' in extras:
+        pkg.maintainer_email = extras['package.maintainer_email']
+        del extras['package.maintainer_email']
+    extras.update(_handle_rights(metadata.get('rightsNode'), namespaces))
+    # The rest.
+    for key, value in metadata.items():
+        if value is None or len(value) == 0 or key in ('title', 'subject', 'type', 'rightsNode', 'publisherNode', 'creator', 'contributorNode',):
             continue
-        if key == 'subject' or key == 'type':
-            for tag in value:
-                if not tag:
-                    continue
-                for tagi in tag.split(','):
-                    tagi = tagi.strip()
-                    tagi = munge_tag(tagi[:100])
-                    tag_obj = model.Tag.by_name(tagi)
-                    if not tag_obj:
-                        tag_obj = model.Tag(name=tagi)
-                    else:
-                        pkgtag = model.PackageTag(tag=tag_obj, package=pkg)
-                        #Session.add(tag_obj)
-                        #Session.add(pkgtag)
-        elif key == 'creator' or key == 'contributor':
-            for auth in value:
-                extras['organization_%d' % lastidx] = ''
-                extras['author_%d' % lastidx] = auth
-                lastidx += 1
-        elif key != 'title':
-            extras[key] = ' '.join(value)
+        extras[key] = ' '.join(value)
     pkg.title = title
     description = metadata['description'][0] if len(metadata['description']) else ''
     pkg.notes = description
