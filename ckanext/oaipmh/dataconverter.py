@@ -12,6 +12,7 @@ import traceback
 from ckan import model
 from ckan.model import Package, Group
 from ckan.model.authz import setup_default_user_roles
+from ckan.model.license import LicenseRegister
 from ckan.controllers.storage import BUCKET, get_ofs
 
 from ckan.lib.munge import munge_tag
@@ -38,6 +39,19 @@ def _find_value(node, key_end):
             return node.get(key)
     return None
 
+# Given information about the license, try to match it with some known one.
+def _match_license(text):
+    lr = LicenseRegister()
+    for cls in lr.licenses:
+        if cls.url == url:
+            return cls.id
+        if cls.id == text:
+            return cls.id
+        obj = cls()
+        if obj.title() == text:
+            return cls.id
+    return None
+
 def _handle_rights(node, namespaces):
     if node is None:
         return {}
@@ -46,17 +60,24 @@ def _handle_rights(node, namespaces):
         namespaces=namespaces)
     if len(decls):
         if len(decls) > 1:
-            log.info('Multiple RightsDeclarations in one record.')
-        for decl in decls:
-            category = decls[0].get('RIGHTSCATEGORY')
-            text = decls[0].text
-            if text:
-                d['accessRights'] = text
-            elif category:
-                d['accessRights'] = category
+            log.warning('Multiple RightsDeclarations in one record.')
+        category = decls[0].get('RIGHTSCATEGORY')
+        text = decls[0].text
     else: # Probably just old-fashioned text. Fix when counter-example found.
-        d['accessRights'] = node.text
-    pprint.pprint(d)
+        text = node.text
+        category = 'LICENSED' # Let's give it a try.
+    if category == 'LICENSED' and text:
+        lic = _match_license(text)
+        if lic is not None:
+            d['package.license'] = { 'id':lic }
+        else:
+            # Something unknown. Store text or license.
+            if text.startswith('http://'):
+                d['licenseURL'] = text
+            else:
+                d['licenseText'] = text
+    # What to do with CONTRACTUAL, COPYRIGHTED, OTHER and PUBLIC DOMAIN?
+    # The licenses partially cover them.
     return d
 
 def _handle_contributor(node, namespaces):
@@ -69,19 +90,20 @@ def _handle_contributor(node, namespaces):
         text = False
         idx = 0
         for pro in projs:
-            d['contributor_project_about_%i' % idx] = _find_value(pro, 'about')
-            n = pro.xpath('./foaf:name', namespaces=namespaces)
-            if len(n):
-                d['contributor_project_name_%i' % idx] = n[0].text
-            n = pro.xpath('./rdfs:comment', namespaces=namespaces)
-            if len(n):
-                d['contributor_project_comment_%i' % idx] = n[0].text
-                d['contributor_project_comment_lang_%i' % idx] = _find_value(n[0], 'lang')
+            d['project_%i' % idx] = _find_value(pro, 'about')
+            # Uncomment and remane keys as needed.
+            #n = pro.xpath('./foaf:name', namespaces=namespaces)
+            #if len(n):
+            #    d['project_name_%i' % idx] = n[0].text
+            #n = pro.xpath('./rdfs:comment', namespaces=namespaces)
+            #if len(n):
+            #    d['project_comment_%i' % idx] = n[0].text
+            #    d['project_comment_lang_%i' % idx] = _find_value(n[0], 'lang')
             idx += 1
     # Add iteration over something else when those show up.
+    # Questionable but let's say it's just a contributor.
     if text:
         d['contributor'] = node.text
-    pprint.pprint(d)
     return d
 
 def _handle_publisher(node, namespaces):
@@ -91,22 +113,19 @@ def _handle_publisher(node, namespaces):
     persons = node.xpath('./foaf:person', namespaces=namespaces)
     if len(persons):
         if len(persons) > 1:
-            log.info('Node with several publishers.')
+            log.warning('Node with several publishers.')
         url = _find_value(persons[0], 'about')
         ns = persons[0].xpath('./foaf:mbox', namespaces=namespaces)
         email = _find_value(ns[0], 'resource') if len(ns) else None
         ns = persons[0].xpath('./foaf:phone', namespaces=namespaces)
         phone = _find_value(ns[0], 'resource') if len(ns) else None
-        if phone == '-':
-            phone = None
         if url:
             d['contactURL'] = url
-        if phone:
+        if phone and len(phone) > 5: # Filter out '-' and other possibilites.
             d['phone'] = phone
         if email:
             d['package.maintainer_email'] = email
     # If not persons, then what is this? Just email? Could be anything?
-    pprint.pprint(d)
     return d 
 
 def _oai_dc2ckan(data, namespaces, group, harvest_object):
@@ -153,14 +172,21 @@ def _oai_dc2ckan(data, namespaces, group, harvest_object):
         pkg.maintainer_email = extras['package.maintainer_email']
         del extras['package.maintainer_email']
     extras.update(_handle_rights(metadata.get('rightsNode'), namespaces))
+    if 'package.license' in extras:
+        pkg.license = extras['package.license']
+        del extras['package.license']
     # The rest.
+    # description below goes to pkg.notes. I think it should not added here.
     for key, value in metadata.items():
         if value is None or len(value) == 0 or key in ('title', 'subject', 'type', 'rightsNode', 'publisherNode', 'creator', 'contributorNode',):
             continue
         extras[key] = ' '.join(value)
     pkg.title = title
+    # Should everything in the list be joined together? Now this also would
+    # go to extras. Surely duplicate is not necessary?
     description = metadata['description'][0] if len(metadata['description']) else ''
     pkg.notes = description
+    # Are both needed to have the same value?
     extras['lastmod'] = extras['date']
     pkg.extras = extras
     pkg.url = data['package_url']
@@ -169,7 +195,7 @@ def _oai_dc2ckan(data, namespaces, group, harvest_object):
         ofs.put_stream(BUCKET, data['package_xml_save']['label'],
             data['package_xml_save']['xml'], {})
         pkg.add_resource(**(data['package_resource']))
-    if harvest_object != None:
+    if harvest_object is not None:
         harvest_object.package_id = pkg.id
         harvest_object.content = None
         harvest_object.current = True
@@ -184,7 +210,7 @@ def _oai_dc2ckan(data, namespaces, group, harvest_object):
         pkg.add_resource(url, description=description, name=title,
             format='html' if url.startswith('http://') else '')
     # All belong to the main group even if they do not belong to any set.
-    if group != None:
+    if group is not None:
         group.add_package_by_name(pkg.name)
         group.save()
     model.repo.commit()

@@ -481,35 +481,14 @@ class OAIPMHHarvester(HarvesterBase):
             subgroup = Group(name=subg_name, description=subg_name)
             setup_default_user_roles(subgroup)
             subgroup.save()
-        # Find out existing group members.
-        old = set()
-        for p in subgroup.packages(with_private=True):
-            old.add(p.name)
         for ident in master_data['record_ids']:
             pkg_name = self._package_name_from_identifier(ident)
-            if pkg_name in old:
-                old.remove(pkg_name)
-                log.debug('Retained: %s' % pkg_name)
-                continue
-                # Actually the add method performs the packages query over and
-                # over again so this may be a speed-up.
             # Package may have been omitted due to missing metadata.
             pkg = Package.get(pkg_name)
             if pkg:
                 subgroup.add_package_by_name(pkg_name)
                 subgroup.save()
         harvest_object.content = None # Clear list.
-        # Remove the old memebers that were not in the set.
-        #for pkg_name in old:
-        #    # There is a method to add package but not to remove. Huh?
-        #    pkg = Package.get(pkg_name)
-        #    members = Session.query(Member).filter(
-        #        Member.table_id == pkg.id).filter(
-        #        Member.group_id == subgroup.id).filter(
-        #        Member.table_name == 'package').all()
-        #    for m in members:
-        #        log.debug('Remove %s from %s.' % (pkg.id, subgroup.id,))
-        #        m.delete()
         model.repo.commit()
         return True
 
