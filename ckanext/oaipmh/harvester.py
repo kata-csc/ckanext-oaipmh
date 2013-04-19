@@ -12,6 +12,7 @@ import datetime
 import sys
 from lxml import etree
 import pickle
+import httplib
 
 from ckan.model import Session, Package, Group, Member
 from ckan import model
@@ -178,16 +179,18 @@ class OAIPMHHarvester(HarvesterBase):
         client = oaipmh.client.Client(url, registry)
         try:
             identifier = client.identify()
-        except urllib2.URLError:
+        except (urllib2.URLError, urllib2.HTTPError,):
             if harvest_job:
-                self._save_gather_error('Could not gather anything from %s!' %
-                                        harvest_job.source.url, harvest_job)
+                self._save_gather_error(
+                    'Could not gather from %s!' % harvest_job.source.url,
+                    harvest_job)
             return (client, None,)
         except socket.error:
             if harvest_job:
                 errno, errstr = sys.exc_info()[:2]
-                self._save_object_error(
-                    'Socket error OAI-PMH %s, details:\n%s' % (errno, errstr))
+                self._save_gather_error(
+                    'Socket error OAI-PMH %s, details:\n%s' % (errno, errstr),
+                    harvest_job)
             return (client, None,)
         except Exception as e:
             # Guard against miscellaneous stuff. Probably plain bugs.
@@ -274,7 +277,7 @@ class OAIPMHHarvester(HarvesterBase):
                 harvest_obj.content = json.dumps(info)
                 harvest_obj.save()
                 harvest_objs.append(harvest_obj.id)
-        except NoRecordsMatchError as e:
+        except NoRecordsMatchError:
             log.debug('No records matched: %s' % domain)
             pass # Ok. Just nothing to get.
         except Exception as e:
@@ -388,6 +391,8 @@ class OAIPMHHarvester(HarvesterBase):
             log.error('Unknown fetch type: %s' % ident['fetch_type'])
         except Exception as e:
             # Guard against miscellaneous stuff. Probably plain bugs.
+            # Also very rare exceptions we haven't seen yet.
+            self._add_retry(harvest_object)
             log.debug(traceback.format_exc(e))
         return False
 
@@ -401,15 +406,21 @@ class OAIPMHHarvester(HarvesterBase):
                 metadataPrefix=self.metadata_prefix_value,
                 identifier=master_data['record'])
         except socket.error:
+            self._add_retry(harvest_object)
             errno, errstr = sys.exc_info()[:2]
             self._save_object_error(
-                'Socket error OAI-PMH %s, details:\n%s' % (errno, errstr))
-            self._add_retry(harvest_object)
+                'Socket error OAI-PMH %s, details:\n%s' % (errno, errstr),
+                harvest_object, stage='Fetch')
             return False
         except urllib2.URLError:
-            self._save_gather_error('Failed to fetch record.')
             self._add_retry(harvest_object)
+            self._save_object_error('Failed to fetch record.', harvest_object,
+                stage='Fetch')
             return False
+        except httplib.BadStatusLine:
+            self._add_retry(harvest_object)
+            self._save_object_error('Bad HTTP response status line.',
+                harvest_object, stage='Fetch')
         if not metadata:
             # Assume that there is no metadata and not an error.
             return False
@@ -437,17 +448,17 @@ class OAIPMHHarvester(HarvesterBase):
             data['package_resource'] = { 'url':fileurl,
                 'description':'Original metadata record',
                 'format':'xml', 'size':len(x) }
-        except urllib2.HTTPError:
+        except (urllib2.HTTPError, urllib2.URLError,):
+            self._add_retry(harvest_object)
             self._save_object_error('Could not get original metadata record!',
                                     harvest_object, stage='Import')
-            self._add_retry(harvest_object)
             return False
         except socket.error:
+            self._add_retry(harvest_object)
             errno, errstr = sys.exc_info()[:2]
             self._save_object_error(
-                'Socket error original metadata record %s, details:\n%s' %
-                    (errno, errstr), harvest_object, stage='Import')
-            self._add_retry(harvest_object)
+                'Socket error original metadata record %s, details:\n%s' % (errno, errstr),
+                harvest_object, stage='Import')
             return False
         return oai_dc2ckan(data, kata_oai_dc_reader._namespaces, group, harvest_object)
 
@@ -466,10 +477,15 @@ class OAIPMHHarvester(HarvesterBase):
         except NoRecordsMatchError:
             return False # Ok, empty set. Nothing to do.
         except socket.error:
+            self._add_retry(harvest_object)
             errno, errstr = sys.exc_info()[:2]
             self._save_object_error('Socket error OAI-PMH %s, details:\n%s' %
-                (errno, errstr,))
+                (errno, errstr,), harvest_object, stage='Fetch')
+            return False
+        except httplib.BadStatusLine:
             self._add_retry(harvest_object)
+            self._save_object_error('Bad HTTP response status line.',
+                harvest_object, stage='Fetch')
             return False
         master_data['record_ids'] = ids
         # Do not save to DB because we can't.

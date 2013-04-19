@@ -12,7 +12,7 @@ import traceback
 from ckan import model
 from ckan.model import Package, Group
 from ckan.model.authz import setup_default_user_roles
-from ckan.model.license import LicenseRegister
+from ckan.model.license import LicenseRegister, LicenseOtherPublicDomain
 from ckan.controllers.storage import BUCKET, get_ofs
 
 from ckan.lib.munge import munge_tag
@@ -42,14 +42,9 @@ def _find_value(node, key_end):
 # Given information about the license, try to match it with some known one.
 def _match_license(text):
     lr = LicenseRegister()
-    for cls in lr.licenses:
-        if cls.url == url:
-            return cls.id
-        if cls.id == text:
-            return cls.id
-        obj = cls()
-        if obj.title() == text:
-            return cls.id
+    for lic in lr.licenses:
+        if text in (lic.url, lic.id, lic.title,):
+            return lic.id
     return None
 
 def _handle_rights(node, namespaces):
@@ -76,8 +71,10 @@ def _handle_rights(node, namespaces):
                 d['licenseURL'] = text
             else:
                 d['licenseText'] = text
-    # What to do with CONTRACTUAL, COPYRIGHTED, OTHER and PUBLIC DOMAIN?
-    # The licenses partially cover them.
+    elif category == 'PUBLIC DOMAIN':
+        pd = LicenseOtherPublicDomain()
+        d['package.license'] = { 'id': pd.id }
+    # Anything sensible to do with CONTRACTUAL, COPYRIGHTED, OTHER?
     return d
 
 def _handle_contributor(node, namespaces):
