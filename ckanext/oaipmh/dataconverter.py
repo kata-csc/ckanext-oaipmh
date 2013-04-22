@@ -8,6 +8,7 @@ database then this could be used to handle that.
 
 import logging
 import traceback
+import datetime
 
 from ckan import model
 from ckan.model import Package, Group
