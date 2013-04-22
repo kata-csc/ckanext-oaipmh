@@ -69,7 +69,7 @@ def _handle_rights(node, namespaces):
             # Something unknown. Store text or license.
             if text.startswith('http://'):
                 d['licenseURL'] = text
-            else:
+            else: # This never seems to happen though text is not URL. Why?
                 d['licenseText'] = text
     elif category == 'PUBLIC DOMAIN':
         pd = LicenseOtherPublicDomain()
@@ -183,6 +183,9 @@ def _oai_dc2ckan(data, namespaces, group, harvest_object):
     # go to extras. Surely duplicate is not necessary?
     description = metadata['description'][0] if len(metadata['description']) else ''
     pkg.notes = description
+    # Date is missing with low probability. I presume this is adequate.
+    if 'date' not in extras:
+        extras['date'] = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
     # Are both needed to have the same value?
     extras['lastmod'] = extras['date']
     pkg.extras = extras
