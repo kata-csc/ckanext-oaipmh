@@ -14,12 +14,11 @@ from ckan import model
 from ckan.model import Package, Group
 from ckan.model.authz import setup_default_user_roles
 from ckan.model.license import LicenseRegister, LicenseOtherPublicDomain
+from ckan.model.license import LicenseOtherClosed, LicenseNotSpecified
 from ckan.controllers.storage import BUCKET, get_ofs
 
 from ckan.lib.munge import munge_tag
 from lxml import etree
-
-import pprint
 
 log = logging.getLogger(__name__)
 
@@ -61,7 +60,7 @@ def _handle_rights(node, namespaces):
         text = decls[0].text
     else: # Probably just old-fashioned text. Fix when counter-example found.
         text = node.text
-        category = 'LICENSED' # Let's give it a try.
+        category = 'LICENSED' # Let's give recognizing the license a try.
     if category == 'LICENSED' and text:
         lic = _match_license(text)
         if lic is not None:
@@ -70,12 +69,17 @@ def _handle_rights(node, namespaces):
             # Something unknown. Store text or license.
             if text.startswith('http://'):
                 d['licenseURL'] = text
-            else: # This never seems to happen though text is not URL. Why?
+            else:
                 d['licenseText'] = text
     elif category == 'PUBLIC DOMAIN':
-        pd = LicenseOtherPublicDomain()
-        d['package.license'] = { 'id': pd.id }
-    # Anything sensible to do with CONTRACTUAL, COPYRIGHTED, OTHER?
+        lic = LicenseOtherPublicDomain()
+        d['package.license'] = { 'id': lic.id }
+    elif category in ('CONTRACTUAL', 'OTHER',):
+        lic = LicenseOtherClosed()
+        d['package.license'] = { 'id': lic.id }
+    elif category == 'COPYRIGHTED':
+        lic = LicenseNotSpecified()
+        d['package.license'] = { 'id': lic.id }
     return d
 
 def _handle_contributor(node, namespaces):
@@ -185,8 +189,9 @@ def _oai_dc2ckan(data, namespaces, group, harvest_object):
     description = metadata['description'][0] if len(metadata['description']) else ''
     pkg.notes = description
     # Date is missing with low probability. I presume this is adequate.
-    if 'date' not in extras:
-        extras['date'] = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
+    # Solved by check and retry in fetch stage.
+    #if 'date' not in extras:
+    #    extras['date'] = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
     # Are both needed to have the same value?
     extras['lastmod'] = extras['date']
     pkg.extras = extras

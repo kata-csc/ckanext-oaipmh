@@ -304,6 +304,7 @@ class OAIPMHHarvester(HarvesterBase):
             if 'until' in from_until:
                 info['until'] = self._str_from_datetime(from_until['until'])
         # Add sets to retry first.
+        insertion_retries = set()
         for name, obj in ident2set.items():
             info = json.loads(obj.content)
             obj.content = None
@@ -313,13 +314,20 @@ class OAIPMHHarvester(HarvesterBase):
             harvest_obj.content = json.dumps(info)
             harvest_obj.save()
             harvest_objs.append(harvest_obj.id)
-            log.debug('Retrying set: %s' % obj.id)
+            if 'set' not in info:
+                insertion_retries.add(name)
+                log.debug('Retrying set insertions: %s' % obj.id)
+            else:
+                log.debug('Retrying set: %s' % obj.id)
         sets = []
         try:
             for set_ in client.listSets():
                 identifier, name, _ = set_
-                if name in ident2set:
-                    continue # Set is already due for retry.
+                # Is set due for retry and it is not missing member insertion?
+                # Set either failed in retry of misses packages but not both.
+                # Set with failed insertions may have new members.
+                if name in ident2set and name not in insertion_retries:
+                    continue
                 sets.append((identifier, name,))
         except NoSetHierarchyError:
             # Is this an actual error or just a feature of the source?
@@ -384,9 +392,11 @@ class OAIPMHHarvester(HarvesterBase):
         group = Group.get(domain) # Checked in gather_stage so exists.
         try:
             if ident['fetch_type'] == 'record':
-                return self._fetch_import_record(harvest_object, ident, client, group)
+                return self._fetch_import_record(
+                    harvest_object, ident, client, group)
             if ident['fetch_type'] == 'set':
-                return self._fetch_import_set(harvest_object, ident, client, group)
+                return self._fetch_import_set(
+                    harvest_object, ident, client, group)
             # This should not happen...
             log.error('Unknown fetch type: %s' % ident['fetch_type'])
         except Exception as e:
@@ -421,8 +431,14 @@ class OAIPMHHarvester(HarvesterBase):
             self._add_retry(harvest_object)
             self._save_object_error('Bad HTTP response status line.',
                 harvest_object, stage='Fetch')
+            return False
         if not metadata:
             # Assume that there is no metadata and not an error.
+            return False
+        if 'date' not in metadata.getMap():
+            self._add_retry(harvest_object)
+            self._save_object_error('Missing date.',
+                harvest_object, stage='Fetch')
             return False
         master_data['record'] = ( header.identifier(), metadata.getMap(), )
         # Do not save to database (because we can't json nor pickle _Element).
@@ -463,31 +479,34 @@ class OAIPMHHarvester(HarvesterBase):
         return oai_dc2ckan(data, kata_oai_dc_reader._namespaces, group, harvest_object)
 
     def _fetch_import_set(self, harvest_object, master_data, client, group):
-        # Fetch stage.
-        args = { self.metadata_prefix_key:self.metadata_prefix_value,
-            'set':master_data['set'] }
-        if 'from_' in master_data:
-            args['from_'] = self._datetime_from_str(master_data['from_'])
-        if 'until' in master_data:
-            args['until'] = self._datetime_from_str(master_data['until'])
-        ids = []
-        try:
-            for identity in client.listIdentifiers(**args):
-                ids.append(identity.identifier())
-        except NoRecordsMatchError:
-            return False # Ok, empty set. Nothing to do.
-        except socket.error:
-            self._add_retry(harvest_object)
-            errno, errstr = sys.exc_info()[:2]
-            self._save_object_error('Socket error OAI-PMH %s, details:\n%s' %
-                (errno, errstr,), harvest_object, stage='Fetch')
-            return False
-        except httplib.BadStatusLine:
-            self._add_retry(harvest_object)
-            self._save_object_error('Bad HTTP response status line.',
-                harvest_object, stage='Fetch')
-            return False
-        master_data['record_ids'] = ids
+        # Could be genuine fetch or retry of set insertions.
+        if 'set' in master_data:
+            # Fetch stage.
+            args = { self.metadata_prefix_key:self.metadata_prefix_value,
+                'set':master_data['set'] }
+            if 'from_' in master_data:
+                args['from_'] = self._datetime_from_str(master_data['from_'])
+            if 'until' in master_data:
+                args['until'] = self._datetime_from_str(master_data['until'])
+            ids = []
+            try:
+                for identity in client.listIdentifiers(**args):
+                    ids.append(identity.identifier())
+            except NoRecordsMatchError:
+                return False # Ok, empty set. Nothing to do.
+            except socket.error:
+                self._add_retry(harvest_object)
+                errno, errstr = sys.exc_info()[:2]
+                self._save_object_error(
+                    'Socket error OAI-PMH %s, details:\n%s' % (errno, errstr,),
+                    harvest_object, stage='Fetch')
+                return False
+            except httplib.BadStatusLine:
+                self._add_retry(harvest_object)
+                self._save_object_error('Bad HTTP response status line.',
+                    harvest_object, stage='Fetch')
+                return False
+            master_data['record_ids'] = ids
         # Do not save to DB because we can't.
         # Import stage.
         model.repo.new_revision()
@@ -497,6 +516,7 @@ class OAIPMHHarvester(HarvesterBase):
             subgroup = Group(name=subg_name, description=subg_name)
             setup_default_user_roles(subgroup)
             subgroup.save()
+        missed = []
         for ident in master_data['record_ids']:
             pkg_name = self._package_name_from_identifier(ident)
             # Package may have been omitted due to missing metadata.
@@ -504,7 +524,20 @@ class OAIPMHHarvester(HarvesterBase):
             if pkg:
                 subgroup.add_package_by_name(pkg_name)
                 subgroup.save()
-        harvest_object.content = None # Clear list.
+            else:
+                # Either omitted due to missing metadata or fetch error.
+                # In the latter case, we want to add record later once the
+                # fetch succeeds after retry.
+                missed.append(ident)
+        if len(missed):
+            # Store missing names for retry.
+            master_data['record_ids'] = missed
+            if 'set' in master_data:
+                del master_data['set'] # Omit fetch later.
+            harvest_object.content = json.dumps(master_data)
+            self._add_retry(harvest_object)
+        else:
+            harvest_object.content = None # Clear data.
         model.repo.commit()
         return True
 
