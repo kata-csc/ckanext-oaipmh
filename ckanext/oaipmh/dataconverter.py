@@ -20,6 +20,8 @@ from ckan.controllers.storage import BUCKET, get_ofs
 from ckan.lib.munge import munge_tag
 from lxml import etree
 
+import pprint
+
 log = logging.getLogger(__name__)
 
 def oai_dc2ckan(data, namespaces, group=None, harvest_object=None):
@@ -47,90 +49,87 @@ def _match_license(text):
             return lic.id
     return None
 
-def _handle_rights(node, namespaces):
-    if node is None:
-        return {}
+def _handle_rights(nodes, namespaces):
     d = {}
-    decls = node.xpath('./*[local-name() = "RightsDeclaration"]',
-        namespaces=namespaces)
-    if len(decls):
-        if len(decls) > 1:
-            log.warning('Multiple RightsDeclarations in one record.')
-        category = decls[0].get('RIGHTSCATEGORY')
-        text = decls[0].text
-    else: # Probably just old-fashioned text. Fix when counter-example found.
-        text = node.text
-        category = 'LICENSED' # Let's give recognizing the license a try.
-    if category == 'LICENSED' and text:
-        lic = _match_license(text)
-        if lic is not None:
-            d['package.license'] = { 'id':lic }
-        else:
-            # Something unknown. Store text or license.
-            if text.startswith('http://'):
-                d['licenseURL'] = text
+    lic_url_idx = 0
+    lic_text_idx = 0
+    for node in nodes:
+        decls = node.xpath('./*[local-name() = "RightsDeclaration"]',
+            namespaces=namespaces)
+        if len(decls):
+            if len(decls) > 1:
+                # This is actually repeatable but not handled so thus far.
+                # Package.license field does not allow for multiple values.
+                # Convert to loop once multiple licenses are handled.
+                log.warning('Multiple RightsDeclarations in one record.')
+            category = decls[0].get('RIGHTSCATEGORY')
+            text = decls[0].text
+        else: # Probably just old-fashioned text.
+            text = node.text
+            category = 'LICENSED' # Let's give recognizing the license a try.
+        if category == 'LICENSED' and text:
+            lic = _match_license(text)
+            if lic is not None:
+                d['package.license'] = { 'id':lic }
             else:
-                d['licenseText'] = text
-    elif category == 'PUBLIC DOMAIN':
-        lic = LicenseOtherPublicDomain()
-        d['package.license'] = { 'id': lic.id }
-    elif category in ('CONTRACTUAL', 'OTHER',):
-        lic = LicenseOtherClosed()
-        d['package.license'] = { 'id': lic.id }
-    elif category == 'COPYRIGHTED':
-        lic = LicenseNotSpecified()
-        d['package.license'] = { 'id': lic.id }
+                # Something unknown. Store text or license.
+                if text.startswith('http://'):
+                    d['licenseURL_%i' % lic_url_idx] = text
+                    lic_url_idx += 1
+                else:
+                    d['licenseText_%i' % lic_text_idx] = text
+                    lic_text_idx += 1
+        elif category == 'PUBLIC DOMAIN':
+            lic = LicenseOtherPublicDomain()
+            d['package.license'] = { 'id': lic.id }
+        elif category in ('CONTRACTUAL', 'OTHER',):
+            lic = LicenseOtherClosed()
+            d['package.license'] = { 'id': lic.id }
+        elif category == 'COPYRIGHTED':
+            lic = LicenseNotSpecified()
+            d['package.license'] = { 'id': lic.id }
     return d
 
-def _handle_contributor(node, namespaces):
-    if node is None:
-        return {}
+def _handle_contributor(nodes, namespaces):
     d = {}
-    projs = node.xpath('./foaf:Project', namespaces=namespaces)
-    text = True
-    if len(projs):
-        text = False
-        idx = 0
-        for pro in projs:
-            d['project_%i' % idx] = _find_value(pro, 'about')
-            # Uncomment and remane keys as needed.
-            #n = pro.xpath('./foaf:name', namespaces=namespaces)
-            #if len(n):
-            #    d['project_name_%i' % idx] = n[0].text
-            #n = pro.xpath('./rdfs:comment', namespaces=namespaces)
-            #if len(n):
-            #    d['project_comment_%i' % idx] = n[0].text
-            #    d['project_comment_lang_%i' % idx] = _find_value(n[0], 'lang')
-            idx += 1
-    # Add iteration over something else when those show up.
-    # Questionable but let's say it's just a contributor.
-    if text:
-        d['contributor'] = node.text
+    contr_idx = 0
+    proj_idx = 0
+    for node in nodes:
+        # Add iteration over something else when those show up.
+        projs = node.xpath('./foaf:Project', namespaces=namespaces)
+        if len(projs):
+            for pro in projs:
+                d['project_%i' % proj_idx] = _find_value(pro, 'about')
+                proj_idx += 1
+        elif node.text: # Plain text field has none of the above.
+            d['contributor_%i' % contr_idx] = node.text
+            contr_idx += 1
     return d
 
-def _handle_publisher(node, namespaces):
-    if node is None:
-        return {}
+def _handle_publisher(nodes, namespaces):
     d = {}
-    persons = node.xpath('./foaf:person', namespaces=namespaces)
-    if len(persons):
-        if len(persons) > 1:
-            log.warning('Node with several publishers.')
-        url = _find_value(persons[0], 'about')
-        ns = persons[0].xpath('./foaf:mbox', namespaces=namespaces)
-        email = _find_value(ns[0], 'resource') if len(ns) else None
-        ns = persons[0].xpath('./foaf:phone', namespaces=namespaces)
-        phone = _find_value(ns[0], 'resource') if len(ns) else None
-        if url:
-            d['contactURL'] = url
-        if phone and len(phone) > 5: # Filter out '-' and other possibilites.
-            d['phone'] = phone
-        if email:
-            d['package.maintainer_email'] = email
-    # If not persons, then what is this? Just email? Could be anything?
+    person_idx = 0
+    for node in nodes:
+        persons = node.xpath('./foaf:person', namespaces=namespaces)
+        for p in persons:
+            url = _find_value(p, 'about')
+            ns = p.xpath('./foaf:mbox', namespaces=namespaces)
+            email = _find_value(ns[0], 'resource') if len(ns) else None
+            ns = p.xpath('./foaf:phone', namespaces=namespaces)
+            phone = _find_value(ns[0], 'resource') if len(ns) else None
+            if url:
+                d['contactURL_%i' % person_idx] = url
+            if phone and len(phone) > 5: # Filter out '-' and similar.
+                d['phone_%i' % person_idx] = phone
+            if email and person_idx == 0: # Just keep first. The rest later?
+                d['package.maintainer_email'] = email
+            person_idx += 1
+        # If not persons, then what is this? Apparently just text. Ignore?
+        # Can be name of an organization.
     return d 
 
 def _oai_dc2ckan(data, namespaces, group, harvest_object):
+    pprint.pprint(data)
     model.repo.new_revision()
     identifier = data['identifier']
     metadata = data['metadata']
@@ -140,6 +139,7 @@ def _oai_dc2ckan(data, namespaces, group, harvest_object):
     if not pkg:
         pkg = Package(name=name, title=title, id=identifier)
         pkg.save()
+        setup_default_user_roles(pkg)
     else:
         log.debug('Updating: %s' % name)
         # There are old resources which are replaced by new ones if they are
@@ -148,52 +148,49 @@ def _oai_dc2ckan(data, namespaces, group, harvest_object):
             r.state = 'deleted'
     extras = {}
     lastidx = 0
-    handled = [ 'title' ]
+    # Is 'type' here needed at all?
     for s in ('subject', 'type',):
-        for tag in metadata.get(s, ''):
-            if not tag:
-                continue
-            for tagi in tag.split(','):
-                tagi = tagi.strip()
-                tagi = munge_tag(tagi[:100])
-                tag_obj = model.Tag.by_name(tagi)
-                if not tag_obj:
-                    tag_obj = model.Tag(name=tagi)
-                else:
-                    pkgtag = model.PackageTag(tag=tag_obj, package=pkg)
+        for tag in metadata.get(s, []):
+            # Turn each subject or type field into it's own tag.
+            tagi = tag.strip()
+            tagi = munge_tag(tagi[:100]) # 100 char limit in DB.
+            tag_obj = model.Tag.by_name(tagi)
+            if not tag_obj:
+                tag_obj = model.Tag(name=tagi)
+                tag_obj.save()
+            pkgtag = model.Session.query(model.PackageTag).filter(
+                model.PackageTag.package_id==pkg.id).filter(
+                model.PackageTag.tag_id==tag_obj.id).limit(1).first()
+            if pkgtag is None:
+                pkgtag = model.PackageTag(tag=tag_obj, package=pkg)
     # Handle creators before contributors so that numbering order is ok.
-    if 'creator' in metadata and len(metadata['creator']):
-        for auth in metadata['creator']:
-            extras['organization_%d' % lastidx] = ''
-            extras['author_%d' % lastidx] = auth
-            lastidx += 1
-    extras.update(_handle_contributor(metadata.get('contributorNode'), namespaces))
-    extras.update(_handle_publisher(metadata.get('publisherNode'), namespaces))
+    for auth in metadata.get('creator', []):
+        extras['organization_%d' % lastidx] = ''
+        extras['author_%d' % lastidx] = auth
+        lastidx += 1
+    extras.update(
+        _handle_contributor(metadata.get('contributorNode', []), namespaces))
+    extras.update(
+        _handle_publisher(metadata.get('publisherNode', []), namespaces))
     # This value belongs to elsewhere.
     if 'package.maintainer_email' in extras:
         pkg.maintainer_email = extras['package.maintainer_email']
         del extras['package.maintainer_email']
-    extras.update(_handle_rights(metadata.get('rightsNode'), namespaces))
+    extras.update(_handle_rights(metadata.get('rightsNode', []), namespaces))
     if 'package.license' in extras:
         pkg.license = extras['package.license']
         del extras['package.license']
     # The rest.
     # description below goes to pkg.notes. I think it should not added here.
     for key, value in metadata.items():
-        if value is None or len(value) == 0 or key in ('title', 'subject', 'type', 'rightsNode', 'publisherNode', 'creator', 'contributorNode',):
+        if value is None or len(value) == 0 or key in ('title', 'subject', 'type', 'rightsNode', 'publisherNode', 'creator', 'contributorNode', 'description',):
             continue
         extras[key] = ' '.join(value)
-    pkg.title = title
-    # Should everything in the list be joined together? Now this also would
-    # go to extras. Surely duplicate is not necessary?
-    description = metadata['description'][0] if len(metadata['description']) else ''
-    pkg.notes = description
-    # Date is missing with low probability. I presume this is adequate.
-    # Solved by check and retry in fetch stage.
-    #if 'date' not in extras:
-    #    extras['date'] = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
-    # Are both needed to have the same value?
-    extras['lastmod'] = extras['date']
+    #description = metadata['description'][0] if len(metadata['description']) else ''
+    notes = ' '.join(metadata.get('description', []))
+    pkg.notes = notes.replace('\n', ' ').replace('  ', ' ')
+    pkg.version = extras['date']
+    del extras['date']
     pkg.extras = extras
     pkg.url = data['package_url']
     if 'package_resource' in data:
@@ -206,19 +203,15 @@ def _oai_dc2ckan(data, namespaces, group, harvest_object):
         harvest_object.content = None
         harvest_object.current = True
         harvest_object.save()
-    setup_default_user_roles(pkg)
-    title = metadata['title'][0] if len(metadata['title']) else ''
+    # Metadata may have different identifiers, pick link, if exists.
     url = ''
     for ids in metadata['identifier']:
         if ids.startswith('http://'):
-            url = ids
-    if url != '':
-        pkg.add_resource(url, description=description, name=title,
-            format='html' if url.startswith('http://') else '')
+            pkg.add_resource(url, name=pkg.title, format='html')
+            break # Previous code added only one so break.
     # All belong to the main group even if they do not belong to any set.
     if group is not None:
         group.add_package_by_name(pkg.name)
-        group.save()
     model.repo.commit()
     return True
 

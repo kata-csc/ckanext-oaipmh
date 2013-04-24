@@ -41,7 +41,7 @@ import traceback
 
 class KataMetadataReader(MetadataReader):
     def __call__(self, element):
-        map = {}
+        map_ = {}
         # create XPathEvaluator for this element
         xpath_evaluator = etree.XPathEvaluator(element, 
                                                namespaces=self._namespaces)
@@ -64,12 +64,11 @@ class KataMetadataReader(MetadataReader):
             elif field_type == 'node':
                 # Structured data. Don't count on knowing what it is but handle
                 # it in code elsewhere. Apparently always a list of 1 node.
-                found = e(expr)
-                value = found[0] if len(found) else None
+                value = e(expr)
             else:
                 raise Error, "Unknown field type: %s" % field_type
-            map[field_name] = value
-        return common.Metadata(map)
+            map_[field_name] = value
+        return common.Metadata(map_)
 
 
 # Below namespaces needs to have all namespaces in docs or some things will not
