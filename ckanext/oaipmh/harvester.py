@@ -316,9 +316,9 @@ class OAIPMHHarvester(HarvesterBase):
             harvest_objs.append(harvest_obj.id)
             if 'set' not in info:
                 insertion_retries.add(name)
-                log.debug('Retrying set insertions: %s' % obj.id)
+                log.debug('Retrying set insertions: %s' % info['set_name'])
             else:
-                log.debug('Retrying set: %s' % obj.id)
+                log.debug('Retrying set: %s' % info['set_name'])
         sets = []
         try:
             for set_ in client.listSets():
@@ -452,8 +452,6 @@ class OAIPMHHarvester(HarvesterBase):
         data['package_url'] = '%s?verb=GetRecord&identifier=%s&%s=%s' % (
             harvest_object.job.source.url, data['identifier'],
             self.metadata_prefix_key, self.metadata_prefix_value,)
-        # Should failure with metadata be considered grounds for retry?
-        # This should fetch the data into the dictionary and not create a file.
         try:
             nowstr = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')
             label = '%s/%s.xml' % (nowstr, data['identifier'])
@@ -507,6 +505,8 @@ class OAIPMHHarvester(HarvesterBase):
                     harvest_object, stage='Fetch')
                 return False
             master_data['record_ids'] = ids
+        else:
+            log.debug('Reinsert: %s %i' % (master_data['set_name'], len(master_data['record_ids']),))
         # Do not save to DB because we can't.
         # Import stage.
         model.repo.new_revision()
@@ -524,11 +524,15 @@ class OAIPMHHarvester(HarvesterBase):
             if pkg:
                 subgroup.add_package_by_name(pkg_name)
                 subgroup.save()
+                if 'set' not in master_data:
+                    log.debug('Inserted %s into %s' % (pkg_name, subg_name,))
             else:
                 # Either omitted due to missing metadata or fetch error.
                 # In the latter case, we want to add record later once the
                 # fetch succeeds after retry.
                 missed.append(ident)
+                if 'set' not in master_data:
+                    log.debug('Omitted %s from %s' % (pkg_name, subg_name,))
         if len(missed):
             # Store missing names for retry.
             master_data['record_ids'] = missed
@@ -536,6 +540,7 @@ class OAIPMHHarvester(HarvesterBase):
                 del master_data['set'] # Omit fetch later.
             harvest_object.content = json.dumps(master_data)
             self._add_retry(harvest_object)
+            log.debug('Missed %s %i' % (master_data['set_name'], len(missed),))
         else:
             harvest_object.content = None # Clear data.
         model.repo.commit()
