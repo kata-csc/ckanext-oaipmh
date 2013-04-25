@@ -129,7 +129,7 @@ def _handle_publisher(nodes, namespaces):
     return d 
 
 def _oai_dc2ckan(data, namespaces, group, harvest_object):
-    pprint.pprint(data)
+    #pprint.pprint(data)
     model.repo.new_revision()
     identifier = data['identifier']
     metadata = data['metadata']
@@ -180,10 +180,15 @@ def _oai_dc2ckan(data, namespaces, group, harvest_object):
     if 'package.license' in extras:
         pkg.license = extras['package.license']
         del extras['package.license']
+    # There may be multiple identifiers (URL, ISBN, ...) in the metadata.
+    id_idx = 0
+    for ident in metadata.get('identifier', []):
+        extras['identifier_%i' % id_idx] = ident
+        id_idx += 1
     # The rest.
     # description below goes to pkg.notes. I think it should not added here.
     for key, value in metadata.items():
-        if value is None or len(value) == 0 or key in ('title', 'subject', 'type', 'rightsNode', 'publisherNode', 'creator', 'contributorNode', 'description',):
+        if value is None or len(value) == 0 or key in ('title', 'subject', 'type', 'rightsNode', 'publisherNode', 'creator', 'contributorNode', 'description', 'identifier',):
             continue
         extras[key] = ' '.join(value)
     #description = metadata['description'][0] if len(metadata['description']) else ''
