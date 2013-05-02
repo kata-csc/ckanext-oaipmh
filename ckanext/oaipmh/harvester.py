@@ -434,9 +434,9 @@ class OAIPMHHarvester(HarvesterBase):
         if not metadata:
             # Assume that there is no metadata and not an error.
             return False
-        if 'date' not in metadata.getMap():
+        if 'date' not in metadata.getMap() or not metadata.getMap()['date']:
             self._add_retry(harvest_object)
-            self._save_object_error('Missing date.',
+            self._save_object_error('Missing date: %s' % master_data['record'],
                 harvest_object, stage='Fetch')
             return False
         master_data['record'] = ( header.identifier(), metadata.getMap(), )
