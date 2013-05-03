@@ -49,6 +49,16 @@ def _match_license(text):
             return lic.id
     return None
 
+def _handle_title(nodes, namespaces):
+    d = {}
+    idx = 0
+    for node in nodes:
+        lang = _find_value(node, 'lang')
+        d['title_%i' % idx] = node.text
+        d['lang_title_%i' % idx] = lang
+        idx += 1
+    return d
+
 def _handle_rights(nodes, namespaces):
     d = {}
     lic_url_idx = 0
@@ -73,7 +83,7 @@ def _handle_rights(nodes, namespaces):
                 d['package.license'] = { 'id':lic }
             else:
                 # Something unknown. Store text or license.
-                if text.startswith('http://'):
+                if text.startswith('http://') or text.startswith('https://'):
                     d['licenseURL_%i' % lic_url_idx] = text
                     lic_url_idx += 1
                 else:
@@ -99,7 +109,13 @@ def _handle_contributor(nodes, namespaces):
         projs = node.xpath('./foaf:Project', namespaces=namespaces)
         if len(projs):
             for pro in projs:
-                d['project_%i' % proj_idx] = _find_value(pro, 'about')
+                name = _find_value(pro, 'about')
+                if name is None:
+                    ns = pro.xpath('./foaf:name', namespaces=namespaces)
+                    if len(ns) == 0:
+                        continue
+                    name = ns[0].text
+                d['project_%i' % proj_idx] = name
                 proj_idx += 1
         elif node.text: # Plain text field has none of the above.
             d['contributor_%i' % contr_idx] = node.text
@@ -133,7 +149,11 @@ def _oai_dc2ckan(data, namespaces, group, harvest_object):
     model.repo.new_revision()
     identifier = data['identifier']
     metadata = data['metadata']
-    title = metadata['title'][0] if len(metadata['title']) else identifier
+    titles = _handle_title(metadata.get('titleNode', []), namespaces)
+    # Store title in pkg.title and keep all in extras as well. That way
+    # UI will work some way in any case.
+    title = titles.get('title_0', identifier)
+    #title = metadata['title'][0] if len(metadata['title']) else identifier
     name = data['package_name']
     pkg = Package.get(name)
     if not pkg:
@@ -146,8 +166,7 @@ def _oai_dc2ckan(data, namespaces, group, harvest_object):
         # relevant anymore so "delete" all existing resources now.
         for r in pkg.resources:
             r.state = 'deleted'
-    extras = {}
-    lastidx = 0
+    extras = titles
     # Is 'type' here needed at all?
     for s in ('subject', 'type',):
         for tag in metadata.get(s, []):
@@ -163,7 +182,7 @@ def _oai_dc2ckan(data, namespaces, group, harvest_object):
                 model.PackageTag.tag_id==tag_obj.id).limit(1).first()
             if pkgtag is None:
                 pkgtag = model.PackageTag(tag=tag_obj, package=pkg)
-    # Handle creators before contributors so that numbering order is ok.
+    lastidx = 0
     for auth in metadata.get('creator', []):
         extras['organization_%d' % lastidx] = ''
         extras['author_%d' % lastidx] = auth
@@ -185,17 +204,22 @@ def _oai_dc2ckan(data, namespaces, group, harvest_object):
     for ident in metadata.get('identifier', []):
         extras['identifier_%i' % id_idx] = ident
         id_idx += 1
+    # Check that we have a language.
+    lang = metadata.get('language', [])
+    if lang is not None and len(lang) and len(lang[0]) > 1:
+        pkg.language = lang[0]
     # The rest.
     # description below goes to pkg.notes. I think it should not added here.
     for key, value in metadata.items():
-        if value is None or len(value) == 0 or key in ('title', 'subject', 'type', 'rightsNode', 'publisherNode', 'creator', 'contributorNode', 'description', 'identifier',):
+        if value is None or len(value) == 0 or key in ('titleNode', 'subject', 'type', 'rightsNode', 'publisherNode', 'creator', 'contributorNode', 'description', 'identifier', 'language',):
             continue
         extras[key] = ' '.join(value)
     #description = metadata['description'][0] if len(metadata['description']) else ''
     notes = ' '.join(metadata.get('description', []))
     pkg.notes = notes.replace('\n', ' ').replace('  ', ' ')
-    pkg.version = extras['date']
-    del extras['date']
+    if 'date' in extras:
+        pkg.version = extras['date']
+        del extras['date']
     pkg.extras = extras
     pkg.url = data['package_url']
     if 'package_resource' in data:
@@ -209,11 +233,9 @@ def _oai_dc2ckan(data, namespaces, group, harvest_object):
         harvest_object.current = True
         harvest_object.save()
     # Metadata may have different identifiers, pick link, if exists.
-    url = ''
     for ids in metadata['identifier']:
-        if ids.startswith('http://'):
-            pkg.add_resource(url, name=pkg.title, format='html')
-            break # Previous code added only one so break.
+        if ids.startswith('http://') or ids.startswith('https://'):
+            pkg.add_resource(ids, name=pkg.title, format='html')
     # All belong to the main group even if they do not belong to any set.
     if group is not None:
         group.add_package_by_name(pkg.name)

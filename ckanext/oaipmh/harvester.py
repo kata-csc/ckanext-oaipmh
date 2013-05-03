@@ -75,7 +75,8 @@ class KataMetadataReader(MetadataReader):
 # be found at all.
 kata_oai_dc_reader = KataMetadataReader(
     fields={
-    'title':       ('textList', 'oai_dc:dc/dc:title/text()'),
+    #'title':       ('textList', 'oai_dc:dc/dc:title/text()'),
+    'titleNode':   ('node', 'oai_dc:dc/dc:title'),
     'creator':     ('textList', 'oai_dc:dc/dc:creator/text()'),
     'subject':     ('textList', 'oai_dc:dc/dc:subject/text()'),
     'description': ('textList', 'oai_dc:dc/dc:description/text()'),
