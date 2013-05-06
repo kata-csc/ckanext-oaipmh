@@ -1,9 +1,11 @@
 '''
 Contains code to convert metadata dictionary into form that's stored in CKAN
 database. Harvester would get a record in import_stage and pass it to this
-for storing the actual data in the database. Technically this could be used for
-conversions outside harvesting, so if we have similar data exported from another
-database then this could be used to handle that.
+for storing the actual data in the database.
+
+In retrospect, there should be a mapping of XML paths to package and extra
+fields/keys which should handle the parsing. This code will become unwieldy as
+more sources with minor variations are added. Repeatability should be known.
 '''
 
 import logging
@@ -145,7 +147,6 @@ def _handle_publisher(nodes, namespaces):
     return d 
 
 def _oai_dc2ckan(data, namespaces, group, harvest_object):
-    #pprint.pprint(data)
     model.repo.new_revision()
     identifier = data['identifier']
     metadata = data['metadata']
@@ -240,5 +241,5 @@ def _oai_dc2ckan(data, namespaces, group, harvest_object):
     if group is not None:
         group.add_package_by_name(pkg.name)
     model.repo.commit()
-    return True
+    return pkg.id
 

@@ -192,6 +192,9 @@ class OAIPMHHarvester(HarvesterBase):
                     'Socket error OAI-PMH %s, details:\n%s' % (errno, errstr),
                     harvest_job)
             return (client, None,)
+        except ValueError:
+            # We have no source URL when importing via UI.
+            return (client, None,)
         except Exception as e:
             # Guard against miscellaneous stuff. Probably plain bugs.
             log.debug(traceback.format_exc(e))
@@ -548,7 +551,7 @@ class OAIPMHHarvester(HarvesterBase):
 
     def import_xml(self, source, xml):
         # Try to get client identifier so group can be found.
-        client, identifier = self._get_client_identifier(source.url)
+        client, identifier = self._get_client_identifier(source.url if source is not None else '')
         group = None
         if identifier:
             domain = identifier.repositoryName()
@@ -567,7 +570,7 @@ class OAIPMHHarvester(HarvesterBase):
         data['package_name'] = self._package_name_from_identifier(
             data['identifier'])
         data['package_url'] = None
-        # Data to use when saving the XMl record.
+        # Data to use when saving the XML record.
         nowstr = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')
         label = '%s/%s.xml' % (nowstr, data['identifier'])
         fileurl = config.get('ckan.site_url') + h.url_for('storage_file',
