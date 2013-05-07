@@ -19,7 +19,7 @@ from ckan.model.license import LicenseRegister, LicenseOtherPublicDomain
 from ckan.model.license import LicenseOtherClosed, LicenseNotSpecified
 from ckan.controllers.storage import BUCKET, get_ofs
 
-from ckan.lib.munge import munge_tag
+#from ckan.lib.munge import munge_tag
 from lxml import etree
 
 import pprint
@@ -173,7 +173,8 @@ def _oai_dc2ckan(data, namespaces, group, harvest_object):
         for tag in metadata.get(s, []):
             # Turn each subject or type field into it's own tag.
             tagi = tag.strip()
-            tagi = munge_tag(tagi[:100]) # 100 char limit in DB.
+            tagi = tagi[:100] # 100 char limit in DB.
+            #tagi = munge_tag(tagi[:100]) # 100 char limit in DB.
             tag_obj = model.Tag.by_name(tagi)
             if not tag_obj:
                 tag_obj = model.Tag(name=tagi)
