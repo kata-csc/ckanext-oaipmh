@@ -18,6 +18,7 @@ from ckan.model.authz import setup_default_user_roles
 from ckan.model.license import LicenseRegister, LicenseOtherPublicDomain
 from ckan.model.license import LicenseOtherClosed, LicenseNotSpecified
 from ckan.controllers.storage import BUCKET, get_ofs
+from ckanext.kata.utils import label_list_yso
 
 #from ckan.lib.munge import munge_tag
 from lxml import etree
@@ -168,22 +169,33 @@ def _oai_dc2ckan(data, namespaces, group, harvest_object):
         for r in pkg.resources:
             r.state = 'deleted'
     extras = titles
-    # Is 'type' here needed at all?
+    idx = 0
     for s in ('subject', 'type',):
         for tag in metadata.get(s, []):
             # Turn each subject or type field into it's own tag.
             tagi = tag.strip()
-            tagi = tagi[:100] # 100 char limit in DB.
-            #tagi = munge_tag(tagi[:100]) # 100 char limit in DB.
-            tag_obj = model.Tag.by_name(tagi)
-            if not tag_obj:
-                tag_obj = model.Tag(name=tagi)
-                tag_obj.save()
-            pkgtag = model.Session.query(model.PackageTag).filter(
-                model.PackageTag.package_id==pkg.id).filter(
-                model.PackageTag.tag_id==tag_obj.id).limit(1).first()
-            if pkgtag is None:
-                pkgtag = model.PackageTag(tag=tag_obj, package=pkg)
+            if tagi.startswith('http://www.yso.fi'):
+                tags = label_list_yso(tagi)
+                extras['tag_source_%i' % idx] = tagi
+                idx += 1
+            elif tagi.startswith('http://') or tagi.startswith('https://'):
+                extras['tag_source_%i' % idx] = tagi
+                idx += 1
+                tags = [] # URL tags break links in UI.
+            else:
+                tags = [ tagi ]
+            for tagi in tags:
+                tagi = tagi[:100] # 100 char limit in DB.
+                #tagi = munge_tag(tagi[:100]) # 100 char limit in DB.
+                tag_obj = model.Tag.by_name(tagi)
+                if not tag_obj:
+                    tag_obj = model.Tag(name=tagi)
+                    tag_obj.save()
+                pkgtag = model.Session.query(model.PackageTag).filter(
+                    model.PackageTag.package_id==pkg.id).filter(
+                    model.PackageTag.tag_id==tag_obj.id).limit(1).first()
+                if pkgtag is None:
+                    pkgtag = model.PackageTag(tag=tag_obj, package=pkg)
     lastidx = 0
     for auth in metadata.get('creator', []):
         extras['organization_%d' % lastidx] = ''

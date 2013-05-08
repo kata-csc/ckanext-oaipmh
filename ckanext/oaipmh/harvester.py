@@ -26,6 +26,7 @@ from pylons import config
 import oaipmh.client
 from oaipmh.metadata import MetadataReader, MetadataRegistry, oai_dc_reader
 from oaipmh.error import NoSetHierarchyError, NoRecordsMatchError
+from oaipmh.error import XMLSyntaxError
 from oaipmh import common
 
 from ckanext.harvest.harvesters.retry import HarvesterRetry
@@ -418,6 +419,11 @@ class OAIPMHHarvester(HarvesterBase):
             header, metadata, _ = client.getRecord(
                 metadataPrefix=self.metadata_prefix_value,
                 identifier=master_data['record'])
+        except XMLSyntaxError:
+            log.error('oai_dc XML syntax error.')
+            self._save_object_error('Syntax error.', harvest_object,
+                stage='Fetch')
+            return False
         except socket.error:
             self._add_retry(harvest_object)
             errno, errstr = sys.exc_info()[:2]
@@ -437,6 +443,7 @@ class OAIPMHHarvester(HarvesterBase):
             return False
         if not metadata:
             # Assume that there is no metadata and not an error.
+            log.warning('No metadata: %s' % master_data['record'])
             return False
         if 'date' not in metadata.getMap() or not metadata.getMap()['date']:
             self._add_retry(harvest_object)
@@ -560,7 +567,7 @@ class OAIPMHHarvester(HarvesterBase):
         try:
             tree = client.parse(xml)
         except SyntaxError:
-            log.debug('oai_dc XML import syntax error.')
+            log.error('oai_dc XML import syntax error.')
             return False
         records, token = client.buildRecords(self.metadata_prefix_value,
             client.getNamespaces(), client.getMetadataRegistry(), tree);
