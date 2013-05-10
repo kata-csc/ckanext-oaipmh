@@ -37,7 +37,7 @@ def oai_dc2ckan(data, namespaces, group=None, harvest_object=None):
 # Annoyingly, attribute such as rdf:about is presented with key such as
 # {http://www.w3.org/1999/02/22-rdf-syntax-ns#}about so we have to check the
 # end of the key. 
-def _find_value(node, key_end):
+def _find_attribute(node, key_end):
     for key in node.keys():
         loc = key.find(key_end)
         if loc == len(key) - len(key_end):
@@ -56,7 +56,7 @@ def _handle_title(nodes, namespaces):
     d = {}
     idx = 0
     for node in nodes:
-        lang = _find_value(node, 'lang')
+        lang = _find_attribute(node, 'lang')
         d['title_%i' % idx] = node.text
         d['lang_title_%i' % idx] = lang
         idx += 1
@@ -112,7 +112,7 @@ def _handle_contributor(nodes, namespaces):
         projs = node.xpath('./foaf:Project', namespaces=namespaces)
         if len(projs):
             for pro in projs:
-                name = _find_value(pro, 'about')
+                name = _find_attribute(pro, 'about')
                 if name is None:
                     ns = pro.xpath('./foaf:name', namespaces=namespaces)
                     if len(ns) == 0:
@@ -131,11 +131,11 @@ def _handle_publisher(nodes, namespaces):
     for node in nodes:
         persons = node.xpath('./foaf:person', namespaces=namespaces)
         for p in persons:
-            url = _find_value(p, 'about')
+            url = _find_attribute(p, 'about')
             ns = p.xpath('./foaf:mbox', namespaces=namespaces)
-            email = _find_value(ns[0], 'resource') if len(ns) else None
+            email = _find_attribute(ns[0], 'resource') if len(ns) else None
             ns = p.xpath('./foaf:phone', namespaces=namespaces)
-            phone = _find_value(ns[0], 'resource') if len(ns) else None
+            phone = _find_attribute(ns[0], 'resource') if len(ns) else None
             if url:
                 d['contactURL_%i' % person_idx] = url
             if phone and len(phone) > 5: # Filter out '-' and similar.
@@ -146,6 +146,37 @@ def _handle_publisher(nodes, namespaces):
         # If not persons, then what is this? Apparently just text. Ignore?
         # Can be name of an organization.
     return d 
+
+def _handle_format(nodes, namespaces):
+    d = []
+    for node in nodes:
+        # Are there others besides File?
+        for f in node.xpath('./fp:File', namespaces=namespaces):
+            url = _find_attribute(f, 'about')
+            if not url:
+                continue
+            size = None
+            # Should be only one.
+            for sz in f.xpath('./fp:size', namespaces=namespaces):
+                size = sz.text
+            checksum = None
+            algorithm = None
+            # Can there be repeat? At what level? Should warn of repetition.
+            for c in f.xpath('./fp:checksum', namespaces=namespaces):
+                for ck in c.xpath('./fp:Checksum', namespaces=namespaces):
+                    for a in ck.xpath('./fp:generator/wn:Algorithm', namespaces=namespaces):
+                        algorithm = _find_attribute(a, 'about')
+                    for v in ck.xpath('./fp:checksumValue', namespaces=namespaces):
+                        checksum = v.text
+            rd = { 'url':url }
+            if size is not None:
+                rd['size'] = size
+            if checksum is not None:
+                rd['hash'] = checksum
+            if algorithm is not None:
+                rd['extras'] = algorithm
+            d.append(rd)
+    return d
 
 def _oai_dc2ckan(data, namespaces, group, harvest_object):
     model.repo.new_revision()
@@ -196,6 +227,7 @@ def _oai_dc2ckan(data, namespaces, group, harvest_object):
                     model.PackageTag.tag_id==tag_obj.id).limit(1).first()
                 if pkgtag is None:
                     pkgtag = model.PackageTag(tag=tag_obj, package=pkg)
+                    pkgtag.save() # Avoids duplicates if tags have duplicates.
     lastidx = 0
     for auth in metadata.get('creator', []):
         extras['organization_%d' % lastidx] = ''
@@ -213,6 +245,10 @@ def _oai_dc2ckan(data, namespaces, group, harvest_object):
     if 'package.license' in extras:
         pkg.license = extras['package.license']
         del extras['package.license']
+    # Causes failure in commit for some reason.
+    #for f in _handle_format(metadata.get('formatNode', []), namespaces):
+    #    pprint.pprint(f)
+    #    pkg.add_resource(**f)
     # There may be multiple identifiers (URL, ISBN, ...) in the metadata.
     id_idx = 0
     for ident in metadata.get('identifier', []):
@@ -225,7 +261,7 @@ def _oai_dc2ckan(data, namespaces, group, harvest_object):
     # The rest.
     # description below goes to pkg.notes. I think it should not added here.
     for key, value in metadata.items():
-        if value is None or len(value) == 0 or key in ('titleNode', 'subject', 'type', 'rightsNode', 'publisherNode', 'creator', 'contributorNode', 'description', 'identifier', 'language',):
+        if value is None or len(value) == 0 or key in ('titleNode', 'subject', 'type', 'rightsNode', 'publisherNode', 'creator', 'contributorNode', 'description', 'identifier', 'language', 'formatNode',):
             continue
         extras[key] = ' '.join(value)
     #description = metadata['description'][0] if len(metadata['description']) else ''

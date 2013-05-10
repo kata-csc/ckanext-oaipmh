@@ -95,12 +95,15 @@ kata_oai_dc_reader = KataMetadataReader(
     'rightsNode': ('node', 'oai_dc:dc/dc:rights'),
     'publisherNode': ('node', 'oai_dc:dc/dc:publisher'),
     'contributorNode': ('node', 'oai_dc:dc/dc:contributor'),
+    'formatNode':      ('node', 'oai_dc:dc/dc:hasFormat'),
     },
     namespaces={
     'oai_dc': 'http://www.openarchives.org/OAI/2.0/oai_dc/',
     'dc' : 'http://purl.org/dc/elements/1.1/',
     'foaf' : "http://xmlns.com/foaf/0.1/",
     'rdfs' : "http://www.w3.org/2000/01/rdf-schema#",
+    'fp' : "http://downlode.org/Code/RDF/File_Properties/schema#",
+    'wn' : "http://xmlns.com/wordnet/1.6/"
     }
 )
 
