@@ -17,7 +17,7 @@ import httplib
 from ckan.model import Session, Package, Group, Member
 from ckan import model
 
-from ckanext.harvest.harvesters.base import HarvesterBase
+from ckanext.harvest.harvesters.base import HarvesterBase, GatherFailure
 from ckanext.harvest.model import HarvestObject, HarvestJob
 from ckan.model.authz import setup_default_user_roles
 from ckan.lib import helpers as h
@@ -217,23 +217,49 @@ class OAIPMHHarvester(HarvesterBase):
                 model.repo.commit()
         return group
 
-    def gather_stage(self, harvest_job):
-        '''
-        The gather stage will recieve a HarvestJob object and will be
-        responsible for:
-            - gathering all the necessary objects to fetch on a later.
-              stage (e.g. for a CSW server, perform a GetRecords request)
-            - creating the necessary HarvestObjects in the database, specifying
-              the guid and a reference to its source and job.
-            - creating and storing any suitable HarvestGatherErrors that may
-              occur.
-            - returning a list with all the ids of the created HarvestObjects.
+    def _raise_gather_failure(self, strerror, retry_list=None):
+        # Use [] to indicate retries should be done. None to do nothing.
+        raise GatherFailure(strerror, retry_list)
 
-        :param harvest_job: HarvestJob object
-        :returns: A list of HarvestObject ids
-        '''
-        model.repo.new_revision()
-        self._set_config(harvest_job.source.config)
+    def _make_retry_lists(self, harvest_job, ident2rec, ident2set, from_until):
+        recs = []
+        for ident, harv in ident2rec.items():
+            info = json.loads(harv.content)
+            harv.content = None
+            harv.save()
+            harvest_obj = HarvestObject(job=harvest_job)
+            harvest_obj.content = json.dumps(info)
+            harvest_obj.save()
+            recs.append(harvest_obj.id)
+            log.debug('Retrying record: %s' % harv.id)
+        sets = []
+        insertion_retries = set()
+        def update_until(info, from_until):
+            if 'until' not in info:
+                return # Wanted up to current time earlier.
+            if 'until' not in from_until:
+                del info['until'] # Want up to current time now.
+                return
+            fu = self._str_from_datetime(from_until['until'])
+            if info['until'] < fu: # Keep latest date from the two alternatives.
+                info['until'] = fu
+        for name, obj in ident2set.items():
+            info = json.loads(obj.content)
+            obj.content = None
+            obj.save()
+            update_until(info, from_until)
+            harvest_obj = HarvestObject(job=harvest_job)
+            harvest_obj.content = json.dumps(info)
+            harvest_obj.save()
+            sets.append(harvest_obj.id)
+            if 'set' not in info:
+                insertion_retries.add(name)
+                log.debug('Retrying set insertions: %s' % info['set_name'])
+            else:
+                log.debug('Retrying set: %s' % info['set_name'])
+        return (recs, sets, insertion_retries,)
+
+    def _get_time_limits(self, harvest_job):
         def date_from_config(key):
             return self._datetime_from_str(config.get(key, None))
         from_ = date_from_config('ckanext.harvest.test.from')
@@ -251,24 +277,18 @@ class OAIPMHHarvester(HarvesterBase):
             from_until['from_'] = from_
         if until:
             from_until['until'] = until
+        return from_until
+
+    def _gather_stage(self, harvest_job):
+        from_until = self._get_time_limits(harvest_job)
         client, identifier = self._get_client_identifier(
             harvest_job.source.url, harvest_job)
         if not identifier:
-            return None
+            self._raise_gather_failure('Could not get source identifier.')
         #query = self.config['query'] if 'query' in self.config else ''
-        harvest_objs = []
         # Get things to retry.
         ident2rec, ident2set = self._scan_retries(harvest_job)
-        # Create a new harvest object that links to this job for every object.
-        for ident, harv in ident2rec.items():
-            info = json.loads(harv.content)
-            harv.content = None
-            harv.save()
-            harvest_obj = HarvestObject(job=harvest_job)
-            harvest_obj.content = json.dumps(info)
-            harvest_obj.save()
-            harvest_objs.append(harvest_obj.id)
-            log.debug('Retrying record: %s' % harv.id)
+        rec_idents = []
         try:
             domain = identifier.repositoryName()
             args = { self.metadata_prefix_key:self.metadata_prefix_value }
@@ -276,56 +296,18 @@ class OAIPMHHarvester(HarvesterBase):
             for ident in client.listIdentifiers(**args):
                 if ident.identifier() in ident2rec:
                     continue # On our retry list already, do not fetch twice.
-                harvest_obj = HarvestObject(job=harvest_job)
-                info = {
-                    'fetch_type':'record',
-                    'record':ident.identifier(),
-                    'domain':domain}
-                harvest_obj.content = json.dumps(info)
-                harvest_obj.save()
-                harvest_objs.append(harvest_obj.id)
+                rec_idents.append(ident.identifier())
         except NoRecordsMatchError:
             log.debug('No records matched: %s' % domain)
             pass # Ok. Just nothing to get.
         except Exception as e:
-            # Todo: handle exceptions better.
+            # Once we know of something specific, handle it separately.
             log.debug(traceback.format_exc(e))
             self._save_gather_error(
                 'Could not fetch identifier list.', harvest_job)
-            return None
-        log.info('Gathered %i records from %s.' % (len(harvest_objs), domain,))
+            self._raise_gather_failure('Could not fetch an identifier list.')
         # Gathering the set list here. Member identifiers in fetch.
         group = self._get_group(domain)
-        def update_until(info, from_until):
-            if 'until' not in info:
-                return # Wanted up to current time earlier.
-            if 'until' not in from_until:
-                del info['until'] # Want up to current time now.
-                return
-            fu = self._str_from_datetime(from_until['until'])
-            if info['until'] < fu: # Keep latest date from the two alternatives.
-                info['until'] = fu
-        def store_times(info, from_until):
-            if 'from_' in from_until:
-                info['from_'] = self._str_from_datetime(from_until['from_'])
-            if 'until' in from_until:
-                info['until'] = self._str_from_datetime(from_until['until'])
-        # Add sets to retry first.
-        insertion_retries = set()
-        for name, obj in ident2set.items():
-            info = json.loads(obj.content)
-            obj.content = None
-            obj.save()
-            update_until(info, from_until)
-            harvest_obj = HarvestObject(job=harvest_job)
-            harvest_obj.content = json.dumps(info)
-            harvest_obj.save()
-            harvest_objs.append(harvest_obj.id)
-            if 'set' not in info:
-                insertion_retries.add(name)
-                log.debug('Retrying set insertions: %s' % info['set_name'])
-            else:
-                log.debug('Retrying set: %s' % info['set_name'])
         sets = []
         try:
             for set_ in client.listSets():
@@ -337,22 +319,81 @@ class OAIPMHHarvester(HarvesterBase):
                     continue
                 sets.append((identifier, name,))
         except NoSetHierarchyError:
-            # Is this an actual error or just a feature of the source?
             log.debug('No sets: %s' % domain)
-            #self._save_gather_error('No set hierarchy.', harvest_job)
+        except urllib2.URLError:
+            # Possibly timeout.
+            self._save_gather_error(
+                'Could not fetch a set list.', harvest_job)
+            # We got something so perhaps records can gen gotten, hence [].
+            self._raise_gather_failure('Could not fetch set list.', [])
+        # Since network errors can't occur anymore, it's ok to create the
+        # harvest objects to return to caller since we are not missing anything
+        # crucial.
+        harvest_objs, set_objs, insertion_retries = self._make_retry_lists(
+            harvest_job, ident2rec, ident2set, from_until)
+        for ident in rec_idents:
+            info = { 'fetch_type':'record', 'record':ident, 'domain':domain }
+            harvest_obj = HarvestObject(job=harvest_job)
+            harvest_obj.content = json.dumps(info)
+            harvest_obj.save()
+            harvest_objs.append(harvest_obj.id)
+        log.info('Gathered %i records from %s.' % (len(harvest_objs), domain,))
+        # Add sets to retry first.
+        harvest_objs.extend(set_objs)
         for set_id, set_name in sets:
             harvest_obj = HarvestObject(job=harvest_job)
             info = { 'fetch_type':'set', 'set': set_id, 'set_name': set_name,
                 'domain': domain, }
+            if 'from_' in from_until:
+                info['from_'] = self._str_from_datetime(from_until['from_'])
+            if 'until' in from_until:
+                info['until'] = self._str_from_datetime(from_until['until'])
             store_times(info, from_until)
             harvest_obj.content = json.dumps(info)
             harvest_obj.save()
             harvest_objs.append(harvest_obj.id)
         self._clear_retries()
-        model.repo.commit()
         log.info(
             'Gathered %i records/sets from %s.' % (len(harvest_objs), domain,))
         return harvest_objs
+
+    def gather_stage(self, harvest_job):
+        '''
+        The gather stage will recieve a HarvestJob object and will be
+        responsible for:
+            - gathering all the necessary objects to fetch on a later.
+              stage (e.g. for a CSW server, perform a GetRecords request)
+            - creating the necessary HarvestObjects in the database, specifying
+              the guid and a reference to its source and job.
+            - creating and storing any suitable HarvestGatherErrors that may
+              occur.
+            - returning a list with all the ids of the created HarvestObjects.
+
+        :param harvest_job: HarvestJob object
+        :returns: A list of HarvestObject ids
+        '''
+        self._set_config(harvest_job.source.config)
+        model.repo.new_revision()
+        result = None
+        retry_ids = []
+        try:
+            result = self._gather_stage(harvest_job)
+        except GatherFailure as e:
+            log.error('Gather %s failed: %s' % (harvest_job.id, e.message,))
+            if e.harvest_obj_ids is not None:
+                # We should be able to retry previous failures.
+                from_until = self._get_time_limits(harvest_job)
+                ident2rec, ident2set = self._scan_retries(harvest_job)
+                retry_ids, set_objs, _ = self._make_retry_lists(
+                    harvest_job, ident2rec, ident2set, from_until)
+                retry_ids.extend(set_objs)
+                self._clear_retries()
+        except Exception as e:
+            log.error(traceback.format_exc(e))
+        model.repo.commit()
+        if result is None:
+            raise GatherFailure(ids=retry_ids)
+        return result
 
     def fetch_stage(self, harvest_object):
         '''
@@ -423,7 +464,8 @@ class OAIPMHHarvester(HarvesterBase):
                 metadataPrefix=self.metadata_prefix_value,
                 identifier=master_data['record'])
         except XMLSyntaxError:
-            log.error('oai_dc XML syntax error.')
+            self._add_retry(harvest_object)
+            log.error('oai_dc XML syntax error: %s' % master_data['record'])
             self._save_object_error('Syntax error.', harvest_object,
                 stage='Fetch')
             return False
@@ -446,6 +488,7 @@ class OAIPMHHarvester(HarvesterBase):
             return False
         if not metadata:
             # Assume that there is no metadata and not an error.
+            # Should this be a cause for retry?
             log.warning('No metadata: %s' % master_data['record'])
             return False
         if 'date' not in metadata.getMap() or not metadata.getMap()['date']:
