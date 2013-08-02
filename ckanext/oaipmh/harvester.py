@@ -67,7 +67,7 @@ class KataMetadataReader(MetadataReader):
                 # it in code elsewhere. Apparently always a list of 1 node.
                 value = e(expr)
             else:
-                raise Error, "Unknown field type: %s" % field_type
+                raise TypeError("Unknown field type: %s" % field_type)
             map_[field_name] = value
         return common.Metadata(map_)
 
@@ -135,22 +135,24 @@ class OAIPMHHarvester(HarvesterBase):
                 'description': 'A server which has a OAI-PMH interface available.'
                 }
 
-
     def _datetime_from_str(self, s):
         # Used to get date from settings file when testing harvesting with
         # (semi-open) date interval.
-        if s == None:
+        if s is None:
             return s
+
         try:
             t = datetime.datetime.strptime(s, '%Y-%m-%dT%H:%M:%S')
             return t
         except ValueError:
             pass
+
         try:
             t = datetime.datetime.strptime(s, '%Y-%m-%d')
             return t
-        except ValueError:
-            log.debug('Bad date for %s: %s' % (key, s,))
+        except ValueError as e:
+            log.debug('Bad date for %s: %s' % (e, s))
+
         return None
 
     def _str_from_datetime(self, dt):
@@ -309,6 +311,8 @@ class OAIPMHHarvester(HarvesterBase):
         # Gathering the set list here. Member identifiers in fetch.
         group = self._get_group(domain)
         sets = []
+        harvest_objs, set_objs, insertion_retries = self._make_retry_lists(
+            harvest_job, ident2rec, ident2set, from_until)
         try:
             for set_ in client.listSets():
                 identifier, name, _ = set_
@@ -329,8 +333,6 @@ class OAIPMHHarvester(HarvesterBase):
         # Since network errors can't occur anymore, it's ok to create the
         # harvest objects to return to caller since we are not missing anything
         # crucial.
-        harvest_objs, set_objs, insertion_retries = self._make_retry_lists(
-            harvest_job, ident2rec, ident2set, from_until)
         for ident in rec_idents:
             info = { 'fetch_type':'record', 'record':ident, 'domain':domain }
             harvest_obj = HarvestObject(job=harvest_job)
@@ -348,7 +350,6 @@ class OAIPMHHarvester(HarvesterBase):
                 info['from_'] = self._str_from_datetime(from_until['from_'])
             if 'until' in from_until:
                 info['until'] = self._str_from_datetime(from_until['until'])
-            store_times(info, from_until)
             harvest_obj.content = json.dumps(info)
             harvest_obj.save()
             harvest_objs.append(harvest_obj.id)

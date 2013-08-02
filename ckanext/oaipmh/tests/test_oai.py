@@ -27,9 +27,9 @@ from oaipmh import metadata
 import oaipmh.client
 from pylons import config
 
-from ckanext.oaipmh.harvester import OAIPMHHarvester
-from ckanext.harvest.model import HarvestJob, HarvestSource, HarvestObject,\
-                                  HarvestGatherError, HarvestObjectError, setup
+from ckanext.oaipmh.harvester import OAIPMHHarvester, GatherFailure
+from ckanext.harvest.model import HarvestJob, HarvestSource, HarvestObject, HarvestGatherError,\
+    HarvestObjectError, setup
 
 from ckanext.oaipmh.oaipmh_server import CKANServer
 from ckanext.oaipmh.rdftools import rdf_reader, rdf_writer
@@ -342,10 +342,10 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         job, harv = self._create_harvester_info()
         job.source.url = "http://foo"
         urllib2.urlopen = realopen
-        gathered = harv.gather_stage(job)
-        self.assert_(gathered == None)
+        # self.assert_(gathered is None)
+        self.assertRaises(GatherFailure, harv.gather_stage, job)
         errs = Session.query(HarvestGatherError).all()
-        self.assert_(errs[0].message == 'Could not gather anything from http://foo!')
+        self.assert_(errs[0].message == 'Could not gather from http://foo!')
 
     def test_zharvester_import(self, mocked=True):
         harvest_object, harv = self._create_harvester()
@@ -361,13 +361,14 @@ class TestOAIPMH(FunctionalTestCase, unittest.TestCase):
         self.assert_(len(the_package.get_tags()) == 4)
         self.assert_(len(the_package.get_groups()) == 3)
         self.assert_(the_package.url == "http://helda.helsinki.fi/oai/request?verb=GetRecord&identifier=%s&metadataPrefix=oai_dc" % the_package.id)
+
         # Test with empty request
         Session.remove()
         CreateTestData.delete()
         Session.query(Package).delete()
         harvest_object, harv = self._create_harvester(config=False)
-        real_content = json.loads(harvest_object.content)
-        self.assert_(harv.import_stage(harvest_object) == False)
+        # real_content = json.loads(harvest_object.content)
+        self.assert_(harv.import_stage(harvest_object) is False)
         errs = Session.query(HarvestGatherError).all()
         self.assert_(len(errs) == 2)
         errs = Session.query(HarvestObjectError).all()
