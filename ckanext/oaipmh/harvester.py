@@ -4,17 +4,14 @@ Harvester for OAI-PMH interfaces.
 #pylint: disable-msg=E1101,E0611,F0401
 import logging
 import json
-import unicodedata
-import string
 import urllib2
 import urllib
 import datetime
 import sys
 from lxml import etree
-import pickle
 import httplib
 
-from ckan.model import Session, Package, Group, Member
+from ckan.model import Session, Package, Group
 from ckan import model
 
 from ckanext.harvest.harvesters.base import HarvesterBase, GatherFailure
@@ -24,7 +21,7 @@ from ckan.lib import helpers as h
 from pylons import config
 
 import oaipmh.client
-from oaipmh.metadata import MetadataReader, MetadataRegistry, oai_dc_reader
+from oaipmh.metadata import MetadataReader, MetadataRegistry
 from oaipmh.error import NoSetHierarchyError, NoRecordsMatchError
 from oaipmh.error import XMLSyntaxError
 from oaipmh import common
@@ -76,36 +73,37 @@ class KataMetadataReader(MetadataReader):
 # be found at all.
 kata_oai_dc_reader = KataMetadataReader(
     fields={
-    #'title':       ('textList', 'oai_dc:dc/dc:title/text()'),
-    'titleNode':   ('node', 'oai_dc:dc/dc:title'),
-    'creator':     ('textList', 'oai_dc:dc/dc:creator/text()'),
-    'subject':     ('textList', 'oai_dc:dc/dc:subject/text()'),
-    'description': ('textList', 'oai_dc:dc/dc:description/text()'),
-    #'publisher':   ('textList', 'oai_dc:dc/dc:publisher/text()'),
-    #'contributor': ('textList', 'oai_dc:dc/dc:contributor/text()'),
-    'date':        ('textList', 'oai_dc:dc/dc:date/text()'),
-    'type':        ('textList', 'oai_dc:dc/dc:type/text()'),
-    'format':      ('textList', 'oai_dc:dc/dc:format/text()'),
-    'identifier':  ('textList', 'oai_dc:dc/dc:identifier/text()'),
-    'source':      ('textList', 'oai_dc:dc/dc:source/text()'),
-    'language':    ('textList', 'oai_dc:dc/dc:language/text()'),
-    'relation':    ('textList', 'oai_dc:dc/dc:relation/text()'),
-    'coverage':    ('textList', 'oai_dc:dc/dc:coverage/text()'),
-    #'rights':      ('textList', 'oai_dc:dc/dc:rights/text()'),
-    'rightsNode': ('node', 'oai_dc:dc/dc:rights'),
-    'publisherNode': ('node', 'oai_dc:dc/dc:publisher'),
-    'contributorNode': ('node', 'oai_dc:dc/dc:contributor'),
-    'formatNode':      ('node', 'oai_dc:dc/dc:hasFormat'),
+        #'title':       ('textList', 'oai_dc:dc/dc:title/text()'),
+        'titleNode': ('node', 'oai_dc:dc/dc:title'),
+        'creator': ('textList', 'oai_dc:dc/dc:creator/text()'),
+        'subject': ('textList', 'oai_dc:dc/dc:subject/text()'),
+        'description': ('textList', 'oai_dc:dc/dc:description/text()'),
+        #'publisher':   ('textList', 'oai_dc:dc/dc:publisher/text()'),
+        #'contributor': ('textList', 'oai_dc:dc/dc:contributor/text()'),
+        'date': ('textList', 'oai_dc:dc/dc:date/text()'),
+        'type': ('textList', 'oai_dc:dc/dc:type/text()'),
+        'format': ('textList', 'oai_dc:dc/dc:format/text()'),
+        'identifier': ('textList', 'oai_dc:dc/dc:identifier/text()'),
+        'source': ('textList', 'oai_dc:dc/dc:source/text()'),
+        'language': ('textList', 'oai_dc:dc/dc:language/text()'),
+        'relation': ('textList', 'oai_dc:dc/dc:relation/text()'),
+        'coverage': ('textList', 'oai_dc:dc/dc:coverage/text()'),
+        #'rights':      ('textList', 'oai_dc:dc/dc:rights/text()'),
+        'rightsNode': ('node', 'oai_dc:dc/dc:rights'),
+        'publisherNode': ('node', 'oai_dc:dc/dc:publisher'),
+        'contributorNode': ('node', 'oai_dc:dc/dc:contributor'),
+        'formatNode': ('node', 'oai_dc:dc/dc:hasFormat'),
     },
     namespaces={
-    'oai_dc': 'http://www.openarchives.org/OAI/2.0/oai_dc/',
-    'dc' : 'http://purl.org/dc/elements/1.1/',
-    'foaf' : "http://xmlns.com/foaf/0.1/",
-    'rdfs' : "http://www.w3.org/2000/01/rdf-schema#",
-    'fp' : "http://downlode.org/Code/RDF/File_Properties/schema#",
-    'wn' : "http://xmlns.com/wordnet/1.6/"
+        'oai_dc': 'http://www.openarchives.org/OAI/2.0/oai_dc/',
+        'dc': 'http://purl.org/dc/elements/1.1/',
+        'foaf': "http://xmlns.com/foaf/0.1/",
+        'rdfs': "http://www.w3.org/2000/01/rdf-schema#",
+        'fp': "http://downlode.org/Code/RDF/File_Properties/schema#",
+        'wn': "http://xmlns.com/wordnet/1.6/"
     }
 )
+
 
 class OAIPMHHarvester(HarvesterBase):
     '''
@@ -174,7 +172,7 @@ class OAIPMHHarvester(HarvesterBase):
             else:
                 # This should not happen...
                 log.debug('Unknown retry fetch type: %s' % data['fetch_type'])
-        return (ident2obj, ident2set,)
+        return ident2obj, ident2set
 
     def _clear_retries(self):
         self._retry.clear_retry_marks()
@@ -185,27 +183,28 @@ class OAIPMHHarvester(HarvesterBase):
         client = oaipmh.client.Client(url, registry)
         try:
             identifier = client.identify()
-        except (urllib2.URLError, urllib2.HTTPError,):
+        except (urllib2.URLError, urllib2.HTTPError):
             if harvest_job:
                 self._save_gather_error(
                     'Could not gather from %s!' % harvest_job.source.url,
                     harvest_job)
-            return (client, None,)
+            return client, None
         except socket.error:
             if harvest_job:
                 errno, errstr = sys.exc_info()[:2]
                 self._save_gather_error(
                     'Socket error OAI-PMH %s, details:\n%s' % (errno, errstr),
                     harvest_job)
-            return (client, None,)
+            return client, None
         except ValueError:
             # We have no source URL when importing via UI.
-            return (client, None,)
+            return client, None
         except Exception as e:
             # Guard against miscellaneous stuff. Probably plain bugs.
             log.debug(traceback.format_exc(e))
-            return (client, None,)
-        return (client, identifier,)
+            return client, None
+
+        return client, identifier
 
     def _get_group(self, domain, in_revision=True):
         group = Group.by_name(domain)
@@ -217,6 +216,7 @@ class OAIPMHHarvester(HarvesterBase):
             group.save()
             if not in_revision:
                 model.repo.commit()
+
         return group
 
     def _raise_gather_failure(self, strerror, retry_list=None):
@@ -236,15 +236,17 @@ class OAIPMHHarvester(HarvesterBase):
             log.debug('Retrying record: %s' % harv.id)
         sets = []
         insertion_retries = set()
+
         def update_until(info, from_until):
             if 'until' not in info:
-                return # Wanted up to current time earlier.
+                return  # Wanted up to current time earlier.
             if 'until' not in from_until:
-                del info['until'] # Want up to current time now.
+                del info['until']  # Want up to current time now.
                 return
             fu = self._str_from_datetime(from_until['until'])
-            if info['until'] < fu: # Keep latest date from the two alternatives.
+            if info['until'] < fu:  # Keep latest date from the two alternatives.
                 info['until'] = fu
+
         for name, obj in ident2set.items():
             info = json.loads(obj.content)
             obj.content = None
@@ -259,11 +261,13 @@ class OAIPMHHarvester(HarvesterBase):
                 log.debug('Retrying set insertions: %s' % info['set_name'])
             else:
                 log.debug('Retrying set: %s' % info['set_name'])
-        return (recs, sets, insertion_retries,)
+
+        return recs, sets, insertion_retries
 
     def _get_time_limits(self, harvest_job):
         def date_from_config(key):
             return self._datetime_from_str(config.get(key, None))
+
         from_ = date_from_config('ckanext.harvest.test.from')
         until = date_from_config('ckanext.harvest.test.until')
         previous_job = Session.query(HarvestJob) \
@@ -271,6 +275,7 @@ class OAIPMHHarvester(HarvesterBase):
             .filter(HarvestJob.gather_finished!=None) \
             .filter(HarvestJob.id!=harvest_job.id) \
             .order_by(HarvestJob.gather_finished.desc()).limit(1).first()
+
         # Settings for debugging override old existing value.
         if previous_job and not from_ and not until:
             from_ = previous_job.gather_started
@@ -279,6 +284,7 @@ class OAIPMHHarvester(HarvesterBase):
             from_until['from_'] = from_
         if until:
             from_until['until'] = until
+
         return from_until
 
     def _gather_stage(self, harvest_job):
@@ -288,6 +294,7 @@ class OAIPMHHarvester(HarvesterBase):
         if not identifier:
             self._raise_gather_failure('Could not get source identifier.')
         #query = self.config['query'] if 'query' in self.config else ''
+
         # Get things to retry.
         ident2rec, ident2set = self._scan_retries(harvest_job)
         rec_idents = []
@@ -308,6 +315,7 @@ class OAIPMHHarvester(HarvesterBase):
             self._save_gather_error(
                 'Could not fetch identifier list.', harvest_job)
             self._raise_gather_failure('Could not fetch an identifier list.')
+
         # Gathering the set list here. Member identifiers in fetch.
         group = self._get_group(domain)
         sets = []
@@ -330,6 +338,7 @@ class OAIPMHHarvester(HarvesterBase):
                 'Could not fetch a set list.', harvest_job)
             # We got something so perhaps records can gen gotten, hence [].
             self._raise_gather_failure('Could not fetch set list.', [])
+
         # Since network errors can't occur anymore, it's ok to create the
         # harvest objects to return to caller since we are not missing anything
         # crucial.
@@ -340,6 +349,7 @@ class OAIPMHHarvester(HarvesterBase):
             harvest_obj.save()
             harvest_objs.append(harvest_obj.id)
         log.info('Gathered %i records from %s.' % (len(harvest_objs), domain,))
+
         # Add sets to retry first.
         harvest_objs.extend(set_objs)
         for set_id, set_name in sets:
@@ -356,6 +366,7 @@ class OAIPMHHarvester(HarvesterBase):
         self._clear_retries()
         log.info(
             'Gathered %i records/sets from %s.' % (len(harvest_objs), domain,))
+
         return harvest_objs
 
     def gather_stage(self, harvest_job):
@@ -391,9 +402,12 @@ class OAIPMHHarvester(HarvesterBase):
                 self._clear_retries()
         except Exception as e:
             log.error(traceback.format_exc(e))
+
         model.repo.commit()
+
         if result is None:
             raise GatherFailure(ids=retry_ids)
+
         return result
 
     def fetch_stage(self, harvest_object):
@@ -439,6 +453,7 @@ class OAIPMHHarvester(HarvesterBase):
         client = oaipmh.client.Client(harvest_object.job.source.url, registry)
         domain = ident['domain']
         group = Group.get(domain) # Checked in gather_stage so exists.
+
         try:
             if ident['fetch_type'] == 'record':
                 return self._fetch_import_record(
@@ -453,6 +468,7 @@ class OAIPMHHarvester(HarvesterBase):
             # Also very rare exceptions we haven't seen yet.
             self._add_retry(harvest_object)
             log.debug(traceback.format_exc(e))
+
         return False
 
     def _package_name_from_identifier(self, identifier):
@@ -487,11 +503,13 @@ class OAIPMHHarvester(HarvesterBase):
             self._save_object_error('Bad HTTP response status line.',
                 harvest_object, stage='Fetch')
             return False
+
         if not metadata:
             # Assume that there is no metadata and not an error.
             # Should this be a cause for retry?
             log.warning('No metadata: %s' % master_data['record'])
             return False
+
         if 'date' not in metadata.getMap() or not metadata.getMap()['date']:
             self._add_retry(harvest_object)
             self._save_object_error('Missing date: %s' % master_data['record'],
@@ -499,6 +517,7 @@ class OAIPMHHarvester(HarvesterBase):
             return False
         master_data['record'] = ( header.identifier(), metadata.getMap(), )
         # Do not save to database (because we can't json nor pickle _Element).
+
         # The import stage.
         # Gather all relevant information into a dictionary.
         data = {}
@@ -531,6 +550,7 @@ class OAIPMHHarvester(HarvesterBase):
                 'Socket error original metadata record %s, details:\n%s' % (errno, errstr),
                 harvest_object, stage='Import')
             return False
+
         return oai_dc2ckan(data, kata_oai_dc_reader._namespaces, group, harvest_object)
 
     def _fetch_import_set(self, harvest_object, master_data, client, group):
@@ -565,6 +585,7 @@ class OAIPMHHarvester(HarvesterBase):
         else:
             log.debug('Reinsert: %s %i' % (master_data['set_name'], len(master_data['record_ids']),))
         # Do not save to DB because we can't.
+
         # Import stage.
         model.repo.new_revision()
         subg_name = '%s - %s' % (group.name, master_data['set_name'],)
@@ -590,6 +611,7 @@ class OAIPMHHarvester(HarvesterBase):
                 missed.append(ident)
                 if 'set' not in master_data:
                     log.debug('Omitted %s from %s' % (pkg_name, subg_name,))
+
         if len(missed):
             # Store missing names for retry.
             master_data['record_ids'] = missed
@@ -600,7 +622,9 @@ class OAIPMHHarvester(HarvesterBase):
             log.debug('Missed %s %i' % (master_data['set_name'], len(missed),))
         else:
             harvest_object.content = None # Clear data.
+
         model.repo.commit()
+
         return True
 
     def import_xml(self, source, xml):
@@ -610,12 +634,14 @@ class OAIPMHHarvester(HarvesterBase):
         if identifier:
             domain = identifier.repositoryName()
             group = self._get_group(domain, False)
+
         # Convert XML to data.
         try:
             tree = client.parse(xml)
         except SyntaxError:
             log.error('oai_dc XML import syntax error.')
             return False
+
         records, token = client.buildRecords(self.metadata_prefix_value,
             client.getNamespaces(), client.getMetadataRegistry(), tree);
         data = {}

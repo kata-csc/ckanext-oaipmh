@@ -6,7 +6,7 @@ import mock
 import urllib2
 from StringIO import StringIO
 import json
-import contextlib
+# import contextlib
 from datetime import datetime, timedelta
 
 import testdata
@@ -15,7 +15,7 @@ from ckan.model import Session, Package, User, Group
 import ckan.model as model
 from ckan.tests import CreateTestData
 from ckan.lib.helpers import url_for
-from ckan.logic.auth.get import package_show
+# from ckan.logic.auth.get import package_show
 from ckan.tests.functional.base import FunctionalTestCase
 
 from lxml import etree

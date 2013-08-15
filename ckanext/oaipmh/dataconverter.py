@@ -13,26 +13,27 @@ import traceback
 import datetime
 
 from ckan import model
-from ckan.model import Package, Group
+from ckan.model import Package
 from ckan.model.authz import setup_default_user_roles
 from ckan.model.license import LicenseRegister, LicenseOtherPublicDomain
 from ckan.model.license import LicenseOtherClosed, LicenseNotSpecified
 from ckan.controllers.storage import BUCKET, get_ofs
 from ckanext.kata.utils import label_list_yso
 
-#from ckan.lib.munge import munge_tag
-from lxml import etree
-
-import pprint
+# from ckan.lib.munge import munge_tag
+# from lxml import etree
 
 log = logging.getLogger(__name__)
+
 
 def oai_dc2ckan(data, namespaces, group=None, harvest_object=None):
     try:
         return _oai_dc2ckan(data, namespaces, group, harvest_object)
     except Exception as e:
         log.debug(traceback.format_exc(e))
+
     return False
+
 
 # Annoyingly, attribute such as rdf:about is presented with key such as
 # {http://www.w3.org/1999/02/22-rdf-syntax-ns#}about so we have to check the
@@ -42,7 +43,9 @@ def _find_attribute(node, key_end):
         loc = key.find(key_end)
         if loc == len(key) - len(key_end):
             return node.get(key)
+
     return None
+
 
 # Given information about the license, try to match it with some known one.
 def _match_license(text):
@@ -50,7 +53,9 @@ def _match_license(text):
     for lic in lr.licenses:
         if text in (lic.url, lic.id, lic.title,):
             return lic.id
+
     return None
+
 
 def _handle_title(nodes, namespaces):
     d = {}
@@ -60,7 +65,9 @@ def _handle_title(nodes, namespaces):
         d['title_%i' % idx] = node.text
         d['lang_title_%i' % idx] = lang
         idx += 1
+
     return d
+
 
 def _handle_rights(nodes, namespaces):
     d = {}
@@ -77,13 +84,14 @@ def _handle_rights(nodes, namespaces):
                 log.warning('Multiple RightsDeclarations in one record.')
             category = decls[0].get('RIGHTSCATEGORY')
             text = decls[0].text
-        else: # Probably just old-fashioned text.
+        else:  # Probably just old-fashioned text.
             text = node.text
-            category = 'LICENSED' # Let's give recognizing the license a try.
+            category = 'LICENSED'  # Let's give recognizing the license a try.
+
         if category == 'LICENSED' and text:
             lic = _match_license(text)
             if lic is not None:
-                d['package.license'] = { 'id':lic }
+                d['package.license'] = {'id': lic}
             else:
                 # Something unknown. Store text or license.
                 if text.startswith('http://') or text.startswith('https://'):
@@ -94,14 +102,16 @@ def _handle_rights(nodes, namespaces):
                     lic_text_idx += 1
         elif category == 'PUBLIC DOMAIN':
             lic = LicenseOtherPublicDomain()
-            d['package.license'] = { 'id': lic.id }
-        elif category in ('CONTRACTUAL', 'OTHER',):
+            d['package.license'] = {'id': lic.id}
+        elif category in ('CONTRACTUAL', 'OTHER'):
             lic = LicenseOtherClosed()
-            d['package.license'] = { 'id': lic.id }
+            d['package.license'] = {'id': lic.id}
         elif category == 'COPYRIGHTED':
             lic = LicenseNotSpecified()
-            d['package.license'] = { 'id': lic.id }
+            d['package.license'] = {'id': lic.id}
+
     return d
+
 
 def _handle_contributor(nodes, namespaces):
     d = {}
@@ -123,7 +133,9 @@ def _handle_contributor(nodes, namespaces):
         elif node.text: # Plain text field has none of the above.
             d['contributor_%i' % contr_idx] = node.text
             contr_idx += 1
+
     return d
+
 
 def _handle_publisher(nodes, namespaces):
     d = {}
@@ -138,14 +150,16 @@ def _handle_publisher(nodes, namespaces):
             phone = _find_attribute(ns[0], 'resource') if len(ns) else None
             if url:
                 d['contactURL_%i' % person_idx] = url
-            if phone and len(phone) > 5: # Filter out '-' and similar.
+            if phone and len(phone) > 5:  # Filter out '-' and similar.
                 d['phone_%i' % person_idx] = phone
-            if email and person_idx == 0: # Just keep first. The rest later?
+            if email and person_idx == 0:  # Just keep first. The rest later?
                 d['package.maintainer_email'] = email
             person_idx += 1
         # If not persons, then what is this? Apparently just text. Ignore?
         # Can be name of an organization.
-    return d 
+
+    return d
+
 
 def _handle_format(nodes, namespaces):
     d = []
@@ -168,7 +182,7 @@ def _handle_format(nodes, namespaces):
                         algorithm = _find_attribute(a, 'about')
                     for v in ck.xpath('./fp:checksumValue', namespaces=namespaces):
                         checksum = v.text
-            rd = { 'url':url }
+            rd = {'url': url}
             if size is not None:
                 rd['size'] = size
             if checksum is not None:
@@ -176,7 +190,9 @@ def _handle_format(nodes, namespaces):
             if algorithm is not None:
                 rd['extras'] = algorithm
             d.append(rd)
+
     return d
+
 
 def _oai_dc2ckan(data, namespaces, group, harvest_object):
     model.repo.new_revision()
@@ -201,7 +217,7 @@ def _oai_dc2ckan(data, namespaces, group, harvest_object):
             r.state = 'deleted'
     extras = titles
     idx = 0
-    for s in ('subject', 'type',):
+    for s in ('subject', 'type'):
         for tag in metadata.get(s, []):
             # Turn each subject or type field into it's own tag.
             tagi = tag.strip()
@@ -212,31 +228,30 @@ def _oai_dc2ckan(data, namespaces, group, harvest_object):
             elif tagi.startswith('http://') or tagi.startswith('https://'):
                 extras['tag_source_%i' % idx] = tagi
                 idx += 1
-                tags = [] # URL tags break links in UI.
+                tags = []  # URL tags break links in UI.
             else:
-                tags = [ tagi ]
+                tags = [tagi]
             for tagi in tags:
-                tagi = tagi[:100] # 100 char limit in DB.
+                tagi = tagi[:100]  # 100 char limit in DB.
                 #tagi = munge_tag(tagi[:100]) # 100 char limit in DB.
                 tag_obj = model.Tag.by_name(tagi)
                 if not tag_obj:
                     tag_obj = model.Tag(name=tagi)
                     tag_obj.save()
                 pkgtag = model.Session.query(model.PackageTag).filter(
-                    model.PackageTag.package_id==pkg.id).filter(
-                    model.PackageTag.tag_id==tag_obj.id).limit(1).first()
+                    model.PackageTag.package_id == pkg.id).filter(
+                    model.PackageTag.tag_id == tag_obj.id).limit(1).first()
                 if pkgtag is None:
                     pkgtag = model.PackageTag(tag=tag_obj, package=pkg)
-                    pkgtag.save() # Avoids duplicates if tags have duplicates.
+                    pkgtag.save()  # Avoids duplicates if tags have duplicates.
     lastidx = 0
     for auth in metadata.get('creator', []):
         extras['organization_%d' % lastidx] = ''
         extras['author_%d' % lastidx] = auth
         lastidx += 1
-    extras.update(
-        _handle_contributor(metadata.get('contributorNode', []), namespaces))
-    extras.update(
-        _handle_publisher(metadata.get('publisherNode', []), namespaces))
+    extras.update(_handle_contributor(metadata.get('contributorNode', []), namespaces))
+    extras.update(_handle_publisher(metadata.get('publisherNode', []), namespaces))
+
     # This value belongs to elsewhere.
     if 'package.maintainer_email' in extras:
         pkg.maintainer_email = extras['package.maintainer_email']
@@ -245,15 +260,18 @@ def _oai_dc2ckan(data, namespaces, group, harvest_object):
     if 'package.license' in extras:
         pkg.license = extras['package.license']
         del extras['package.license']
+
     # Causes failure in commit for some reason.
     #for f in _handle_format(metadata.get('formatNode', []), namespaces):
     #    pprint.pprint(f)
     #    pkg.add_resource(**f)
+
     # There may be multiple identifiers (URL, ISBN, ...) in the metadata.
     id_idx = 0
     for ident in metadata.get('identifier', []):
         extras['identifier_%i' % id_idx] = ident
         id_idx += 1
+
     # Check that we have a language.
     lang = metadata.get('language', [])
     if lang is not None and len(lang) and len(lang[0]) > 1:
@@ -282,13 +300,17 @@ def _oai_dc2ckan(data, namespaces, group, harvest_object):
         harvest_object.content = None
         harvest_object.current = True
         harvest_object.save()
+
     # Metadata may have different identifiers, pick link, if exists.
     for ids in metadata['identifier']:
         if ids.startswith('http://') or ids.startswith('https://'):
             pkg.add_resource(ids, name=pkg.title, format='html')
+
     # All belong to the main group even if they do not belong to any set.
     if group is not None:
         group.add_package_by_name(pkg.name)
+
     model.repo.commit()
+
     return pkg.id
 
