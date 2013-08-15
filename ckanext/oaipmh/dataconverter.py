@@ -51,7 +51,7 @@ def _find_attribute(node, key_end):
 def _match_license(text):
     lr = LicenseRegister()
     for lic in lr.licenses:
-        if text in (lic.url, lic.id, lic.title,):
+        if text in (lic.url, lic.id, lic.title):
             return lic.id
 
     return None
@@ -74,8 +74,7 @@ def _handle_rights(nodes, namespaces):
     lic_url_idx = 0
     lic_text_idx = 0
     for node in nodes:
-        decls = node.xpath('./*[local-name() = "RightsDeclaration"]',
-            namespaces=namespaces)
+        decls = node.xpath('./*[local-name() = "RightsDeclaration"]', namespaces=namespaces)
         if len(decls):
             if len(decls) > 1:
                 # This is actually repeatable but not handled so thus far.
@@ -90,7 +89,7 @@ def _handle_rights(nodes, namespaces):
 
         if category == 'LICENSED' and text:
             lic = _match_license(text)
-            if lic is not None:
+            if lic:
                 d['package.license'] = {'id': lic}
             else:
                 # Something unknown. Store text or license.
@@ -130,7 +129,7 @@ def _handle_contributor(nodes, namespaces):
                     name = ns[0].text
                 d['project_%i' % proj_idx] = name
                 proj_idx += 1
-        elif node.text: # Plain text field has none of the above.
+        elif node.text:  # Plain text field has none of the above.
             d['contributor_%i' % contr_idx] = node.text
             contr_idx += 1
 
@@ -183,11 +182,11 @@ def _handle_format(nodes, namespaces):
                     for v in ck.xpath('./fp:checksumValue', namespaces=namespaces):
                         checksum = v.text
             rd = {'url': url}
-            if size is not None:
+            if size:
                 rd['size'] = size
-            if checksum is not None:
+            if checksum:
                 rd['hash'] = checksum
-            if algorithm is not None:
+            if algorithm:
                 rd['extras'] = algorithm
             d.append(rd)
 
@@ -274,28 +273,32 @@ def _oai_dc2ckan(data, namespaces, group, harvest_object):
 
     # Check that we have a language.
     lang = metadata.get('language', [])
-    if lang is not None and len(lang) and len(lang[0]) > 1:
+    if lang and len(lang) and len(lang[0]) > 1:
         pkg.language = lang[0]
+
     # The rest.
     # description below goes to pkg.notes. I think it should not added here.
     for key, value in metadata.items():
-        if value is None or len(value) == 0 or key in ('titleNode', 'subject', 'type', 'rightsNode', 'publisherNode', 'creator', 'contributorNode', 'description', 'identifier', 'language', 'formatNode',):
+        if value is None or len(value) == 0 or key in ('titleNode', 'subject', 'type', 'rightsNode',
+                                                       'publisherNode', 'creator', 'contributorNode',
+                                                       'description', 'identifier', 'language', 'formatNode'):
             continue
         extras[key] = ' '.join(value)
     #description = metadata['description'][0] if len(metadata['description']) else ''
     notes = ' '.join(metadata.get('description', []))
     pkg.notes = notes.replace('\n', ' ').replace('  ', ' ')
+
     if 'date' in extras:
         pkg.version = extras['date']
         del extras['date']
+
     pkg.extras = extras
     pkg.url = data['package_url']
     if 'package_resource' in data:
         ofs = get_ofs()
-        ofs.put_stream(BUCKET, data['package_xml_save']['label'],
-            data['package_xml_save']['xml'], {})
+        ofs.put_stream(BUCKET, data['package_xml_save']['label'], data['package_xml_save']['xml'], {})
         pkg.add_resource(**(data['package_resource']))
-    if harvest_object is not None:
+    if harvest_object:
         harvest_object.package_id = pkg.id
         harvest_object.content = None
         harvest_object.current = True
@@ -307,7 +310,7 @@ def _oai_dc2ckan(data, namespaces, group, harvest_object):
             pkg.add_resource(ids, name=pkg.title, format='html')
 
     # All belong to the main group even if they do not belong to any set.
-    if group is not None:
+    if group:
         group.add_package_by_name(pkg.name)
 
     model.repo.commit()
