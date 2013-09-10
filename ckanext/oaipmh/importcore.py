@@ -9,6 +9,8 @@ from lxml import etree
 def generic_xml_metadata_reader(xml_element):
 	def flatten_with(prefix, element, result):
 		if element.text: result[prefix] = element.text
+		for attr in element.attrib:
+			result["%s.@%s" % (prefix, attr)] = element.attrib[attr]
 		indices = {}
 		for child in element:
 			index = indices.get(child.tag, 0)
@@ -17,7 +19,7 @@ def generic_xml_metadata_reader(xml_element):
 			if prefix: child_path = "%s.%s" % (prefix, child_path)
 			flatten_with(child_path, child, result)
 	result = {}
-	flatten_with('', xml_element, result)
+	flatten_with(xml_element.tag, xml_element, result)
 	return Metadata(result)
 
 def dummy_metadata_reader(xml_element):
