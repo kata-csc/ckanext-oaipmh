@@ -6,8 +6,22 @@ from oaipmh.metadata import MetadataRegistry
 from oaipmh.common import Metadata
 from lxml import etree
 
+def generic_xml_metadata_reader(xml_element):
+	def flatten_with(prefix, element, result):
+		if element.text: result[prefix] = element.text
+		indices = {}
+		for child in element:
+			index = indices.get(child.tag, 0)
+			indices[child.tag] = index + 1
+			child_path = "%s.%d" % (child.tag, index)
+			if prefix: child_path = "%s.%s" % (prefix, child_path)
+			flatten_with(child_path, child, result)
+	result = {}
+	flatten_with('', xml_element, result)
+	return Metadata(result)
+
 def dummy_metadata_reader(xml_element):
-	return Metadata({'test': 'success', 'foo': 'bar'})
+	return Metadata({'test': 'success'})
 
 def create_metadata_registry():
 	registry = MetadataRegistry()
