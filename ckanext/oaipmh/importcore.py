@@ -6,6 +6,17 @@ from oaipmh.metadata import MetadataRegistry
 from oaipmh.common import Metadata
 from lxml import etree
 
+def namespaced_name(element):
+	name = element.tag
+	default_namespaces = []
+	for prefix, nsurl in element.nsmap.items() + default_namespaces:
+		if prefix is None: prefix = ''
+		else: prefix += ':'
+		oldprefix = '{%s}' % nsurl
+		if name.startswith(oldprefix):
+			return prefix + name[len(oldprefix):]
+	return name
+
 def generic_xml_metadata_reader(xml_element):
 	def flatten_with(prefix, element, result):
 		if element.text: result[prefix] = element.text
@@ -13,12 +24,13 @@ def generic_xml_metadata_reader(xml_element):
 			result["%s.@%s" % (prefix, attr)] = element.attrib[attr]
 		indices = {}
 		for child in element:
-			index = indices.get(child.tag, 0)
-			indices[child.tag] = index + 1
-			child_path = "%s.%s.%d" % (prefix, child.tag, index)
+			name = namespaced_name(child)
+			index = indices.get(name, 0)
+			indices[name] = index + 1
+			child_path = "%s.%s.%d" % (prefix, name, index)
 			flatten_with(child_path, child, result)
 	result = {}
-	flatten_with(xml_element.tag, xml_element, result)
+	flatten_with(namespaced_name(xml_element), xml_element, result)
 	return Metadata(result)
 
 def dummy_metadata_reader(xml_element):
