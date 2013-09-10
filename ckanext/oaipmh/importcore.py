@@ -15,8 +15,7 @@ def generic_xml_metadata_reader(xml_element):
 		for child in element:
 			index = indices.get(child.tag, 0)
 			indices[child.tag] = index + 1
-			child_path = "%s.%d" % (child.tag, index)
-			if prefix: child_path = "%s.%s" % (prefix, child_path)
+			child_path = "%s.%s.%d" % (prefix, child.tag, index)
 			flatten_with(child_path, child, result)
 	result = {}
 	flatten_with(xml_element.tag, xml_element, result)
