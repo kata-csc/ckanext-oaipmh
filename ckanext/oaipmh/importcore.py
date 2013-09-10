@@ -5,6 +5,9 @@
 from oaipmh.metadata import MetadataRegistry
 from oaipmh.common import Metadata
 from lxml import etree
+from rdflib import Graph, Namespace
+from cStringIO import StringIO
+import os
 
 default_namespaces = [
 	('dc', 'http://purl.org/dc/elements/1.1/'),
@@ -53,12 +56,29 @@ def generic_xml_metadata_reader(xml_element):
 			xml_element, result)
 	return Metadata(result)
 
+def generic_rdf_metadata_reader(xml_element):
+	g = Graph()
+	e = etree.ElementTree(xml_element[0])
+	ns = dict((prefix, Namespace(nsurl))
+			for prefix, nsurl in default_namespaces)
+	# this is kinda stupid, but by far the easiest way:
+	# rdflib uses xml.sax so it doesn't understand etree
+	f = StringIO(etree.tostring(e, xml_declaration=True, encoding="utf-8"))
+	g.parse(f, format='xml') # publicID could be the metadata source URL
+	# end stupid
+	datasets = list(g.subjects(ns['rdf']['type'], ns['nrd']['Dataset']))
+	assert len(datasets) == 1
+	root_node = datasets[0]
+	# TODO everything else
+	return Metadata({'identifier': root_node})
+
 def dummy_metadata_reader(xml_element):
 	return Metadata({'test': 'success'})
 
 def create_metadata_registry():
 	registry = MetadataRegistry()
 	registry.registerReader('oai_dc', generic_xml_metadata_reader)
+	registry.registerReader('nrd', generic_rdf_metadata_reader)
 	#registry.registerReader('nrd', nrd_metadata_reader)
 	return registry
 
@@ -67,7 +87,7 @@ def test_fetch(url, record_id):
 	registry = create_metadata_registry()
 	client = Client(url, registry)
 	record = client.getRecord(identifier=record_id,
-			metadataPrefix='oai_dc')
+			metadataPrefix='nrd')
 	return record
 
 def test_list(url):
