@@ -30,9 +30,10 @@ default_namespaces = [
 ]
 
 def namespaced_name(name, namespaces):
-	for prefix, nsurl in namespaces.items() + default_namespaces:
+	for prefix, nsurl in namespaces + default_namespaces:
 		if prefix is None: prefix = ''
 		else: prefix += ':'
+		if name.startswith(nsurl): return prefix + name[len(nsurl):]
 		oldprefix = '{%s}' % nsurl
 		if name.startswith(oldprefix):
 			return prefix + name[len(oldprefix):]
@@ -42,18 +43,18 @@ def generic_xml_metadata_reader(xml_element):
 	def flatten_with(prefix, element, result):
 		if element.text: result[prefix] = element.text
 		for attr in element.attrib:
-			name = namespaced_name(attr, element.nsmap)
+			name = namespaced_name(attr, element.nsmap.items())
 			result["%s.@%s" % (prefix, name)] = element.attrib[attr]
 		indices = {}
 		for child in element:
-			name = namespaced_name(child.tag, child.nsmap)
+			name = namespaced_name(child.tag, child.nsmap.items())
 			index = indices.get(name, 0)
 			indices[name] = index + 1
 			child_path = "%s.%s.%d" % (prefix, name, index)
 			flatten_with(child_path, child, result)
 	result = {}
-	flatten_with(namespaced_name(xml_element.tag, xml_element.nsmap),
-			xml_element, result)
+	flatten_with(namespaced_name(xml_element.tag,
+		xml_element.nsmap.items()), xml_element, result)
 	return Metadata(result)
 
 def generic_rdf_metadata_reader(xml_element):
@@ -66,11 +67,29 @@ def generic_rdf_metadata_reader(xml_element):
 	f = StringIO(etree.tostring(e, xml_declaration=True, encoding="utf-8"))
 	g.parse(f, format='xml') # publicID could be the metadata source URL
 	# end stupid
+
+	visited = set()
+	def flatten_with(prefix, node, result):
+		if node in visited: return
+		visited.add(node)
+		result[prefix] = unicode(node)
+		if hasattr(node, 'language') and node.language:
+			result[prefix + '.language'] = node.language
+		indices = {}
+		# TODO add reverse relations
+		for p, o in g.predicate_objects(node):
+			name = namespaced_name(str(p), list(g.namespaces()))
+			index = indices.get(name, 0)
+			indices[name] = index + 1
+			child_path = "%s.%s.%d" % (prefix, name, index)
+			flatten_with(child_path, o, result)
+
 	datasets = list(g.subjects(ns['rdf']['type'], ns['nrd']['Dataset']))
 	assert len(datasets) == 1
 	root_node = datasets[0]
-	# TODO everything else
-	return Metadata({'identifier': root_node})
+	result = {}
+	flatten_with('dataset', root_node, result)
+	return Metadata(result)
 
 def dummy_metadata_reader(xml_element):
 	return Metadata({'test': 'success'})
