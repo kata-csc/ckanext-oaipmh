@@ -57,6 +57,10 @@ def generic_xml_metadata_reader(xml_element):
 		xml_element.nsmap.items()), xml_element, result)
 	return Metadata(result)
 
+def is_reverse_relation(rel1, rel2):
+	rel1, rel2 = rel1[:rel1.rindex('.')], rel2[:rel2.rindex('.')]
+	return rel1 == 'rev:' + rel2 or rel2 == 'rev:' + rel1
+
 def generic_rdf_metadata_reader(xml_element):
 	g = Graph()
 	e = etree.ElementTree(xml_element[0])
@@ -71,26 +75,25 @@ def generic_rdf_metadata_reader(xml_element):
 
 	visited = set()
 	def flatten_with(prefix, node, result):
+		path = prefix.split('/')
+		if len(path) > 2 and is_reverse_relation(path[-1], path[-2]):
+			return
 		result[prefix] = unicode(node)
 		if node in visited: return
 		visited.add(node)
 		if hasattr(node, 'language') and node.language:
 			result[prefix + '/language'] = node.language
 		indices = {}
-		for p, o in g.predicate_objects(node):
-			name = namespaced_name(str(p), list(g.namespaces()))
+		arcs = [(namespaced_name(str(p), list(g.namespaces())), o)
+				for p, o in g.predicate_objects(node)] + \
+			[('rev:' + namespaced_name(str(p),
+				list(g.namespaces())), s)
+				for s, p in g.subject_predicates(node)]
+		for name, child in arcs:
 			index = indices.get(name, 0)
 			indices[name] = index + 1
 			child_path = "%s/%s.%d" % (prefix, name, index)
-			flatten_with(child_path, o, result)
-		for s, p in g.subject_predicates(node):
-			if s in visited: continue
-			name = 'rev:' + namespaced_name(str(p),
-					list(g.namespaces()))
-			index = indices.get(name, 0)
-			indices[name] = index + 1
-			child_path = "%s/%s.%d" % (prefix, name, index)
-			flatten_with(child_path, s, result)
+			flatten_with(child_path, child, result)
 
 	datasets = list(g.subjects(ns['rdf']['type'], ns['nrd']['Dataset']))
 	assert len(datasets) == 1
