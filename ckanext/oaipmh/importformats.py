@@ -100,14 +100,14 @@ def dc_metadata_reader(xml):
 	result = generic_xml_metadata_reader(xml).getMap()
 	mapping = [(u'dc:title', u'title.%d'),
 		(u'dc:identifier', u'versionidentifier.%d'),
-		(u'dc:creator', u'creator.%d/name'),
-		(u'dc:language', u'language.%d/label'),
+		(u'dc:creator', u'creator.%d/name.0'),
+		(u'dc:language', u'language.%d/label.0'),
 		(u'dc:description', u'description.%d'),
 		(u'dc:subject', u'subject.%d'),
-		(u'dc:publisher', u'distributor.%d/name'),
-		(u'dc:format', u'resource.%d/format'),
-		(u'dc:contributor', u'contributor.%d/name'),
-		(u'dc:rights', u'license.%d/description'),
+		(u'dc:publisher', u'distributor.%d/name.0'),
+		(u'dc:format', u'resource.%d/format.0'),
+		(u'dc:contributor', u'contributor.%d/name.0'),
+		(u'dc:rights', u'license.%d/description.0'),
 		(u'dc:source', u'continuityidentifier.%d'),
 	]
 	for source, dest in mapping:
@@ -116,4 +116,6 @@ def dc_metadata_reader(xml):
 		for i in range(count):
 			source_n = 'metadata/oai_dc:dc.0/%s.%d' % (source, i)
 			copy_element(source_n, dest % i, result)
+			if dest.endswith('.0'):
+				result[dest[:-2] % i + '.count'] = 1
 	return Metadata(result)
