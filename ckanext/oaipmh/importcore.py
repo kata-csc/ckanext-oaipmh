@@ -38,6 +38,14 @@ def namespaced_name(name, namespaces):
 		if name.startswith(nsurl): return prefix + name[len(nsurl):]
 	return name
 
+def namepath_for_element(prefix, name, indices, md):
+	index = indices.get(name, 0)
+	indices[name] = index + 1
+	last_rel = prefix.split('/')[-1]
+	if not is_reverse_relation(name, last_rel):
+		md["%s/%s.count" % (prefix, name)] = index + 1
+	return "%s/%s.%d" % (prefix, name, index)
+
 def generic_xml_metadata_reader(xml_element):
 	def flatten_with(prefix, element, result):
 		if element.text: result[prefix] = element.text
@@ -47,10 +55,8 @@ def generic_xml_metadata_reader(xml_element):
 		indices = {}
 		for child in element:
 			name = namespaced_name(child.tag, child.nsmap.items())
-			index = indices.get(name, 0)
-			indices[name] = index + 1
-			result["%s/%s.count" % (prefix, name)] = index + 1
-			child_path = "%s/%s.%d" % (prefix, name, index)
+			child_path = namepath_for_element(prefix, name,
+					indices, result)
 			flatten_with(child_path, child, result)
 	result = {}
 	flatten_with(namespaced_name(xml_element.tag,
@@ -58,7 +64,10 @@ def generic_xml_metadata_reader(xml_element):
 	return Metadata(result)
 
 def is_reverse_relation(rel1, rel2):
-	rel1, rel2 = rel1[:rel1.rindex('.')], rel2[:rel2.rindex('.')]
+	try: rel1 = rel1[:rel1.rindex('.')]
+	except ValueError: pass
+	try: rel2 = rel2[:rel2.rindex('.')]
+	except ValueError: pass
 	return rel1 == 'rev:' + rel2 or rel2 == 'rev:' + rel1
 
 def generic_rdf_metadata_reader(xml_element):
@@ -90,10 +99,8 @@ def generic_rdf_metadata_reader(xml_element):
 				list(g.namespaces())), s)
 				for s, p in g.subject_predicates(node)]
 		for name, child in arcs:
-			index = indices.get(name, 0)
-			indices[name] = index + 1
-			result["%s/%s.count" % (prefix, name)] = index + 1
-			child_path = "%s/%s.%d" % (prefix, name, index)
+			child_path = namepath_for_element(prefix, name,
+					indices, result)
 			flatten_with(child_path, child, result)
 
 	datasets = list(g.subjects(ns['rdf']['type'], ns['nrd']['Dataset']))
