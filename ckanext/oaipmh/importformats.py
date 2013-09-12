@@ -6,23 +6,19 @@ from lxml import etree
 
 def copy_element(source, dest, md, callback = None):
 	if source in md:
-		md[dest] = md[dest + '.0'] = md[source]
-		md[dest + '.count'] = 1
+		md[dest] = md[source]
 		if callback: callback(source, dest)
 		return
 	count = md.get(source + '.count', 0)
+	if not count: return
 	md[dest + '.count'] = count
 	for i in range(count):
 		source_n = '%s.%d' % (source, i)
 		dest_n = '%s.%d' % (dest, i)
-		md[dest_n] = md[dest] = md[source_n]
-		src_lang = source_n + '/language'
-		dst_n_lang = dest_n + '/language'
-		dst_lang = dest + '/language'
-		if src_lang in md: md[dst_n_lang] = md[dst_lang] = md[src_lang]
-		src_lang = source_n + '/@lang'
-		if src_lang in md: md[dst_n_lang] = md[dst_lang] = md[src_lang]
-		if callback: callback(source_n, dest_n)
+		copy_element(source_n + '/language', dest_n + '/language', md)
+		copy_element(source_n + '/@lang', dest_n + '/language', md)
+		copy_element(source_n + '/@xml:lang', dest_n + '/language', md)
+		copy_element(source_n, dest_n, md, callback)
 
 def nrd_metadata_reader(xml):
 	result = generic_rdf_metadata_reader(xml).getMap()
@@ -82,7 +78,7 @@ def nrd_metadata_reader(xml):
 		(u'dataset/nrd:temporal', u'temporalcoverage', None),
 		(u'dataset/nrd:spatial', u'spatialcoverage', None), # names?
 		(u'dataset/nrd:manifestation', u'resource', file_attrs),
-		(u'dataset/nrd:observationMatrix', u'structure', None), # TODO
+		(u'dataset/nrd:observationMatrix', u'variables', None), # TODO
 		(u'dataset/nrd:usedByPublication', u'publication',
 			document_attrs),
 		(u'dataset/dct:description', u'description', None),
@@ -102,8 +98,23 @@ def nrd_metadata_reader(xml):
 
 def dc_metadata_reader(xml):
 	result = generic_xml_metadata_reader(xml).getMap()
-	mapping = [(u'dc:title', u'title'),
-		(u'dc:identifier', u'versionidentifier'),
+	mapping = [(u'dc:title', u'title.%d'),
+		(u'dc:identifier', u'versionidentifier.%d'),
+		(u'dc:creator', u'creator.%d/name'),
+		(u'dc:language', u'language.%d/label'),
+		(u'dc:description', u'description.%d'),
+		(u'dc:subject', u'subject.%d'),
+		(u'dc:publisher', u'distributor.%d/name'),
+		(u'dc:format', u'resource.%d/format'),
+		(u'dc:contributor', u'contributor.%d/name'),
+		(u'dc:rights', u'license.%d/description'),
+		(u'dc:source', u'continuityidentifier.%d'),
 	]
+	for source, dest in mapping:
+		count = md.get(source + '.count', 0)
+		md[dest + '.count'] = count
+		for i in range(count):
+			source_n = 'metadata/oai_dc:dc/%s.%d' % (source, i)
+			dest_n = dest % i
+			copy_element(source_n, dest_n, result)
 	return Metadata(result)
-
