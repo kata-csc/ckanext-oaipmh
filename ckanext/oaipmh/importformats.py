@@ -37,16 +37,16 @@ def nrd_metadata_reader(xml):
 		copy_element(source + '/dct:title', dest + '/title', result)
 		copy_element(source + '/dct:identifier', dest, result)
 		copy_element(source + '/dct:creator',
-				dest + '/creator/name', result)
+				dest + '/creator.0/name', result)
 		copy_element(source + '/nrd:creator', dest + '/creator',
 				result, person_attrs)
 		copy_element(source + '/dct:description',
 				dest + '/description', result)
 
 	def funding_attrs(source, dest):
-		copy_element(source + '/rev:arpfo:funds.0/arpfo:grantNumber.0',
+		copy_element(source + '/rev:arpfo:funds.0/arpfo:grantNumber',
 				dest + '/fundingNumber', result)
-		copy_element(source + '/rev:arpfo:funds.0/rev:arpfo:provides.0',
+		copy_element(source + '/rev:arpfo:funds.0/rev:arpfo:provides',
 				dest + '/funder', result,
 				person_attrs)
 
@@ -79,8 +79,8 @@ def nrd_metadata_reader(xml):
 		(u'dataset/dct:isPartOf', u'collection', document_attrs),
 		(u'dataset/dct:requires', u'requires', None),
 		(u'dataset/nrd:discipline', u'discipline', None),
-		(u'dataset/nrd:temporal', u'temporalCoverage', None),
-		(u'dataset/nrd:spatial', u'spatialCoverage', None), # names?
+		(u'dataset/nrd:temporal', u'temporalcoverage', None),
+		(u'dataset/nrd:spatial', u'spatialcoverage', None), # names?
 		(u'dataset/nrd:manifestation', u'resource', file_attrs),
 		(u'dataset/nrd:observationMatrix', u'structure', None), # TODO
 		(u'dataset/nrd:usedByPublication', u'publication',
@@ -101,6 +101,9 @@ def nrd_metadata_reader(xml):
 	return Metadata(result)
 
 def dc_metadata_reader(xml):
-	result = generic_xml_metadata_reader(xml)
-	return result
+	result = generic_xml_metadata_reader(xml).getMap()
+	mapping = [(u'dc:title', u'title'),
+		(u'dc:identifier', u'versionidentifier'),
+	]
+	return Metadata(result)
 
