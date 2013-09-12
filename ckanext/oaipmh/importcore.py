@@ -107,7 +107,7 @@ def generic_rdf_metadata_reader(xml_element):
 	assert len(datasets) == 1
 	root_node = datasets[0]
 	result = {}
-	flatten_with('dataset', root_node, result)
+	flatten_with(u'dataset', root_node, result)
 	return Metadata(result)
 
 def dummy_metadata_reader(xml_element):
