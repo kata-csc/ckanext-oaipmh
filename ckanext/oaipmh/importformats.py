@@ -111,10 +111,9 @@ def dc_metadata_reader(xml):
 		(u'dc:source', u'continuityidentifier.%d'),
 	]
 	for source, dest in mapping:
-		count = md.get(source + '.count', 0)
-		md[dest + '.count'] = count
+		count = result.get('metadata/oai_dc:dc.0/%s.count' % source, 0)
+		result[dest[:dest.index('.%d')] + '.count'] = count
 		for i in range(count):
-			source_n = 'metadata/oai_dc:dc/%s.%d' % (source, i)
-			dest_n = dest % i
-			copy_element(source_n, dest_n, result)
+			source_n = 'metadata/oai_dc:dc.0/%s.%d' % (source, i)
+			copy_element(source_n, dest % i, result)
 	return Metadata(result)
