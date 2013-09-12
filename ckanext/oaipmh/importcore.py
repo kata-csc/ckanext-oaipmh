@@ -34,9 +34,8 @@ def namespaced_name(name, namespaces):
 		if prefix is None: prefix = ''
 		else: prefix += ':'
 		if name.startswith(nsurl): return prefix + name[len(nsurl):]
-		oldprefix = '{%s}' % nsurl
-		if name.startswith(oldprefix):
-			return prefix + name[len(oldprefix):]
+		nsurl = '{%s}' % nsurl
+		if name.startswith(nsurl): return prefix + name[len(nsurl):]
 	return name
 
 def generic_xml_metadata_reader(xml_element):
@@ -50,6 +49,7 @@ def generic_xml_metadata_reader(xml_element):
 			name = namespaced_name(child.tag, child.nsmap.items())
 			index = indices.get(name, 0)
 			indices[name] = index + 1
+			result["%s/%s.count" % (prefix, name)] = index + 1
 			child_path = "%s/%s.%d" % (prefix, name, index)
 			flatten_with(child_path, child, result)
 	result = {}
@@ -92,6 +92,7 @@ def generic_rdf_metadata_reader(xml_element):
 		for name, child in arcs:
 			index = indices.get(name, 0)
 			indices[name] = index + 1
+			result["%s/%s.count" % (prefix, name)] = index + 1
 			child_path = "%s/%s.%d" % (prefix, name, index)
 			flatten_with(child_path, child, result)
 
@@ -106,10 +107,11 @@ def dummy_metadata_reader(xml_element):
 	return Metadata({'test': 'success'})
 
 def create_metadata_registry():
+	from importformats import nrd_metadata_reader, dc_metadata_reader
 	registry = MetadataRegistry()
-	registry.registerReader('oai_dc', generic_xml_metadata_reader)
-	registry.registerReader('nrd', generic_rdf_metadata_reader)
-	#registry.registerReader('nrd', nrd_metadata_reader)
+	registry.registerReader('oai_dc', dc_metadata_reader)
+	registry.registerReader('nrd', nrd_metadata_reader)
+	registry.registerReader('rdf', generic_rdf_metadata_reader)
 	return registry
 
 def test_fetch(url, record_id):
