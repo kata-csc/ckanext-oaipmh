@@ -121,12 +121,11 @@ def create_metadata_registry():
 	registry.registerReader('rdf', generic_rdf_metadata_reader)
 	return registry
 
-def test_fetch(url, record_id):
+def test_fetch(url, record_id, fmt):
 	from oaipmh.client import Client
 	registry = create_metadata_registry()
 	client = Client(url, registry)
-	record = client.getRecord(identifier=record_id,
-			metadataPrefix='nrd')
+	record = client.getRecord(identifier=record_id, metadataPrefix=fmt)
 	return record
 
 def test_list(url):
@@ -138,8 +137,9 @@ def test_list(url):
 
 if __name__ == '__main__':
 	import sys
-	if len(sys.argv) > 2:
-		header, metadata, about = test_fetch(sys.argv[1], sys.argv[2])
+	if len(sys.argv) > 3:
+		header, metadata, about = test_fetch(sys.argv[1],
+				sys.argv[2], sys.argv[3])
 		for item in metadata.getMap().items(): print item
 	else:
 		for item in test_list(sys.argv[1]): print item
