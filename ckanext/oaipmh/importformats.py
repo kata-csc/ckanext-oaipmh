@@ -26,9 +26,42 @@ def copy_element(source, dest, md, callback = None):
 
 def nrd_metadata_reader(xml):
 	result = generic_rdf_metadata_reader(xml).getMap()
-	copy_element(u'dataset/dct:title', u'title', result)
-	copy_element(u'dataset/nrd:modified', u'modified', result)
-	copy_element(u'dataset/nrd:rights', u'rights', result)
+
+	def pick_person_attributes(source, dest):
+		# TODO: here we could also fetch from ISNI/ORCID
+		copy_element(source + '/foaf:name', dest + '/name', result)
+		copy_element(source + '/foaf:mbox', dest + '/email', result)
+		copy_element(source + '/foaf:phone', dest + '/phone', result)
+
+	def copy_funding(source, dest):
+		copy_element(source + '/rev:arpfo:funds.0/arpfo:grantNumber.0',
+				dest + '/fundingNumber', result)
+		copy_element(source + '/rev:arpfo:funds.0/rev:arpfo:provides.0',
+				dest + '/funder', result,
+				pick_person_attributes)
+
+	mapping = [(u'dataset', u'versionidentifier', None),
+		(u'dataset/nrd:continuityIdentifier', u'continuityidentifier',
+			None),
+		(u'dataset/rev:foaf:primaryTopic.0/nrd:metadataIdentifier',
+			u'metadata/identifier', None),
+		(u'dataset/rev:foaf:primaryTopic.0/nrd:metadataModified',
+			u'metadata/modified', None),
+		(u'dataset/dct:title', u'title', None),
+		(u'dataset/nrd:modified', u'modified', None),
+		(u'dataset/nrd:rights', u'rights', None),
+		(u'dataset/nrd:language', u'language', None),
+		(u'dataset/nrd:owner', u'owner', pick_person_attributes),
+		(u'dataset/nrd:creator', u'creator', pick_person_attributes),
+		(u'dataset/nrd:distributor', u'distributor',
+			pick_person_attributes),
+		(u'dataset/nrd:contributor', u'contributor',
+			pick_person_attributes),
+		(u'dataset/nrd:subject', u'subject', None), # fetch tags?
+		(u'dataset/nrd:producerProject', u'project', copy_funding),
+	]
+	for source, dest, callback in mapping:
+		copy_element(source, dest, result, callback)
 	try:
 		rights = etree.XML(result[u'rights'])
 		rightsclass = rights.attrib['RIGHTSCATEGORY'].lower()
@@ -38,19 +71,6 @@ def nrd_metadata_reader(xml):
 		if rightsclass == 'contractual':
 			result[u'accessURL'] = rights[0].text
 	except: pass
-	copy_element(u'dataset/nrd:language', u'language', result)
-	def pick_person_attributes(source, dest):
-		copy_element(source + '/foaf:name', dest + '/name', result)
-		copy_element(source + '/foaf:mbox', dest + '/email', result)
-		copy_element(source + '/foaf:phone', dest + '/phone', result)
-	copy_element(u'dataset/nrd:owner', u'owner',
-			result, pick_person_attributes)
-	copy_element(u'dataset/nrd:creator', u'creator',
-			result, pick_person_attributes)
-	copy_element(u'dataset/nrd:distributor', u'distributor',
-			result, pick_person_attributes)
-	copy_element(u'dataset/nrd:contributor', u'contributor',
-			result, pick_person_attributes)
 	return Metadata(result)
 
 def dc_metadata_reader(xml):
