@@ -74,13 +74,17 @@ class KataMetadataReader(MetadataReader):
 # be found at all.
 kata_oai_dc_reader = KataMetadataReader(
     fields={
+        # OAI-DC
         # 'title': ('textList', 'oai_dc:dc/dc:title/text()'),
         'titleNode': ('node', 'oai_dc:dc/dc:title'),
+        'title_lang': ('textList', 'oai_dc:dc/dc:title/@xml:lang'),
         'creator': ('textList', 'oai_dc:dc/dc:creator/text()'),
         'subject': ('textList', 'oai_dc:dc/dc:subject/text()'),
         'description': ('textList', 'oai_dc:dc/dc:description/text()'),
         # 'publisher': ('textList', 'oai_dc:dc/dc:publisher/text()'),
+        'publisherNode': ('node', 'oai_dc:dc/dc:publisher'),
         # 'contributor': ('textList', 'oai_dc:dc/dc:contributor/text()'),
+        'contributorNode': ('node', 'oai_dc:dc/dc:contributor'),
         'date': ('textList', 'oai_dc:dc/dc:date/text()'),
         'type': ('textList', 'oai_dc:dc/dc:type/text()'),
         'format': ('textList', 'oai_dc:dc/dc:format/text()'),
@@ -91,13 +95,17 @@ kata_oai_dc_reader = KataMetadataReader(
         'coverage': ('textList', 'oai_dc:dc/dc:coverage/text()'),
         # 'rights': ('textList', 'oai_dc:dc/dc:rights/text()'),
         'rightsNode': ('node', 'oai_dc:dc/dc:rights'),
-        'publisherNode': ('node', 'oai_dc:dc/dc:publisher'),
-        'contributorNode': ('node', 'oai_dc:dc/dc:contributor'),
-        'formatNode': ('node', 'oai_dc:dc/dc:hasFormat'),
+
+        # DC
+        'hasFormatNode': ('node', 'oai_dc:dc/dc:hasFormat'),
+
+        # DC TERMS
+        'modified': ('textList', 'oai_dc:dc/dct:modified/text()'),
     },
     namespaces={
         'oai_dc': 'http://www.openarchives.org/OAI/2.0/oai_dc/',
         'dc': 'http://purl.org/dc/elements/1.1/',
+        'dct': 'http://purl.org/dc/terms/',
         'foaf': "http://xmlns.com/foaf/0.1/",
         'rdfs': "http://www.w3.org/2000/01/rdf-schema#",
         'fp': "http://downlode.org/Code/RDF/File_Properties/schema#",
