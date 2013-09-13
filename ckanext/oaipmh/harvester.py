@@ -10,6 +10,7 @@ import datetime
 import sys
 from lxml import etree
 import httplib
+import dateutil.parser
 
 from ckan.model import Session, Package, Group
 from ckan import model
@@ -133,26 +134,6 @@ class OAIPMHHarvester(HarvesterBase):
                 'description': 'A server which has a OAI-PMH interface available.'
                 }
 
-    def _datetime_from_str(self, s):
-        # Used to get date from settings file when testing harvesting with
-        # (semi-open) date interval.
-        if s is None:
-            return s
-
-        try:
-            t = datetime.datetime.strptime(s, '%Y-%m-%dT%H:%M:%S')
-            return t
-        except ValueError:
-            pass
-
-        try:
-            t = datetime.datetime.strptime(s, '%Y-%m-%d')
-            return t
-        except ValueError as e:
-            log.debug('Bad date for %s: %s' % (e, s))
-
-        return None
-
     def _str_from_datetime(self, dt):
         return dt.strftime('%Y-%m-%dT%H:%M:%S')
 
@@ -267,7 +248,7 @@ class OAIPMHHarvester(HarvesterBase):
     def _get_time_limits(self, harvest_job):
         def date_from_config(key):
             if key in pylons.configuration.config:
-                return self._datetime_from_str(pylons.configuration.config[key])
+                return dateutil.parser.parse(pylons.configuration.config[key])
             else:
                 return None
 
@@ -568,9 +549,9 @@ class OAIPMHHarvester(HarvesterBase):
             # Fetch stage.
             args = {self.metadata_prefix_key: self.metadata_prefix_value, 'set': master_data['set']}
             if 'from_' in master_data:
-                args['from_'] = self._datetime_from_str(master_data['from_'])
+                args['from_'] = dateutil.parser.parse(master_data['from_'])
             if 'until' in master_data:
-                args['until'] = self._datetime_from_str(master_data['until'])
+                args['until'] = dateutil.parser.parse(master_data['until'])
             ids = []
             try:
                 for identity in client.listIdentifiers(**args):
