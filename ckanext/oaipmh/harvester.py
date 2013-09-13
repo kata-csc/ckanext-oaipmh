@@ -18,7 +18,7 @@ from ckanext.harvest.harvesters.base import HarvesterBase, GatherFailure
 from ckanext.harvest.model import HarvestObject, HarvestJob
 from ckan.model.authz import setup_default_user_roles
 from ckan.lib import helpers as h
-from pylons import config
+import pylons.configuration
 
 import oaipmh.client
 from oaipmh.metadata import MetadataReader, MetadataRegistry
@@ -266,7 +266,10 @@ class OAIPMHHarvester(HarvesterBase):
 
     def _get_time_limits(self, harvest_job):
         def date_from_config(key):
-            return self._datetime_from_str(config.get(key, None))
+            if key in pylons.configuration.config:
+                return self._datetime_from_str(pylons.configuration.config[key])
+            else:
+                return None
 
         from_ = date_from_config('ckanext.harvest.test.from')
         until = date_from_config('ckanext.harvest.test.until')
@@ -533,7 +536,7 @@ class OAIPMHHarvester(HarvesterBase):
             label = '%s/%s.xml' % (nowstr, data['identifier'])
             f = urllib2.urlopen(data['package_url'])
             x = f.read()
-            fileurl = config.get('ckan.site_url') + h.url_for('storage_file', label=label)
+            fileurl = pylons.configuration.config['ckan.site_url'] + h.url_for('storage_file', label=label)
             data['package_xml_save'] = {
                 'label': label,
                 'xml': x
@@ -661,7 +664,7 @@ class OAIPMHHarvester(HarvesterBase):
         # Data to use when saving the XML record.
         nowstr = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')
         label = '%s/%s.xml' % (nowstr, data['identifier'])
-        fileurl = config.get('ckan.site_url') + h.url_for('storage_file', label=label)
+        fileurl = pylons.configuration.config['ckan.site_url'] + h.url_for('storage_file', label=label)
         data['package_xml_save'] = {
             'label': label,
             'xml': xml
