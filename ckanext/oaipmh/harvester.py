@@ -74,13 +74,13 @@ class KataMetadataReader(MetadataReader):
 # be found at all.
 kata_oai_dc_reader = KataMetadataReader(
     fields={
-        #'title':       ('textList', 'oai_dc:dc/dc:title/text()'),
+        # 'title': ('textList', 'oai_dc:dc/dc:title/text()'),
         'titleNode': ('node', 'oai_dc:dc/dc:title'),
         'creator': ('textList', 'oai_dc:dc/dc:creator/text()'),
         'subject': ('textList', 'oai_dc:dc/dc:subject/text()'),
         'description': ('textList', 'oai_dc:dc/dc:description/text()'),
-        #'publisher':   ('textList', 'oai_dc:dc/dc:publisher/text()'),
-        #'contributor': ('textList', 'oai_dc:dc/dc:contributor/text()'),
+        # 'publisher': ('textList', 'oai_dc:dc/dc:publisher/text()'),
+        # 'contributor': ('textList', 'oai_dc:dc/dc:contributor/text()'),
         'date': ('textList', 'oai_dc:dc/dc:date/text()'),
         'type': ('textList', 'oai_dc:dc/dc:type/text()'),
         'format': ('textList', 'oai_dc:dc/dc:format/text()'),
@@ -89,7 +89,7 @@ kata_oai_dc_reader = KataMetadataReader(
         'language': ('textList', 'oai_dc:dc/dc:language/text()'),
         'relation': ('textList', 'oai_dc:dc/dc:relation/text()'),
         'coverage': ('textList', 'oai_dc:dc/dc:coverage/text()'),
-        #'rights':      ('textList', 'oai_dc:dc/dc:rights/text()'),
+        # 'rights': ('textList', 'oai_dc:dc/dc:rights/text()'),
         'rightsNode': ('node', 'oai_dc:dc/dc:rights'),
         'publisherNode': ('node', 'oai_dc:dc/dc:publisher'),
         'contributorNode': ('node', 'oai_dc:dc/dc:contributor'),
@@ -485,10 +485,10 @@ class OAIPMHHarvester(HarvesterBase):
             log.warning('No metadata: %s' % master_data['record'])
             return False
 
-        if 'date' not in metadata.getMap() or not metadata.getMap()['date']:
-            self._add_retry(harvest_object)
-            self._save_object_error('Missing date: %s' % master_data['record'], harvest_object, stage='Fetch')
-            return False
+        # if 'date' not in metadata.getMap() or not metadata.getMap()['date']:
+        #     self._add_retry(harvest_object)
+        #     self._save_object_error('Missing date: %s' % master_data['record'], harvest_object, stage='Fetch')
+        #     return False
 
         master_data['record'] = (header.identifier(), metadata.getMap())
         # Do not save to database (because we can't json nor pickle _Element).
