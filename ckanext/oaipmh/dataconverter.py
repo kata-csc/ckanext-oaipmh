@@ -58,15 +58,25 @@ def _match_license(text):
 
 
 def _handle_title(nodes, namespaces):
-    d = {}
+    '''
+    # :rtype : object
+    # :type namespaces: object
+    # :type nodes: object
+    :param nodes:
+    :param namespaces:
+    :return: Dictionary containing titles and title languages
+    '''
+    tl_dict = {}
     idx = 0
     for node in nodes:
+        if node.text:
+            tl_dict['title_%i' % idx] = node.text
         lang = _find_attribute(node, 'lang')
-        d['title_%i' % idx] = node.text
-        d['lang_title_%i' % idx] = lang
+        if lang:
+            tl_dict['lang_title_%i' % idx] = lang
         idx += 1
 
-    return d
+    return tl_dict
 
 
 def _handle_rights(nodes, namespaces):
