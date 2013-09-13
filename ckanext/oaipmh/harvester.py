@@ -128,11 +128,9 @@ class OAIPMHHarvester(HarvesterBase):
         '''
         Return information about this harvester.
         '''
-        return {
-                'name': 'OAI-PMH',
+        return {'name': 'OAI-PMH',
                 'title': 'OAI-PMH',
-                'description': 'A server which has a OAI-PMH interface available.'
-                }
+                'description': 'A server which has a OAI-PMH interface available.'}
 
     def _str_from_datetime(self, dt):
         return dt.strftime('%Y-%m-%dT%H:%M:%S')
@@ -164,18 +162,15 @@ class OAIPMHHarvester(HarvesterBase):
         client = oaipmh.client.Client(url, registry)
         try:
             identifier = client.identify()
-        except (urllib2.URLError, urllib2.HTTPError):
+        except (urllib2.URLError, urllib2.HTTPError) as err:
+            log.debug("Error occurred: {0}".format(err))
             if harvest_job:
-                self._save_gather_error(
-                    'Could not gather from %s!' % harvest_job.source.url,
-                    harvest_job)
+                self._save_gather_error('Could not gather from %s!' % harvest_job.source.url, harvest_job)
             return client, None
         except socket.error:
             if harvest_job:
                 errno, errstr = sys.exc_info()[:2]
-                self._save_gather_error(
-                    'Socket error OAI-PMH %s, details:\n%s' % (errno, errstr),
-                    harvest_job)
+                self._save_gather_error('Socket error OAI-PMH %s, details:\n%s' % (errno, errstr), harvest_job)
             return client, None
         except ValueError:
             # We have no source URL when importing via UI.
@@ -294,8 +289,7 @@ class OAIPMHHarvester(HarvesterBase):
         except Exception as e:
             # Once we know of something specific, handle it separately.
             log.debug(traceback.format_exc(e))
-            self._save_gather_error(
-                'Could not fetch identifier list.', harvest_job)
+            self._save_gather_error('Could not fetch identifier list.', harvest_job)
             self._raise_gather_failure('Could not fetch an identifier list.')
 
         # Gathering the set list here. Member identifiers in fetch.
@@ -495,6 +489,7 @@ class OAIPMHHarvester(HarvesterBase):
             self._add_retry(harvest_object)
             self._save_object_error('Missing date: %s' % master_data['record'], harvest_object, stage='Fetch')
             return False
+
         master_data['record'] = (header.identifier(), metadata.getMap())
         # Do not save to database (because we can't json nor pickle _Element).
 
