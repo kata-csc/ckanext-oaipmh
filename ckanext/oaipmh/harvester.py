@@ -15,7 +15,7 @@ import dateutil.parser
 from ckan.model import Session, Package, Group
 from ckan import model
 
-from ckanext.harvest.harvesters.base import HarvesterBase, GatherFailure
+from ckanext.harvest.harvesters.base import HarvesterBase
 from ckanext.harvest.model import HarvestObject, HarvestJob
 from ckan.model.authz import setup_default_user_roles
 from ckan.lib import helpers as h
@@ -36,6 +36,17 @@ import socket
 socket.setdefaulttimeout(30)
 
 import traceback
+
+
+# TODO! This is the worlds most useless class!! REWRITE OR REMOVE IT!!!
+class GatherFailure(Exception):
+    def __init__(self, message='', ids=[]):
+        '''
+        ids is used to pass objects for retry. They could be harvested even
+        if the server did not return proper info for new items.
+        '''
+        self.message = message
+        self.harvest_obj_ids = ids
 
 
 class KataMetadataReader(MetadataReader):
