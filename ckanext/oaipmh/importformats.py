@@ -7,6 +7,9 @@ from lxml import etree
 def copy_element(source, dest, md, callback = None):
 	if source in md:
 		md[dest] = md[source]
+		copy_element(source + '/language', dest + '/language', md)
+		copy_element(source + '/@lang', dest + '/language', md)
+		copy_element(source + '/@xml:lang', dest + '/language', md)
 		if callback: callback(source, dest)
 		return
 	count = md.get(source + '.count', 0)
@@ -15,9 +18,6 @@ def copy_element(source, dest, md, callback = None):
 	for i in range(count):
 		source_n = '%s.%d' % (source, i)
 		dest_n = '%s.%d' % (dest, i)
-		copy_element(source_n + '/language', dest_n + '/language', md)
-		copy_element(source_n + '/@lang', dest_n + '/language', md)
-		copy_element(source_n + '/@xml:lang', dest_n + '/language', md)
 		copy_element(source_n, dest_n, md, callback)
 
 def nrd_metadata_reader(xml):
