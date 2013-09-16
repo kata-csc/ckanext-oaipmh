@@ -30,6 +30,15 @@ default_namespaces = [
 ]
 
 def namespaced_name(name, namespaces):
+        '''substitutes a namespace prefix in a URL with its short form.
+
+        :param name: the URL
+        :type name: string
+        :param namespaces: a list of (short prefix, long prefix) pairs
+        :type namespaces: list of (string, string)
+        :returns: the URL, with a short prefix
+        :rtype: string
+        '''
         for prefix, nsurl in namespaces + default_namespaces:
                 if prefix is None: prefix = ''
                 else: prefix += ':'
@@ -39,6 +48,25 @@ def namespaced_name(name, namespaces):
         return name
 
 def namepath_for_element(prefix, name, indices, md):
+        '''helper function to form name paths
+
+        This function takes a prefix and name and concatenates them into
+        a "name path".  As a side effect, it also counts the elements with
+        a same name path and gives them unique indices, and marks the
+        count of such elements in the metadata dictionary.
+
+        :param prefix: the namepath of the parent element
+        :type prefix: string
+        :param name: the name of the current element
+        :type name: string
+        :param indices: a hash to keep counts
+        :type indices: a hash from strings to integers (inout)
+        :param md: a dictionary of metadata keys (namepaths) and values
+        :type md: a hash from strings to any type (inout)
+
+        :returns: a new namepath with name appended to prefix
+        :rtype: string
+        '''
         index = indices.get(name, 0)
         indices[name] = index + 1
         last_rel = prefix.split('/')[-1]
@@ -47,7 +75,15 @@ def namepath_for_element(prefix, name, indices, md):
         return "%s/%s.%d" % (prefix, name, index)
 
 def generic_xml_metadata_reader(xml_element):
+        '''transform XML documents into metadata dictionaries
+
+        :param xml_element: XML document
+        :type xml_element: lxml.etree.Element instance
+        :returns: metadata dictionary with all the content of xml_element
+        :rtype: oaipmh.common.Metadata instance
+        '''
         def flatten_with(prefix, element, result):
+                '''recursive traversal of XML tree'''
                 if element.text: result[prefix] = element.text
                 for attr in element.attrib:
                         name = namespaced_name(attr, element.nsmap.items())
@@ -64,6 +100,15 @@ def generic_xml_metadata_reader(xml_element):
         return Metadata(result)
 
 def is_reverse_relation(rel1, rel2):
+        '''tells whether two elements are mutual reverses
+
+        :param rel1: name of relation
+        :type rel1: string
+        :param rel2: name of relation
+        :type rel2: string
+        :returns: whether rel1 and rel2 are reverse relations
+        :rtype: boolean
+        '''
         try: rel1 = rel1[:rel1.rindex('.')]
         except ValueError: pass
         try: rel2 = rel2[:rel2.rindex('.')]
@@ -71,6 +116,17 @@ def is_reverse_relation(rel1, rel2):
         return rel1 == 'rev:' + rel2 or rel2 == 'rev:' + rel1
 
 def generic_rdf_metadata_reader(xml_element):
+        '''transform RDF/XML documents into metadata dictionaries
+
+        This function takes an RDF document in XML format, transforms it
+        into an RDF graph, and traverses that graph to find all nodes in
+        the graph and give them namepaths.
+
+        :param xml_element: RDF/XML document
+        :type xml_element: lxml.etree.Element instance
+        :returns: metadata dictionary
+        :rtype: oaipmh.common.Metadata instance
+        '''
         g = Graph()
         e = etree.ElementTree(xml_element[0])
         ns = dict((prefix, Namespace(nsurl))
@@ -84,6 +140,7 @@ def generic_rdf_metadata_reader(xml_element):
 
         visited = set()
         def flatten_with(prefix, node, result):
+                '''recursive traversal of RDF graph'''
                 path = prefix.split('/')
                 if len(path) > 2 and is_reverse_relation(path[-1], path[-2]):
                         return
@@ -111,9 +168,21 @@ def generic_rdf_metadata_reader(xml_element):
         return Metadata(result)
 
 def dummy_metadata_reader(xml_element):
+        '''a test metadata reader that always returns the same metadata
+
+        :param xml_element: XML input
+        :type xml_element: any
+        :returns: metadata dictionary
+        :rtype: oaipmh.common.Metadata instance
+        '''
         return Metadata({'test': 'success'})
 
 def create_metadata_registry():
+        '''return new metadata registry with all common metadata readers
+
+        :returns: metadata registry
+        :rtype: oaipmh.metadata.MetadataRegistry instance
+        '''
         from importformats import nrd_metadata_reader, dc_metadata_reader
         registry = MetadataRegistry()
         registry.registerReader('oai_dc', dc_metadata_reader)
