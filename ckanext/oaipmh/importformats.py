@@ -10,6 +10,25 @@ xml_reader = importcore.generic_xml_metadata_reader
 rdf_reader = importcore.generic_rdf_metadata_reader
 
 def copy_element(source, dest, md, callback = None):
+        '''copy element in metadata dictionary from one key to another
+
+        This function changes the metadata dictionary, md, by copying the
+        value corresponding to key source to the value corresponding to
+        the key dest.  It also copies all elements if it is an indexed
+        element, and language information that pertains to the copied
+        element.  The parameter callback, if given, is called with any
+        element names formed (indexed or no).
+
+        :param source: key to be copied
+        :type source: string
+        :param dest: key to copy to
+        :type dest: string
+        :param md: a metadata dictionary to update
+        :type md: hash from string to any value (inout)
+        :param callback: optional callback function, called with source,
+                dest and their indexed versions
+        :type callback: function of (string, string) -> None
+        '''
         if source in md:
                 md[dest] = md[source]
                 copy_element(source + '/language', dest + '/language', md)
@@ -26,15 +45,28 @@ def copy_element(source, dest, md, callback = None):
                 copy_element(source_n, dest_n, md, callback)
 
 def nrd_metadata_reader(xml):
+        '''read metadata in NRD schema
+
+        This function takes NRD metadata as an lxml.etree.Element object,
+        and returns the same metadata as a dictionary, with central TTA
+        elements picked to format-independent keys.
+
+        :param xml: RDF metadata as XML-encoded NRD
+        :type xml: lxml.etree.Element instance
+        :returns: a metadata dictionary
+        :rtype: a hash from string to any value
+        '''
         result = rdf_reader(xml).getMap()
 
         def person_attrs(source, dest):
+                '''callback for copying person attributes'''
                 # TODO: here we could also fetch from ISNI/ORCID
                 copy_element(source + '/foaf:name', dest + '/name', result)
                 copy_element(source + '/foaf:mbox', dest + '/email', result)
                 copy_element(source + '/foaf:phone', dest + '/phone', result)
 
         def document_attrs(source, dest):
+                '''callback for copying document attributes'''
                 copy_element(source + '/dct:title', dest + '/title', result)
                 copy_element(source + '/dct:identifier', dest, result)
                 copy_element(source + '/dct:creator',
@@ -45,6 +77,7 @@ def nrd_metadata_reader(xml):
                                 dest + '/description', result)
 
         def funding_attrs(source, dest):
+                '''callback for copying project attributes'''
                 copy_element(source + '/rev:arpfo:funds.0/arpfo:grantNumber',
                                 dest + '/fundingNumber', result)
                 copy_element(source + '/rev:arpfo:funds.0/rev:arpfo:provides',
@@ -52,6 +85,7 @@ def nrd_metadata_reader(xml):
                                 person_attrs)
 
         def file_attrs(source, dest):
+                '''callback for copying manifestation attributes'''
                 copy_element(source + '/dcat:mediaType',
                                 dest + '/mimetype', result)
                 copy_element(source + '/fp:checksum.0/fp:checksumValue.0',
@@ -102,6 +136,17 @@ def nrd_metadata_reader(xml):
         return oaipmh.common.Metadata(result)
 
 def dc_metadata_reader(xml):
+        '''read metadata in oai_dc schema
+
+        This function takes oai_dc metadata as an lxml.etree.Element
+        object, and returns the same metadata as a dictionary, with
+        central TTA elements picked to format-independent keys.
+
+        :param xml: oai_dc metadata
+        :type xml: lxml.etree.Element instance
+        :returns: a metadata dictionary
+        :rtype: a hash from string to any value
+        '''
         result = xml_reader(xml).getMap()
         mapping = [(u'dc:title', u'title.%d'),
                 (u'dc:identifier', u'versionidentifier.%d'),
@@ -127,6 +172,9 @@ def dc_metadata_reader(xml):
 
 def create_metadata_registry():
         '''return new metadata registry with all common metadata readers
+
+        The readers currently implemented are for metadataPrefixes
+        oai_dc, nrd, rdf and xml.
 
         :returns: metadata registry
         :rtype: oaipmh.metadata.MetadataRegistry instance
