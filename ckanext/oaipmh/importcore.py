@@ -2,12 +2,13 @@
 # coding: utf-8
 # vi:et:ts=8:
 
-from cStringIO import StringIO
+import cStringIO
+StringIO = cStringIO.StringIO
 import os
 
-from oaipmh.common import Metadata
-from lxml import etree
-from rdflib import Graph, Namespace
+import oaipmh.common
+import lxml.etree
+import rdflib
 
 default_namespaces = [
         ('dc', 'http://purl.org/dc/elements/1.1/'),
@@ -97,7 +98,7 @@ def generic_xml_metadata_reader(xml_element):
         result = {}
         flatten_with(namespaced_name(xml_element.tag,
                 xml_element.nsmap.items()), xml_element, result)
-        return Metadata(result)
+        return oaipmh.common.Metadata(result)
 
 def is_reverse_relation(rel1, rel2):
         '''tells whether two elements are mutual reverses
@@ -127,9 +128,10 @@ def generic_rdf_metadata_reader(xml_element):
         :returns: metadata dictionary
         :rtype: oaipmh.common.Metadata instance
         '''
-        g = Graph()
+        etree = lxml.etree
+        g = rdflib.Graph()
         e = etree.ElementTree(xml_element[0])
-        ns = dict((prefix, Namespace(nsurl))
+        ns = dict((prefix, rdflib.Namespace(nsurl))
                         for prefix, nsurl in default_namespaces)
         # this is kinda stupid, but by far the easiest way:
         # rdflib uses xml.sax so it doesn't understand etree,
@@ -165,7 +167,7 @@ def generic_rdf_metadata_reader(xml_element):
         root_node = datasets[0]
         result = {}
         flatten_with(u'dataset', root_node, result)
-        return Metadata(result)
+        return oaipmh.common.Metadata(result)
 
 def dummy_metadata_reader(xml_element):
         '''a test metadata reader that always returns the same metadata
@@ -175,5 +177,5 @@ def dummy_metadata_reader(xml_element):
         :returns: metadata dictionary
         :rtype: oaipmh.common.Metadata instance
         '''
-        return Metadata({'test': 'success'})
+        return oaipmh.common.Metadata({'test': 'success'})
 
