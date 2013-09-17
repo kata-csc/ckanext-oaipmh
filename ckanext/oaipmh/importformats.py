@@ -1,11 +1,13 @@
 # coding: utf-8
 # vi:et:ts=8:
 
-from importcore import generic_xml_metadata_reader, generic_rdf_metadata_reader
+import oaipmh.common
+import oaipmh.metadata
+import lxml.etree
 
-from oaipmh.common import Metadata
-from oaipmh.metadata import MetadataRegistry
-from lxml import etree
+import importcore
+xml_reader = importcore.generic_xml_metadata_reader
+rdf_reader = importcore.generic_rdf_metadata_reader
 
 def copy_element(source, dest, md, callback = None):
         if source in md:
@@ -24,7 +26,7 @@ def copy_element(source, dest, md, callback = None):
                 copy_element(source_n, dest_n, md, callback)
 
 def nrd_metadata_reader(xml):
-        result = generic_rdf_metadata_reader(xml).getMap()
+        result = rdf_reader(xml).getMap()
 
         def person_attrs(source, dest):
                 # TODO: here we could also fetch from ISNI/ORCID
@@ -89,7 +91,7 @@ def nrd_metadata_reader(xml):
         for source, dest, callback in mapping:
                 copy_element(source, dest, result, callback)
         try:
-                rights = etree.XML(result[u'rights'])
+                rights = lxml.etree.XML(result[u'rights'])
                 rightsclass = rights.attrib['RIGHTSCATEGORY'].lower()
                 result[u'rightsclass'] = rightsclass
                 if rightsclass == 'licensed':
@@ -97,10 +99,10 @@ def nrd_metadata_reader(xml):
                 if rightsclass == 'contractual':
                         result[u'accessURL'] = rights[0].text
         except: pass
-        return Metadata(result)
+        return oaipmh.common.Metadata(result)
 
 def dc_metadata_reader(xml):
-        result = generic_xml_metadata_reader(xml).getMap()
+        result = xml_reader(xml).getMap()
         mapping = [(u'dc:title', u'title.%d'),
                 (u'dc:identifier', u'versionidentifier.%d'),
                 (u'dc:creator', u'creator.%d/name.0'),
@@ -121,7 +123,7 @@ def dc_metadata_reader(xml):
                         copy_element(source_n, dest % i, result)
                         if dest.endswith('.0'):
                                 result[dest[:-2] % i + '.count'] = 1
-        return Metadata(result)
+        return oaipmh.common.Metadata(result)
 
 def create_metadata_registry():
         '''return new metadata registry with all common metadata readers
@@ -129,10 +131,10 @@ def create_metadata_registry():
         :returns: metadata registry
         :rtype: oaipmh.metadata.MetadataRegistry instance
         '''
-        registry = MetadataRegistry()
+        registry = oaipmh.metadata.MetadataRegistry()
         registry.registerReader('oai_dc', dc_metadata_reader)
         registry.registerReader('nrd', nrd_metadata_reader)
-        registry.registerReader('rdf', generic_rdf_metadata_reader)
-        registry.registerReader('xml', generic_xml_metadata_reader)
+        registry.registerReader('rdf', rdf_reader)
+        registry.registerReader('xml', xml_reader)
         return registry
 
