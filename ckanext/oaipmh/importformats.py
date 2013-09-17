@@ -1,8 +1,10 @@
 # coding: utf-8
 # vi:et:ts=8:
 
-from oaipmh.common import Metadata
 from importcore import generic_xml_metadata_reader, generic_rdf_metadata_reader
+
+from oaipmh.common import Metadata
+from oaipmh.metadata import MetadataRegistry
 from lxml import etree
 
 def copy_element(source, dest, md, callback = None):
@@ -120,3 +122,17 @@ def dc_metadata_reader(xml):
                         if dest.endswith('.0'):
                                 result[dest[:-2] % i + '.count'] = 1
         return Metadata(result)
+
+def create_metadata_registry():
+        '''return new metadata registry with all common metadata readers
+
+        :returns: metadata registry
+        :rtype: oaipmh.metadata.MetadataRegistry instance
+        '''
+        registry = MetadataRegistry()
+        registry.registerReader('oai_dc', dc_metadata_reader)
+        registry.registerReader('nrd', nrd_metadata_reader)
+        registry.registerReader('rdf', generic_rdf_metadata_reader)
+        registry.registerReader('xml', generic_xml_metadata_reader)
+        return registry
+

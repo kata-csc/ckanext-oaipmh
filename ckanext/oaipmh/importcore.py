@@ -2,12 +2,12 @@
 # coding: utf-8
 # vi:et:ts=8:
 
-from oaipmh.metadata import MetadataRegistry
+from cStringIO import StringIO
+import os
+
 from oaipmh.common import Metadata
 from lxml import etree
 from rdflib import Graph, Namespace
-from cStringIO import StringIO
-import os
 
 default_namespaces = [
         ('dc', 'http://purl.org/dc/elements/1.1/'),
@@ -176,40 +176,4 @@ def dummy_metadata_reader(xml_element):
         :rtype: oaipmh.common.Metadata instance
         '''
         return Metadata({'test': 'success'})
-
-def create_metadata_registry():
-        '''return new metadata registry with all common metadata readers
-
-        :returns: metadata registry
-        :rtype: oaipmh.metadata.MetadataRegistry instance
-        '''
-        from importformats import nrd_metadata_reader, dc_metadata_reader
-        registry = MetadataRegistry()
-        registry.registerReader('oai_dc', dc_metadata_reader)
-        registry.registerReader('nrd', nrd_metadata_reader)
-        registry.registerReader('rdf', generic_rdf_metadata_reader)
-        return registry
-
-def test_fetch(url, record_id, fmt):
-        from oaipmh.client import Client
-        registry = create_metadata_registry()
-        client = Client(url, registry)
-        record = client.getRecord(identifier=record_id, metadataPrefix=fmt)
-        return record
-
-def test_list(url):
-        from oaipmh.client import Client
-        registry = create_metadata_registry()
-        client = Client(url, registry)
-        return (header.identifier() for header in
-                        client.listIdentifiers(metadataPrefix='oai_dc'))
-
-if __name__ == '__main__':
-        import sys
-        if len(sys.argv) > 3:
-                header, metadata, about = test_fetch(sys.argv[1],
-                                sys.argv[2], sys.argv[3])
-                for item in metadata.getMap().items(): print item
-        else:
-                for item in test_list(sys.argv[1]): print item
 
