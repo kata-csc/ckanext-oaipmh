@@ -1,19 +1,18 @@
 # coding: utf-8
 # vi:et:ts=8:
 
-from oaipmh.client import Client
+import oaipmh.client
 import importformats
-from importcore import generic_rdf_metadata_reader, generic_xml_metadata_reader
 
 def test_fetch(url, record_id, fmt):
         registry = importformats.create_metadata_registry()
-        client = Client(url, registry)
+        client = oaipmh.client.Client(url, registry)
         record = client.getRecord(identifier=record_id, metadataPrefix=fmt)
         return record
 
 def test_list(url):
         registry = importformats.create_metadata_registry()
-        client = Client(url, registry)
+        client = oaipmh.client.Client(url, registry)
         return (header.identifier() for header in
                         client.listIdentifiers(metadataPrefix='oai_dc'))
 
