@@ -71,8 +71,8 @@ def namepath_for_element(prefix, name, indices, md):
         indices[name] = index + 1
         last_rel = prefix.split('/')[-1]
         if not is_reverse_relation(name, last_rel):
-                md["%s/%s.count" % (prefix, name)] = index + 1
-        return "%s/%s.%d" % (prefix, name, index)
+                md['%s/%s.count' % (prefix, name)] = index + 1
+        return '%s/%s.%d' % (prefix, name, index)
 
 def generic_xml_metadata_reader(xml_element):
         '''transform XML documents into metadata dictionaries
@@ -87,7 +87,7 @@ def generic_xml_metadata_reader(xml_element):
                 if element.text: result[prefix] = element.text
                 for attr in element.attrib:
                         name = namespaced_name(attr, element.nsmap.items())
-                        result["%s/@%s" % (prefix, name)] = element.attrib[attr]
+                        result['%s/@%s' % (prefix, name)] = element.attrib[attr]
                 indices = {}
                 for child in element:
                         name = namespaced_name(child.tag, child.nsmap.items())
@@ -136,7 +136,7 @@ def generic_rdf_metadata_reader(xml_element):
         # rdflib uses xml.sax so it doesn't understand etree,
         # so text is the only common language spoken by lxml and rdflib
         f = cStringIO.StringIO(etree.tostring(e, xml_declaration=True,
-                encoding="utf-8"))
+                encoding='utf-8'))
         g.parse(f, format='xml') # publicID could be the metadata source URL
         # end stupid
 
