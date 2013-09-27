@@ -3,7 +3,6 @@
 # vi:et:ts=8:
 
 import cStringIO
-import os
 
 import oaipmh.common
 import lxml.etree
@@ -29,8 +28,9 @@ default_namespaces = [
         ('prov', 'http://www.w3.org/ns/prov#'),
 ]
 
+
 def namespaced_name(name, namespaces):
-        '''substitutes a namespace prefix in a URL with its short form.
+        '''Substitutes a namespace prefix in a URL with its short form.
 
         :param name: the URL
         :type name: string
@@ -47,8 +47,9 @@ def namespaced_name(name, namespaces):
                 if name.startswith(nsurl): return prefix + name[len(nsurl):]
         return name
 
+
 def namepath_for_element(prefix, name, indices, md):
-        '''helper function to form name paths
+        '''Helper function to form name paths
 
         This function takes a prefix and name and concatenates them into
         a "name path".  As a side effect, it also counts the elements with
@@ -74,17 +75,19 @@ def namepath_for_element(prefix, name, indices, md):
                 md['%s/%s.count' % (prefix, name)] = index + 1
         return '%s/%s.%d' % (prefix, name, index)
 
+
 def generic_xml_metadata_reader(xml_element):
-        '''transform XML documents into metadata dictionaries
+        '''Transform XML documents into metadata dictionaries
 
         :param xml_element: XML document
-        :type xml_element: lxml.etree.Element instance
+        :type xml_element: lxml.etree.Element
         :returns: metadata dictionary with all the content of xml_element
-        :rtype: oaipmh.common.Metadata instance
+        :rtype: oaipmh.common.Metadata
         '''
         def flatten_with(prefix, element, result):
-                '''recursive traversal of XML tree'''
-                if element.text: result[prefix] = element.text
+                '''Recursive traversal of XML tree'''
+                if element.text:
+                    result[prefix] = element.text
                 for attr in element.attrib:
                         name = namespaced_name(attr, element.nsmap.items())
                         result['%s/@%s' % (prefix, name)] = element.attrib[attr]
@@ -94,13 +97,15 @@ def generic_xml_metadata_reader(xml_element):
                         child_path = namepath_for_element(prefix, name,
                                         indices, result)
                         flatten_with(child_path, child, result)
+
         result = {}
         flatten_with(namespaced_name(xml_element.tag,
                 xml_element.nsmap.items()), xml_element, result)
         return oaipmh.common.Metadata(result)
 
+
 def is_reverse_relation(rel1, rel2):
-        '''tells whether two elements are mutual reverses
+        '''Tells whether two elements are mutual reverses
 
         :param rel1: name of relation
         :type rel1: string
@@ -115,8 +120,9 @@ def is_reverse_relation(rel1, rel2):
         except ValueError: pass
         return rel1 == 'rev:' + rel2 or rel2 == 'rev:' + rel1
 
+
 def generic_rdf_metadata_reader(xml_element):
-        '''transform RDF/XML documents into metadata dictionaries
+        '''Transform RDF/XML documents into metadata dictionaries
 
         This function takes an RDF document in XML format, transforms it
         into an RDF graph, and traverses that graph to find all nodes in
@@ -142,7 +148,7 @@ def generic_rdf_metadata_reader(xml_element):
 
         visited = set()
         def flatten_with(prefix, node, result):
-                '''recursive traversal of RDF graph'''
+                '''Recursive traversal of RDF graph'''
                 path = prefix.split('/')
                 if len(path) > 2 and is_reverse_relation(path[-1], path[-2]):
                         return
@@ -169,8 +175,9 @@ def generic_rdf_metadata_reader(xml_element):
         flatten_with(u'dataset', root_node, result)
         return oaipmh.common.Metadata(result)
 
+
 def dummy_metadata_reader(xml_element):
-        '''a test metadata reader that always returns the same metadata
+        '''A test metadata reader that always returns the same metadata
 
         :param xml_element: XML input
         :type xml_element: any
@@ -178,4 +185,3 @@ def dummy_metadata_reader(xml_element):
         :rtype: oaipmh.common.Metadata instance
         '''
         return oaipmh.common.Metadata({'test': 'success'})
-
