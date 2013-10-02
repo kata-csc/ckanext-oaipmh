@@ -87,7 +87,9 @@ def generic_xml_metadata_reader(xml_element):
         def flatten_with(prefix, element, result):
                 '''Recursive traversal of XML tree'''
                 if element.text:
-                    result[prefix] = element.text
+                    result[prefix] = element.text.strip()
+                else:
+                    result[prefix] = ''
                 for attr in element.attrib:
                         name = namespaced_name(attr, element.nsmap.items())
                         result['%s/@%s' % (prefix, name)] = element.attrib[attr]
