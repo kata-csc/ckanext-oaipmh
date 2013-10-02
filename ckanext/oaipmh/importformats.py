@@ -37,6 +37,7 @@ def copy_element(source, dest, md, callback=None):
                 copy_element(source + '/language', dest + '/language', md)
                 copy_element(source + '/@lang', dest + '/language', md)
                 copy_element(source + '/@xml:lang', dest + '/language', md)
+                copy_element(source + '/@rdf:resource', dest, md)  # overwrites any possible element text
 
                 # Call possible callback function
                 if callback:
@@ -55,6 +56,14 @@ def copy_element(source, dest, md, callback=None):
                 copy_element(source_n, dest_n, md, callback)
 
 
+def person_attrs(source, dest, result):
+    '''Callback for copying person attributes'''
+    # TODO: here we could also fetch from ISNI/ORCID
+    copy_element(source + '/foaf:name', dest + '/name', result)
+    copy_element(source + '/foaf:mbox', dest + '/email', result)
+    copy_element(source + '/foaf:phone', dest + '/phone', result)
+
+
 def nrd_metadata_reader(xml):
         '''Read metadata in NRD schema
 
@@ -68,13 +77,6 @@ def nrd_metadata_reader(xml):
         :rtype: a hash from string to any value
         '''
         result = rdf_reader(xml).getMap()
-
-        def person_attrs(source, dest):
-                '''Callback for copying person attributes'''
-                # TODO: here we could also fetch from ISNI/ORCID
-                copy_element(source + '/foaf:name', dest + '/name', result)
-                copy_element(source + '/foaf:mbox', dest + '/email', result)
-                copy_element(source + '/foaf:phone', dest + '/phone', result)
 
         def document_attrs(source, dest):
                 '''Callback for copying document attributes'''
@@ -160,25 +162,46 @@ def dc_metadata_reader(xml):
         :returns: a metadata dictionary
         :rtype: a hash from string to any value
         '''
+
+        def foaf_type_counter(x, y, ts):
+            for t in ts:
+                print(t)
+                p = '{s}/foaf:{t}'.format(s=x, t=t)
+                print(p)
+                if p + '.count' in result:
+                    print(p + '.count')
+                    for n in range(result[p + '.count']):
+                        r = p + '.0'
+                        print(r)
+                        person_attrs(r, y, result)
+
+        def foaf_agent_derived_handler(x, y):
+            print('src: {0}'.format(x))
+            print('dst: {0}'.format(y))
+
+            foaf_types = ('Agent', 'Organization', 'Group', 'Person', 'Project')
+            foaf_type_counter(x, y, foaf_types)
+
         result = xml_reader(xml).getMap()
-        mapping = [(u'dc:title', u'title.%d'),
-                (u'dc:identifier', u'versionidentifier.%d'),
-                (u'dc:creator', u'creator.%d/name.0'),
-                (u'dc:language', u'language.%d/label.0'),
-                (u'dc:description', u'description.%d'),
-                (u'dc:subject', u'subject.%d'),
-                (u'dc:publisher', u'distributor.%d/name.0'),
-                (u'dc:format', u'resource.%d/format.0'),
-                (u'dc:contributor', u'contributor.%d/name.0'),
-                (u'dc:rights', u'license.%d/description.0'),
-                (u'dc:source', u'continuityidentifier.%d'),
+        mapping = [
+            (u'dc:title', u'title.%d', None),
+            (u'dc:identifier', u'versionidentifier.%d', None),
+            (u'dc:creator', u'creator.%d/name.0', None),
+            (u'dc:language', u'language.%d/label.0', None),
+            (u'dc:description', u'description.%d', None),
+            (u'dc:subject', u'subject.%d', None),
+            (u'dc:publisher', u'distributor.%d', foaf_agent_derived_handler),
+            (u'dc:format', u'resource.%d/format.0', None),
+            (u'dc:contributor', u'contributor.%d', foaf_agent_derived_handler),
+            (u'dc:rights', u'license.%d/description.0', None),
+            (u'dc:source', u'continuityidentifier.%d', None),
         ]
-        for source, dest in mapping:
+        for source, dest, callback in mapping:
                 count = result.get('metadata/oai_dc:dc.0/%s.count' % source, 0)
                 result[dest[:dest.index('.%d')] + '.count'] = count
                 for i in range(count):
                         source_n = 'metadata/oai_dc:dc.0/%s.%d' % (source, i)
-                        copy_element(source_n, dest % i, result)
+                        copy_element(source_n, dest % i, result, callback)
                         if dest.endswith('.0'):
                                 result[dest[:-2] % i + '.count'] = 1
         return oaipmh.common.Metadata(result)
