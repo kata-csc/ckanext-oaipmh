@@ -41,7 +41,7 @@ def copy_element(source, dest, md, callback=None):
 
                 # Call possible callback function
                 if callback:
-                    callback(source, dest)
+                    callback(source, dest, md)
                 return
 
         count = md.get(source + '.count', 0)
@@ -78,7 +78,7 @@ def nrd_metadata_reader(xml):
         '''
         result = rdf_reader(xml).getMap()
 
-        def document_attrs(source, dest):
+        def document_attrs(source, dest, result):
                 '''Callback for copying document attributes'''
                 copy_element(source + '/dct:title', dest + '/title', result)
                 copy_element(source + '/dct:identifier', dest, result)
@@ -89,7 +89,7 @@ def nrd_metadata_reader(xml):
                 copy_element(source + '/dct:description',
                                 dest + '/description', result)
 
-        def funding_attrs(source, dest):
+        def funding_attrs(source, dest, result):
                 '''Callback for copying project attributes'''
                 copy_element(source + '/rev:arpfo:funds.0/arpfo:grantNumber',
                                 dest + '/fundingNumber', result)
@@ -97,7 +97,7 @@ def nrd_metadata_reader(xml):
                                 dest + '/funder', result,
                                 person_attrs)
 
-        def file_attrs(source, dest):
+        def file_attrs(source, dest, result):
                 '''Callback for copying manifestation attributes'''
                 copy_element(source + '/dcat:mediaType',
                                 dest + '/mimetype', result)
@@ -163,7 +163,7 @@ def dc_metadata_reader(xml):
         :rtype: a hash from string to any value
         '''
 
-        def foaf_type_counter(x, y, ts):
+        def foaf_type_counter(x, y, ts, result):
             for t in ts:
                 print(t)
                 p = '{s}/foaf:{t}'.format(s=x, t=t)
@@ -175,12 +175,12 @@ def dc_metadata_reader(xml):
                         print(r)
                         person_attrs(r, y, result)
 
-        def foaf_agent_derived_handler(x, y):
+        def foaf_agent_derived_handler(x, y, result):
             print('src: {0}'.format(x))
             print('dst: {0}'.format(y))
 
             foaf_types = ('Agent', 'Organization', 'Group', 'Person', 'Project')
-            foaf_type_counter(x, y, foaf_types)
+            foaf_type_counter(x, y, foaf_types, result)
 
         result = xml_reader(xml).getMap()
         mapping = [
