@@ -216,11 +216,18 @@ def dc_metadata_reader(xml):
             (u'dc:language', u'language.%d/label.0', None),
             (u'dc:description', u'description.%d', None),
             (u'dc:subject', u'subject.%d', None),
-            (u'dc:publisher', u'distributor.%d', publisher_handler),
+            (u'dc:publisher', u'distributor.%d/name.0', None),
             (u'dc:format', u'resource.%d/format.0', None),
-            (u'dc:contributor', u'contributor.%d', contributor_handler),
+            (u'dc:contributor', u'contributor.%d/name.0', None),
             (u'dc:rights', u'license.%d/description.0', None),
             (u'dc:source', u'continuityidentifier.%d', None),
+            # (u'dc:type', u'type.%d', None),
+            # (u'dc:relation', u'relation.%d', None),
+            # (u'dct:publisher', u'distributor.%d', publisher_handler),
+            # (u'dct:contributor', u'contributor.%d', contributor_handler),
+            (u'dct:hasFormat', u'resource.%d/format.0', None),
+            (u'dct:modified', u'modified.%d', None),
+            # (u'dct:rightsHolder', u'owner.%d', None),
         ]
 
         for source, dest, callback in mapping:
