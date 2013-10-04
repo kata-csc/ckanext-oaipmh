@@ -163,24 +163,50 @@ def dc_metadata_reader(xml):
         :rtype: a hash from string to any value
         '''
 
-        def foaf_type_counter(x, y, ts, result):
-            for t in ts:
-                print(t)
+        def foaf_handler(x, y, result):
+            '''Handler for foaf elements
+
+            :param x: Source element
+            :param y: Destination element
+            :param result: Metadata dictionary
+            :return: Nothing
+            :type x: str
+            :type y: str
+            '''
+            foaf_types = ('Agent', 'Organization', 'Group', 'Person', 'Project')
+            for t in foaf_types:
                 p = '{s}/foaf:{t}'.format(s=x, t=t)
-                print(p)
                 if p + '.count' in result:
-                    print(p + '.count')
                     for n in range(result[p + '.count']):
                         r = p + '.0'
-                        print(r)
                         person_attrs(r, y, result)
 
-        def foaf_agent_derived_handler(x, y, result):
-            print('src: {0}'.format(x))
-            print('dst: {0}'.format(y))
+        def publisher_handler(x, y, result):
+            '''Handler for publisher elements
 
-            foaf_types = ('Agent', 'Organization', 'Group', 'Person', 'Project')
-            foaf_type_counter(x, y, foaf_types, result)
+            :param x: Source element
+            :param y: Destination element
+            :param result: Metadata dictionary
+            :return: Nothing
+            :type x: str
+            :type y: str
+            '''
+            foaf_handler(x, y, result)
+            # # Clean out 'empty' entry. Should only occur in cases where sub-entries exist
+            # if y in result and not result[y]:
+            #     del result[y]
+
+        def contributor_handler(x, y, result):
+            '''Handler for contributor elements
+
+            :param x: Source element
+            :param y: Destination element
+            :param result: Metadata dictionary
+            :return: Nothing
+            :type x: str
+            :type y: str
+            '''
+            foaf_handler(x, y, result)
 
         result = xml_reader(xml).getMap()
         mapping = [
@@ -190,12 +216,13 @@ def dc_metadata_reader(xml):
             (u'dc:language', u'language.%d/label.0', None),
             (u'dc:description', u'description.%d', None),
             (u'dc:subject', u'subject.%d', None),
-            (u'dc:publisher', u'distributor.%d', foaf_agent_derived_handler),
+            (u'dc:publisher', u'distributor.%d', publisher_handler),
             (u'dc:format', u'resource.%d/format.0', None),
-            (u'dc:contributor', u'contributor.%d', foaf_agent_derived_handler),
+            (u'dc:contributor', u'contributor.%d', contributor_handler),
             (u'dc:rights', u'license.%d/description.0', None),
             (u'dc:source', u'continuityidentifier.%d', None),
         ]
+
         for source, dest, callback in mapping:
                 count = result.get('metadata/oai_dc:dc.0/%s.count' % source, 0)
                 result[dest[:dest.index('.%d')] + '.count'] = count
@@ -204,6 +231,7 @@ def dc_metadata_reader(xml):
                         copy_element(source_n, dest % i, result, callback)
                         if dest.endswith('.0'):
                                 result[dest[:-2] % i + '.count'] = 1
+
         return oaipmh.common.Metadata(result)
 
 
