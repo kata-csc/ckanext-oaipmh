@@ -1,4 +1,6 @@
 import logging
+import pickle
+import json
 
 import oaipmh.client
 
@@ -112,18 +114,19 @@ class OAIPMHHarvester(HarvesterBase):
 
         log.debug('Harvest source: {s}'.format(s=harvest_job.source.url))
 
+        # Create a OAI-PMH Client
         registry = importformats.create_metadata_registry()
+        log.debug('Registry: %s' % registry)
         client = oaipmh.client.Client(harvest_job.source.url, registry)
-
-        # Hot-patch HarvestJob to contain Client reference
-        harvest_job.oaipmh_client = client
+        log.debug('Client: %s' % client)
 
         # Choose best md_format from md_formats, but let's use 'oai_dc' for now
         md_formats = client.listMetadataFormats()
         md_format = 'oai_dc'
+        log.debug('md_format: %s' % md_format)
 
-        # Hot-patch HarvestJob to contain MetadataPrefix reference
-        harvest_job.oaipmh_md_format = md_format
+        # Todo! Read set limit from config
+        config = harvest_job.source.config
 
         # Todo! Limit search to a specific Set
         set_ids = client.listSets()
@@ -131,6 +134,7 @@ class OAIPMHHarvester(HarvesterBase):
 
         # Todo! Get all identifiers or records??
         package_ids = [header.identifier() for header in client.listIdentifiers(metadataPrefix=md_format)]
+        # package_ids = [header.identifier() for header in client.listIdentifiers(metadataPrefix=md_format, set=set_id)]
         # package_ids = [header.identifier() for header in client.listRecords()]
         log.debug('Identifiers: {i}'.format(i=package_ids))
 
@@ -194,15 +198,27 @@ class OAIPMHHarvester(HarvesterBase):
         log.debug("Entering fetch_stage()")
         log.debug("Exiting fetch_stage()")
 
+        log.debug('Harvest object: %s' % harvest_object)
+        log.debug('Harvest job: %s' % harvest_object.job)
+        log.debug('Object id: %s' % harvest_object.guid)
+        log.debug('Harvest job: %s' % dir(harvest_object))
+
+        # Todo! This should not be duplicated here. Should be some class' attributes
+        # Create a OAI-PMH Client
+        registry = importformats.create_metadata_registry()
+        client = oaipmh.client.Client(harvest_object.job.source.url, registry)
+        # Choose best md_format from md_formats, but let's use 'oai_dc' for now
+        md_format = 'oai_dc'
+
         # Get source URL
-        header, metadata, about = harvest_object.job.oaipmh_client.getRecord(
-            identifier=harvest_object.id, metadataPrefix=harvest_object.job.oaipmh_md_format)
+        header, metadata, about = client.getRecord(identifier=harvest_object.guid, metadataPrefix=md_format)
 
         # Get contents
         try:
-            content = metadata  #.getMap()
+            content = json.dumps(metadata.getMap())
         except Exception as e:
-            self._save_object_error('Unable to get content for package: %s: %r' % (harvest_object.source.url, e), harvest_object)
+            self._save_object_error('Unable to get content for package: %s: %r' % (
+                harvest_object.source.url, e), harvest_object)
             return None
 
         # Save the fetched contents in the HarvestObject
@@ -239,11 +255,15 @@ class OAIPMHHarvester(HarvesterBase):
             self._save_object_error('Empty content for object %s' % harvest_object.id, harvest_object, 'Import')
             return False
 
+        log.debug('Content (packed): %s' % harvest_object.content)
+        content = json.loads(harvest_object.content)
+        log.debug('Content (unpacked): %s' % content)
+
         package_dict = {
             'id': harvest_object.id,
-            'title': 'my dataset title',
-            'name': 'ckan-dataset-%s' % harvest_object.id,
-            'notes': 'A long description of my dataset',
+            'title': content.title,
+            'name': content.identification,
+            'notes': content.description,
         }
 
         result = self._create_or_update_package(package_dict, harvest_object)
