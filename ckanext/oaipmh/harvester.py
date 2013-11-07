@@ -1,6 +1,7 @@
 import logging
 import pickle
 import json
+import pprint
 
 import oaipmh.client
 
@@ -258,13 +259,76 @@ class OAIPMHHarvester(HarvesterBase):
         log.debug('Content (packed): %s' % harvest_object.content)
         content = json.loads(harvest_object.content)
         log.debug('Content (unpacked): %s' % content)
+        pprint.pprint(content)
 
         package_dict = {
+            'access': u'free',
+            'accessRights': u'',
+            'author': [  # Todo! The metadata reader should return a complete list of dicts
+                {'value': content.get('creator.0/name.0', '')},
+                # {'value': u'Tekij\xe4 2'},
+                # {'value': u'Tekij\xe4 3'}
+            ],
             'id': harvest_object.id,
-            'title': content.title,
-            'name': content.identification,
-            'notes': content.description,
+            'title': content.get('title.0', ''),
+            # 'title': content.get('title.0', harvest_object.guid),
+            'name': harvest_object.guid.replace(':', ''),  # Todo! Remove strip after KATA schema is in use
+            'version': content.get('modified.0', ''),
+            'versionPID': content.get('versionidentifier.0', ''),
+            'notes': content.get('description.0', ''),
         }
+
+
+        # Example package dict
+        # {
+        #     'access': u'free',
+        #     'accessRights': u'',
+        #     'author': [{'value': u'Tekij\xe4 Aineiston (DC:Creator)'},
+        #                {'value': u'Tekij\xe4 2'},
+        #                {'value': u'Tekij\xe4 3'}],
+        #     'contactURL': u'http://www.jakelija.julkaisija.fi',
+        #     'discipline': u'Tilastotiede',
+        #     'evdescr': [],
+        #     'evtype': [{'value': u'collection'}],
+        #     'evwhen': [],
+        #     'evwho': [],
+        #     'funder': u'Roope Rahoittaja',
+        #     'geographic_coverage': u'Espoo (city),Keilaniemi (populated place)',
+        #     'geographic_coverage_tmp': [u'Espoo (city)', u'Keilaniemi (populated place)'],
+        #     'groups': [],
+        #     'id': u'urn:nbn:fi:csc-kata20131105081851699382',
+        #     'langtitle': [{'lang': u'fin', 'value': u'Aineiston nimi FIN'},
+        #                   {'lang': u'eng', 'value': u'Aineiston nimi ENG'},
+        #                   {'lang': u'swe', 'value': u'Aineiston nimi SWE'}],
+        #     'language': u'eng, fin, swe',
+        #     'licenseURL': u'Lisenssin URL (obsolete)',
+        #     'license_id': u'cc-zero',
+        #     'maintainer_email': u'jakelija.julkaisija@csc.fi',
+        #     'name': u'urn:nbn:fi:csc-kata20131105081851610265',
+        #     'notes': u'T\xe4m\xe4 on testiaineisto.',
+        #     'organization': [{'value': u'T. Aineiston Oy'},
+        #                      {'value': u'Toinen Oy'},
+        #                      {'value': u'Kolmas Oy'}],
+        #     'owner': u'Omistaja Aineiston',
+        #     'phone': u'+35805050505',
+        #     'pkg_name': u'urn:nbn:fi:csc-kata20131105081851699382',
+        #     'project_funding': u'1234-rahoitusp\xe4\xe4t\xf6snumero',
+        #     'project_homepage': u'http://www.rahoittajan.kotisivu.fi/',
+        #     'project_name': u'Rahoittajan Projekti',
+        #     'publisher': u'Jakelija / Julkaisija',
+        #     'resources': [{'algorithm': u'MD5',
+        #                    'hash': u'f60e586509d99944e2d62f31979a802f',
+        #                    'mimetype': u'application/csv',
+        #                    'name': None,
+        #                    'resource_type': 'dataset',
+        #                    'url': u'http://aineiston.osoite.fi/tiedosto.csv'}],
+        #     'save': u'finish',
+        #     'tag_string': u'tragikomiikka,dadaismi,asiasanastot',
+        #     'temporal_coverage_begin': u'1976-11-06T00:00:00Z',
+        #     'temporal_coverage_end': u'2003-11-06T00:00:00Z',
+        #     'version': u'2007-06-06T10:17:44Z',
+        #     'versionPID': u'Aineistoversion-tunniste-PID'
+        # }
 
         result = self._create_or_update_package(package_dict, harvest_object)
 
