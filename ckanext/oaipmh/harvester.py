@@ -55,18 +55,23 @@ class OAIPMHHarvester(HarvesterBase):
             'description': 'Harvests OAI-PMH providers'
         }
 
-    # def validate_config(self, config):
-    #     '''
-    #
-    #     [optional]
-    #
-    #     Harvesters can provide this method to validate the configuration entered in the
-    #     form. It should return a single string, which will be stored in the database.
-    #     Exceptions raised will be shown in the form's error messages.
-    #
-    #     :param harvest_object_id: Config string coming from the form
-    #     :returns: A string with the validated configuration options
-    #     '''
+    def validate_config(self, config):
+        '''
+
+        [optional]
+
+        Harvesters can provide this method to validate the configuration entered in the
+        form. It should return a single string, which will be stored in the database.
+        Exceptions raised will be shown in the form's error messages.
+
+        :param harvest_object_id: Config string coming from the form
+        :returns: A string with the validated configuration options
+        '''
+
+        # Try to decode JSON and "Let it Fail"
+        # Todo: Write better try/except cases
+        json.loads(config)
+        return config
 
     # def get_original_url(self, harvest_object_id):
     #     '''
@@ -126,16 +131,19 @@ class OAIPMHHarvester(HarvesterBase):
         md_format = 'oai_dc'
         log.debug('md_format: %s' % md_format)
 
-        # Todo! Read set limit from config
-        config = harvest_job.source.config
+        # Decode JSON formatted config
+        log.debug('Config: %s' % harvest_job.source.config)
+        try:
+            config = json.loads(harvest_job.source.config)
+        except ValueError as e:
+            self._save_gather_error('Unable to decode config: %s for %s' % (e, harvest_job.source.config), harvest_job)
+        set_ids = config.get('set')
+        log.debug('Sets in config: %s' % set_ids)
 
-        # Todo! Limit search to a specific Set
-        set_ids = client.listSets()
-        log.debug('listSets(): {s}'.format(s=set_ids))
+        log.debug('listSets(): {s}'.format(s=list(client.listSets())))
 
-        # Todo! Get all identifiers or records??
-        package_ids = [header.identifier() for header in client.listIdentifiers(metadataPrefix=md_format)]
-        # package_ids = [header.identifier() for header in client.listIdentifiers(metadataPrefix=md_format, set=set_id)]
+        # package_ids = [header.identifier() for header in client.listIdentifiers(metadataPrefix=md_format)]
+        package_ids = [header.identifier() for header in client.listIdentifiers(metadataPrefix=md_format, set=set_ids)]
         # package_ids = [header.identifier() for header in client.listRecords()]
         log.debug('Identifiers: {i}'.format(i=package_ids))
 
@@ -246,7 +254,6 @@ class OAIPMHHarvester(HarvesterBase):
         '''
 
         log.debug("Entering import_stage()")
-        log.debug("Exiting import_stage()")
 
         if not harvest_object:
             log.error('No harvest object received')
@@ -272,10 +279,11 @@ class OAIPMHHarvester(HarvesterBase):
             'id': harvest_object.id,
             'title': content.get('title.0', ''),
             # 'title': content.get('title.0', harvest_object.guid),
-            'name': harvest_object.guid.replace(':', ''),  # Todo! Remove strip after KATA schema is in use
+            'name': harvest_object.guid.replace(':', ''),  # Todo! Remove strip() with KATA schema
             'version': content.get('modified.0', ''),
             'versionPID': content.get('versionidentifier.0', ''),
             'notes': content.get('description.0', ''),
+            'extras': content,
         }
 
 
@@ -331,6 +339,7 @@ class OAIPMHHarvester(HarvesterBase):
         # }
 
         result = self._create_or_update_package(package_dict, harvest_object)
+        log.debug("Exiting import_stage()")
 
         return result
         # return True
