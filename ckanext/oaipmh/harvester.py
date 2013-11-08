@@ -4,6 +4,7 @@ import json
 import pprint
 
 import oaipmh.client
+import oaipmh.error
 
 import importformats
 
@@ -127,9 +128,13 @@ class OAIPMHHarvester(HarvesterBase):
         log.debug('Client: %s' % client)
 
         # Choose best md_format from md_formats, but let's use 'oai_dc' for now
-        md_formats = client.listMetadataFormats()
-        md_format = 'oai_dc'
-        log.debug('md_format: %s' % md_format)
+        try:
+            md_formats = client.listMetadataFormats()
+            md_format = 'oai_dc'
+        except oaipmh.error.BadVerbError as e:
+            log.warning('Provider does not support listMetadataFormats verb. Using oai_dc as fallback format.')
+            md_format = 'oai_dc'
+        log.debug('Metadata format: %s' % md_format)
 
         # Decode JSON formatted config
         log.debug('Config: %s' % harvest_job.source.config)
