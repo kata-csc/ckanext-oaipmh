@@ -276,11 +276,14 @@ class OAIPMHHarvester(HarvesterBase):
         package_dict = {
             'access': u'free',
             'accessRights': u'',
-            'author': [  # Todo! The metadata reader should return a complete list of dicts
-                {'value': content.get('creator.0/name.0', '')},
-                # {'value': u'Tekij\xe4 2'},
-                # {'value': u'Tekij\xe4 3'}
-            ],
+            'author': content.get('creator.0/name.0', ''),  # Todo! The metadata reader should return a complete list of dicts, use below with KATA schema
+            # 'author': [
+            #     {'value': content.get('creator.0/name.0', '')},
+            #     {'value': content.get('creator.1/name.0', '')},
+            #     {'value': content.get('creator.2/name.0', '')},
+            # ],
+            'contactURL': u'http://www.jakelija.julkaisija.fi',
+
             'id': harvest_object.id,
             'title': content.get('title.0', ''),
             # 'title': content.get('title.0', harvest_object.guid),

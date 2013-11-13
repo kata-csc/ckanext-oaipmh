@@ -4,6 +4,7 @@
 import oaipmh.common
 import oaipmh.metadata
 import lxml.etree
+import bs4
 
 import importcore
 
@@ -208,36 +209,46 @@ def dc_metadata_reader(xml):
             '''
             foaf_handler(x, y, result)
 
-        result = xml_reader(xml).getMap()
-        mapping = [
-            (u'dc:title', u'title.%d', None),
-            (u'dc:identifier', u'versionidentifier.%d', None),
-            (u'dc:creator', u'creator.%d/name.0', None),
-            (u'dc:language', u'language.%d/label.0', None),
-            (u'dc:description', u'description.%d', None),
-            (u'dc:subject', u'subject.%d', None),
-            (u'dc:publisher', u'distributor.%d/name.0', None),
-            (u'dc:format', u'resource.%d/format.0', None),
-            (u'dc:contributor', u'contributor.%d/name.0', None),
-            (u'dc:rights', u'license.%d/description.0', None),
-            (u'dc:source', u'continuityidentifier.%d', None),
-            # (u'dc:type', u'type.%d', None),
-            # (u'dc:relation', u'relation.%d', None),
-            # (u'dct:publisher', u'distributor.%d', publisher_handler),
-            # (u'dct:contributor', u'contributor.%d', contributor_handler),
-            (u'dct:hasFormat', u'resource.%d/format.0', None),
-            (u'dct:modified', u'modified.%d', None),
-            # (u'dct:rightsHolder', u'owner.%d', None),
-        ]
+        # Populate a BeautifulSoup object
+        bs = bs4.BeautifulSoup(lxml.etree.tostring(xml), 'xml')
+        dc = bs.metadata.dc
 
-        for source, dest, callback in mapping:
-                count = result.get('metadata/oai_dc:dc.0/%s.count' % source, 0)
-                result[dest[:dest.index('.%d')] + '.count'] = count
-                for i in range(count):
-                        source_n = 'metadata/oai_dc:dc.0/%s.%d' % (source, i)
-                        copy_element(source_n, dest % i, result, callback)
-                        if dest.endswith('.0'):
-                                result[dest[:-2] % i + '.count'] = 1
+        # Create a unified internal harvester format dict
+        unified = dict(
+            authors=dc('author', recursive=False),
+            date=dc('modified', recursive=False) or dc('date', recursive=False),
+            title=dc('title', recursive=False),
+            identifier=dc('identifier', recursive=False),
+            creator=dc('creator', recursive=False),
+            language=dc('language', recursive=False),
+            description=dc('description', recursive=False).strings,
+            tag=dc('subject', recursive=False),
+            distributor=dc('publisher', recursive=False),
+            resource=dict(
+                format=dc('hasFormat', recursive=False) or dc('format', recursive=False),
+            ),
+            contributor=dc('contributor', recursive=False),
+            license=dc('rights', recursive=False),
+            source=dc('source', recursive=False),
+            type=dc('type', recursive=False),
+            relation=dc('relation', recursive=False),
+            owner=dc('rightsHolder', recursive=False),
+        )
+
+        result = xml_reader(xml).getMap()
+        result['unified'] = unified
+
+        # for source, dest, callback in mapping:
+        #     # if callback:
+        #     #     copy_element(source, dest, result, callback)
+        #     # else:
+        #         count = result.get('metadata/oai_dc:dc.0/%s.count' % source, 0)
+        #         result[dest[:dest.index('.%d')] + '.count'] = count
+        #         for i in range(count):
+        #                 source_n = 'metadata/oai_dc:dc.0/%s.%d' % (source, i)
+        #                 copy_element(source_n, dest % i, result, callback)
+        #                 if dest.endswith('.0'):
+        #                         result[dest[:-2] % i + '.count'] = 1
 
         return oaipmh.common.Metadata(result)
 
