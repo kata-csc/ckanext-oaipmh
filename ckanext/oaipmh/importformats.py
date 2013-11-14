@@ -6,6 +6,8 @@ import oaipmh.metadata
 import lxml.etree
 import bs4
 
+from functools import partial
+
 import importcore
 
 xml_reader = importcore.generic_xml_metadata_reader
@@ -209,6 +211,17 @@ def dc_metadata_reader(xml):
             '''
             foaf_handler(x, y, result)
 
+        def filter_tag_name_namespace(name, namespace, tag):
+            '''
+            Boolean filter function, for BeautifulSoup find functions, that checks tag's name and namespace
+            '''
+            return tag.name == name and tag.namespace == namespace
+
+        ns = {
+            'dct': 'http://purl.org/dc/terms/',
+            'dc': 'http://purl.org/dc/elements/1.1/',
+        }
+
         # Populate a BeautifulSoup object
         bs = bs4.BeautifulSoup(lxml.etree.tostring(xml), 'xml')
         dc = bs.metadata.dc
@@ -216,22 +229,45 @@ def dc_metadata_reader(xml):
         # Create a unified internal harvester format dict
         unified = dict(
             authors=dc('author', recursive=False),
-            date=dc('modified', recursive=False) or dc('date', recursive=False),
-            title=dc('title', recursive=False),
+
+            # Todo! This should be more exactly picked
+            version=dc.modified.text or dc.date.text,
+            # version=dc(
+            #     partial(filter_tag_name_namespace, 'modified', ns['dct']), recursive=False)[0].text or dc(
+            #         partial(filter_tag_name_namespace, 'date', ns['dc']), recursive=False)[0].text,
+
+            titles=[dict(lang=a.get('xml:lang', ''), value=a.text) for a in dc('title', recursive=False)],
+
             identifier=dc('identifier', recursive=False),
+
             creator=dc('creator', recursive=False),
+
             language=dc('language', recursive=False),
-            description=dc('description', recursive=False).strings,
-            tag=dc('subject', recursive=False),
-            distributor=dc('publisher', recursive=False),
+
+            description='\n\n'.join(sorted([a.text for a in dc(
+                partial(filter_tag_name_namespace, 'description', ns['dc']),
+                recursive=False)])),
+
+            tags=', '.join(sorted([a.text for a in dc('subject', recursive=False)])),
+
+            distributor=dc(
+                partial(filter_tag_name_namespace, 'publisher', ns['dct']), recursive=False) or dc(
+                    partial(filter_tag_name_namespace, 'publisher', ns['dc']), recursive=False),
+
             resource=dict(
                 format=dc('hasFormat', recursive=False) or dc('format', recursive=False),
             ),
+
             contributor=dc('contributor', recursive=False),
+
             license=dc('rights', recursive=False),
+
             source=dc('source', recursive=False),
+
             type=dc('type', recursive=False),
+
             relation=dc('relation', recursive=False),
+
             owner=dc('rightsHolder', recursive=False),
         )
 
