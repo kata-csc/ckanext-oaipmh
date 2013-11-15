@@ -300,12 +300,15 @@ class OAIPMHHarvester(HarvesterBase):
 
         # Example package dict
         # {
-        #     'access': u'free',
-        #     'accessRights': u'',
+        #     'availability': u'direct_download' |
+        #                     u'access_application' |
+        #                     u'access_request' |
+        #                     u'contact_owner'    ## JuhoL: changed 'access' to 'availability'
+        #     'access_application_URL': u'',   ## JuhoL: changed 'accessRights' to 'access_application_URL
         #     'author': [{'value': u'Tekij\xe4 Aineiston (DC:Creator)'},
         #                {'value': u'Tekij\xe4 2'},
         #                {'value': u'Tekij\xe4 3'}],
-        #     'contactURL': u'http://www.jakelija.julkaisija.fi',
+        #     'contact_URL': u'http://www.jakelija.julkaisija.fi',  ## JuhoL: added underscore '_'
         #     'discipline': u'Tilastotiede',
         #     'evdescr': [],
         #     'evtype': [{'value': u'collection'}, {'value': u'published'}],
@@ -320,7 +323,7 @@ class OAIPMHHarvester(HarvesterBase):
         #                   {'lang': u'swe', 'value': u'Aineiston nimi SWE'}],
         ###     'langdis': u'True',
         #     'language': u'eng, fin, swe',
-        #     'licenseURL': u'Lisenssin URL (obsolete)',
+        #     'license_URL': u'Lisenssin URL (obsolete)',   ## JuhoL: added underscore '_'
         #     'license_id': u'cc-zero',
         #     'maintainer_email': u'jakelija.julkaisija@csc.fi',
         #     'name': u'urn:nbn:fi:csc-kata20131105081851610265',
@@ -333,22 +336,22 @@ class OAIPMHHarvester(HarvesterBase):
         #     'project_funding': u'1234-rahoitusp\xe4\xe4t\xf6snumero',
         #     'project_homepage': u'http://www.rahoittajan.kotisivu.fi/',
         #     'project_name': u'Rahoittajan Projekti',
-        #     'publisher': u'Jakelija / Julkaisija',
-        #     'resources': [{'algorithm': u'MD5',
-        #                    'hash': u'f60e586509d99944e2d62f31979a802f',
-        #                    'mimetype': u'application/csv',
-        #                    'name': None,
-        #                    'resource_type': 'dataset',
-        #                    'url': u'http://aineiston.osoite.fi/tiedosto.csv'}],
+        #     'maintainer': u'Jakelija / Julkaisija',   ## JuhoL: changed 'publisher' to 'maintainer'
+        ###  JuhoL: Mikko muokkaa koko resurssin käsittelyn uusiksi.
+        ###  Harvestoidaan tähän liittyvät vasta sitten.
+        ###     'resources': [{'algorithm': u'MD5',
+        ###                    'hash': u'f60e586509d99944e2d62f31979a802f',
+        ###                    'mimetype': u'application/csv',
+        ###                    'name': None,
+        ###                    'resource_type': 'dataset',
+        ###                    'url': u'http://aineiston.osoite.fi/tiedosto.csv'}],
         #     'save': u'finish',
         #     'tag_string': u'tragikomiikka,dadaismi,asiasanastot',
         #     'temporal_coverage_begin': u'1976-11-06T00:00:00Z',
         #     'temporal_coverage_end': u'2003-11-06T00:00:00Z',
         #     'version': u'2007-06-06T10:17:44Z',
-        #     'versionPID': u'Aineistoversion-tunniste-PID'
-        ###   'extras': {
-        ###
-        ###    }
+        #     'version_PID': u'Aineistoversion-tunniste-PID'   ## JuhoL: added underscore '_'
+        ###   'extras': {}  ## JuhoL: filled directly with 'content' dict
         # }
 
         result = self._create_or_update_package(package_dict, harvest_object)
