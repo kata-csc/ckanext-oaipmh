@@ -273,26 +273,29 @@ class OAIPMHHarvester(HarvesterBase):
         log.debug('Content (unpacked): %s' % content)
         pprint.pprint(content)
 
-        package_dict = {
-            'access': u'free',
-            'accessRights': u'',
-            'author': content.get('creator.0/name.0', ''),  # Todo! The metadata reader should return a complete list of dicts, use below with KATA schema
-            # 'author': [
-            #     {'value': content.get('creator.0/name.0', '')},
-            #     {'value': content.get('creator.1/name.0', '')},
-            #     {'value': content.get('creator.2/name.0', '')},
-            # ],
-            'contactURL': u'http://www.jakelija.julkaisija.fi',
+        package_dict = content.pop('unified')
+        package_dict['extras'] = content
 
-            'id': harvest_object.id,
-            'title': content.get('title.0', ''),
-            # 'title': content.get('title.0', harvest_object.guid),
-            'name': harvest_object.guid.replace(':', ''),  # Todo! Remove strip() with KATA schema
-            'version': content.get('modified.0', ''),
-            'versionPID': content.get('versionidentifier.0', ''),
-            'notes': content.get('description.0', ''),
-            'extras': content,
-        }
+        # package_dict = {
+        #     'access': u'free',
+        #     'accessRights': u'',
+        #     'author': content.get('creator.0/name.0', ''),  # Todo! The metadata reader should return a complete list of dicts, use below with KATA schema
+        #     # 'author': [
+        #     #     {'value': content.get('creator.0/name.0', '')},
+        #     #     {'value': content.get('creator.1/name.0', '')},
+        #     #     {'value': content.get('creator.2/name.0', '')},
+        #     # ],
+        #     'contactURL': u'http://www.jakelija.julkaisija.fi',
+        #
+        #     'id': harvest_object.id,
+        #     'title': content.get('title.0', ''),
+        #     # 'title': content.get('title.0', harvest_object.guid),
+        #     'name': harvest_object.guid.replace(':', ''),  # Todo! Remove strip() with KATA schema
+        #     'version': content.get('modified.0', ''),
+        #     'versionPID': content.get('versionidentifier.0', ''),
+        #     'notes': content.get('description.0', ''),
+        #     'extras': content,
+        # }
 
 
         # Example package dict
@@ -305,17 +308,17 @@ class OAIPMHHarvester(HarvesterBase):
         #     'contactURL': u'http://www.jakelija.julkaisija.fi',
         #     'discipline': u'Tilastotiede',
         #     'evdescr': [],
-        #     'evtype': [{'value': u'collection'}],
-        #     'evwhen': [],
+        #     'evtype': [{'value': u'collection'}, {'value': u'published'}],
+        #     'evwhen': [{'value': u'2007-06-06T10:17:44Z'}, {'value': u'2007-06-06T10:17:45Z'}],
         #     'evwho': [],
         #     'funder': u'Roope Rahoittaja',
         #     'geographic_coverage': u'Espoo (city),Keilaniemi (populated place)',
         #     'geographic_coverage_tmp': [u'Espoo (city)', u'Keilaniemi (populated place)'],
         #     'groups': [],
-        #     'id': u'urn:nbn:fi:csc-kata20131105081851699382',
         #     'langtitle': [{'lang': u'fin', 'value': u'Aineiston nimi FIN'},
         #                   {'lang': u'eng', 'value': u'Aineiston nimi ENG'},
         #                   {'lang': u'swe', 'value': u'Aineiston nimi SWE'}],
+        ###     'langdis': u'True',
         #     'language': u'eng, fin, swe',
         #     'licenseURL': u'Lisenssin URL (obsolete)',
         #     'license_id': u'cc-zero',
@@ -327,7 +330,6 @@ class OAIPMHHarvester(HarvesterBase):
         #                      {'value': u'Kolmas Oy'}],
         #     'owner': u'Omistaja Aineiston',
         #     'phone': u'+35805050505',
-        #     'pkg_name': u'urn:nbn:fi:csc-kata20131105081851699382',
         #     'project_funding': u'1234-rahoitusp\xe4\xe4t\xf6snumero',
         #     'project_homepage': u'http://www.rahoittajan.kotisivu.fi/',
         #     'project_name': u'Rahoittajan Projekti',
@@ -344,6 +346,9 @@ class OAIPMHHarvester(HarvesterBase):
         #     'temporal_coverage_end': u'2003-11-06T00:00:00Z',
         #     'version': u'2007-06-06T10:17:44Z',
         #     'versionPID': u'Aineistoversion-tunniste-PID'
+        ###   'extras': {
+        ###
+        ###    }
         # }
 
         result = self._create_or_update_package(package_dict, harvest_object)
