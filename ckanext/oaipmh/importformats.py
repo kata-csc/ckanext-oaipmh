@@ -226,31 +226,38 @@ def dc_metadata_reader(xml):
         bs = bs4.BeautifulSoup(lxml.etree.tostring(xml), 'xml')
         dc = bs.metadata.dc
 
+        funder, project_funding, project_name = zip(*[
+            tuple(a.Project.comment.text.split(u' rahoituspäätös ')) + (a.Project.find('name').text,)
+            for a in dc(partial(filter_tag_name_namespace, 'contributor', ns['dct']))])
+
         # Create a unified internal harvester format dict
         unified = dict(
-            authors=dc('author', recursive=False),
-
             # Todo! This should be more exactly picked
             version=dc.modified.text or dc.date.text,
             # version=dc(
             #     partial(filter_tag_name_namespace, 'modified', ns['dct']), recursive=False)[0].text or dc(
             #         partial(filter_tag_name_namespace, 'date', ns['dc']), recursive=False)[0].text,
 
-            titles=[dict(lang=a.get('xml:lang', ''), value=a.text) for a in dc('title', recursive=False)],
+            versionPID=dc('description', 'Identifier.version:'),
+
+            langtitle=[dict(lang=a.get('xml:lang', ''), value=a.text) for a in dc('title', recursive=False)],
 
             identifier=dc('identifier', recursive=False),
 
-            creator=dc('creator', recursive=False),
+            author=[dict(value=a.text) for a in dc('creator', recursive=False)],
 
-            language=dc('language', recursive=False),
+            # DONE!
+            language=','.join(sorted([a.text for a in dc('language', recursive=False)])),
 
-            description='\n\n'.join(sorted([a.text for a in dc(
+            # TEST!
+            notes='\r\n\r\n'.join(sorted([a.text for a in dc(
                 partial(filter_tag_name_namespace, 'description', ns['dc']),
                 recursive=False)])),
 
-            tags=', '.join(sorted([a.text for a in dc('subject', recursive=False)])),
+            # TEST!
+            tag_string=','.join(sorted([a.text for a in dc('subject', recursive=False)])),
 
-            distributor=dc(
+            publisher=dc(
                 partial(filter_tag_name_namespace, 'publisher', ns['dct']), recursive=False) or dc(
                     partial(filter_tag_name_namespace, 'publisher', ns['dc']), recursive=False),
 
@@ -258,7 +265,8 @@ def dc_metadata_reader(xml):
                 format=dc('hasFormat', recursive=False) or dc('format', recursive=False),
             ),
 
-            contributor=dc('contributor', recursive=False),
+            # author=dc('contributor', recursive=False) if "Person",
+            # organization=dc('contributor', recursive=False) if "Organization",
 
             license=dc('rights', recursive=False),
 
@@ -268,8 +276,19 @@ def dc_metadata_reader(xml):
 
             relation=dc('relation', recursive=False),
 
-            owner=dc('rightsHolder', recursive=False),
+            owner=[a.get('resource') for a in dc('rightsHolder', recursive=False)],
+
+            # Todo! This needs to be flattened down!
+            contactURL=[[b.mbox.get('resource') for b in a(recursive=False)]
+                        for a in dc(partial(filter_tag_name_namespace, 'publisher', ns['dct']), recursive=False)],
+            maintainer_email=dc('publisher', 'foaf:mbox'),
+
+            project_funding=list(project_funding),
+            project_name=list(project_name),
+            funder=list(funder),
         )
+        if not unified['language']:
+            unified['langdis'] = 'True'
 
         result = xml_reader(xml).getMap()
         result['unified'] = unified

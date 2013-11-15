@@ -275,6 +275,7 @@ class OAIPMHHarvester(HarvesterBase):
 
         package_dict = content.pop('unified')
         package_dict['extras'] = content
+        package_dict['name'] = harvest_object.guid
 
         # package_dict = {
         #     'access': u'free',
@@ -296,7 +297,6 @@ class OAIPMHHarvester(HarvesterBase):
         #     'notes': content.get('description.0', ''),
         #     'extras': content,
         # }
-
 
         # Example package dict
         # {
