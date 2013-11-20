@@ -5,8 +5,7 @@ import oaipmh.common
 import oaipmh.metadata
 import lxml.etree
 import bs4
-
-from functools import partial
+import pointfree
 
 import importcore
 
@@ -211,6 +210,7 @@ def dc_metadata_reader(xml):
             '''
             foaf_handler(x, y, result)
 
+        @pointfree.partial
         def filter_tag_name_namespace(name, namespace, tag):
             '''
             Boolean filter function, for BeautifulSoup find functions, that checks tag's name and namespace
@@ -228,7 +228,7 @@ def dc_metadata_reader(xml):
 
         project_funder, project_funding, project_name, project_homepage = zip(*[
             tuple(a.Project.comment.text.split(u' rahoituspäätös ')) + (a.Project.find('name').text,) + (a.Project.get('about'),)
-            for a in dc(partial(filter_tag_name_namespace, 'contributor', ns['dct']))])
+            for a in dc(filter_tag_name_namespace(name='contributor', namespace=ns['dct']))])
 
         access_application_url, access_request_url = NotImplemented, NotImplemented
 
@@ -246,7 +246,7 @@ def dc_metadata_reader(xml):
 
             # Todo! This needs to be flattened down!
             contact_URL=[[b.mbox.get('resource') for b in a(recursive=False)]
-                        for a in dc(partial(filter_tag_name_namespace, 'publisher', ns['dct']), recursive=False)],
+                         for a in dc(filter_tag_name_namespace(name='publisher', namespace=ns['dct']), recursive=False)],
             contact_phone=NotImplemented,
 
             direct_download_URL=dc.hasFormat.File.about,
@@ -268,8 +268,8 @@ def dc_metadata_reader(xml):
             # license_id='notspecified',
 
             maintainer=dc(
-                partial(filter_tag_name_namespace, 'publisher', ns['dct']), recursive=False) or dc(
-                    partial(filter_tag_name_namespace, 'publisher', ns['dc']), recursive=False),
+                filter_tag_name_namespace('publisher', ns['dct']), recursive=False) or dc(
+                filter_tag_name_namespace('publisher', ns['dc']), recursive=False),
             maintainer_email=dc('publisher', 'foaf:mbox'),
 
             mimetype=dc('hasFormat', recursive=False) or dc('format', recursive=False),
@@ -278,7 +278,7 @@ def dc_metadata_reader(xml):
 
             # TEST!
             notes='\r\n\r\n'.join(sorted([a.text for a in dc(
-                partial(filter_tag_name_namespace, 'description', ns['dc']),
+                filter_tag_name_namespace('description', ns['dc']),
                 recursive=False)])),
 
             orgauth=NotImplemented,
