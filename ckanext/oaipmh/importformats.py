@@ -1,6 +1,8 @@
 # coding: utf-8
 # vi:et:ts=8:
 
+import logging
+
 import oaipmh.common
 import oaipmh.metadata
 import lxml.etree
@@ -11,6 +13,23 @@ import importcore
 
 xml_reader = importcore.generic_xml_metadata_reader
 rdf_reader = importcore.generic_rdf_metadata_reader
+logging.basicConfig(level=logging.DEBUG)
+log = logging.getLogger(__name__)
+
+
+def ExceptReturn(exception, returns):
+    def decorator(f):
+        def call(*args, **kwargs):
+            try:
+                log.debug('call()')
+                return f(*args, **kwargs)
+            except exception as e:
+                log.error('Exception occurred: %s' % e)
+                return returns
+        log.debug('decorator()')
+        return call
+    log.debug('ExceptReturn()')
+    return decorator
 
 
 def copy_element(source, dest, md, callback=None):
@@ -152,6 +171,7 @@ def nrd_metadata_reader(xml):
         return oaipmh.common.Metadata(result)
 
 
+@ExceptReturn(exception=Exception, returns=False)
 def dc_metadata_reader(xml):
         '''Read metadata in oai_dc schema
 
