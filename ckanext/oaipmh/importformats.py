@@ -226,66 +226,86 @@ def dc_metadata_reader(xml):
         bs = bs4.BeautifulSoup(lxml.etree.tostring(xml), 'xml')
         dc = bs.metadata.dc
 
-        funder, project_funding, project_name = zip(*[
-            tuple(a.Project.comment.text.split(u' rahoituspäätös ')) + (a.Project.find('name').text,)
+        project_funder, project_funding, project_name, project_homepage = zip(*[
+            tuple(a.Project.comment.text.split(u' rahoituspäätös ')) + (a.Project.find('name').text,) + (a.Project.get('about'),)
             for a in dc(partial(filter_tag_name_namespace, 'contributor', ns['dct']))])
+
+        access_application_url, access_request_url = NotImplemented, NotImplemented
 
         # Create a unified internal harvester format dict
         unified = dict(
-            # Todo! This should be more exactly picked
-            version=dc.modified.text or dc.date.text,
-            # version=dc(
-            #     partial(filter_tag_name_namespace, 'modified', ns['dct']), recursive=False)[0].text or dc(
-            #         partial(filter_tag_name_namespace, 'date', ns['dc']), recursive=False)[0].text,
+            # ?=dc('source', recursive=False),
+            # ?=dc('relation', recursive=False),
+            # ?=dc('type', recursive=False),
 
-            versionPID=dc('description', 'Identifier.version:'),
+            algorithm=NotImplemented,
+
+            availability=NotImplemented,
+
+            checksum=dc.hasFormat.File.checksum.Checksum.checksumValue.string,
+
+            # Todo! This needs to be flattened down!
+            contact_URL=[[b.mbox.get('resource') for b in a(recursive=False)]
+                        for a in dc(partial(filter_tag_name_namespace, 'publisher', ns['dct']), recursive=False)],
+            contact_phone=NotImplemented,
+
+            direct_download_URL=dc.hasFormat.File.about,
+
+            # discipline=NotImplemented,
+
+            # evdescr=NotImplemented,
+            # evtype=NotImplemented,
+            # evwhen=NotImplemented,
+            # evwho=NotImplemented,
+
+            # geographic_coverage=NotImplemented,
 
             langtitle=[dict(lang=a.get('xml:lang', ''), value=a.text) for a in dc('title', recursive=False)],
 
-            identifier=dc('identifier', recursive=False),
-
-            author=[dict(value=a.text) for a in dc('creator', recursive=False)],
-
             # DONE!
             language=','.join(sorted([a.text for a in dc('language', recursive=False)])),
+
+            # license_id='notspecified',
+
+            maintainer=dc(
+                partial(filter_tag_name_namespace, 'publisher', ns['dct']), recursive=False) or dc(
+                    partial(filter_tag_name_namespace, 'publisher', ns['dc']), recursive=False),
+            maintainer_email=dc('publisher', 'foaf:mbox'),
+
+            mimetype=dc('hasFormat', recursive=False) or dc('format', recursive=False),
+
+            name=dc('identifier', recursive=False),
 
             # TEST!
             notes='\r\n\r\n'.join(sorted([a.text for a in dc(
                 partial(filter_tag_name_namespace, 'description', ns['dc']),
                 recursive=False)])),
 
-            # TEST!
-            tag_string=','.join(sorted([a.text for a in dc('subject', recursive=False)])),
-
-            publisher=dc(
-                partial(filter_tag_name_namespace, 'publisher', ns['dct']), recursive=False) or dc(
-                    partial(filter_tag_name_namespace, 'publisher', ns['dc']), recursive=False),
-
-            resource=dict(
-                format=dc('hasFormat', recursive=False) or dc('format', recursive=False),
-            ),
-
+            orgauth=NotImplemented,
+            # author=[dict(value=a.text) for a in dc('creator', recursive=False)],
             # author=dc('contributor', recursive=False) if "Person",
             # organization=dc('contributor', recursive=False) if "Organization",
 
-            license=dc('rights', recursive=False),
-
-            source=dc('source', recursive=False),
-
-            type=dc('type', recursive=False),
-
-            relation=dc('relation', recursive=False),
-
             owner=[a.get('resource') for a in dc('rightsHolder', recursive=False)],
 
-            # Todo! This needs to be flattened down!
-            contactURL=[[b.mbox.get('resource') for b in a(recursive=False)]
-                        for a in dc(partial(filter_tag_name_namespace, 'publisher', ns['dct']), recursive=False)],
-            maintainer_email=dc('publisher', 'foaf:mbox'),
-
+            project_funder=list(project_funder),
             project_funding=list(project_funding),
+            project_homepage=list(project_homepage),
             project_name=list(project_name),
-            funder=list(funder),
+
+            # TEST!
+            tag_string=','.join(sorted([a.text for a in dc('subject', recursive=False)])),
+
+            # temporal_coverage_begin=NotImplemented,
+            # temporal_coverage_end=NotImplemented,
+
+            # Todo! This should be more exactly picked
+            version=dc.modified.text or dc.date.text,
+            # version=dc(
+            #     partial(filter_tag_name_namespace, 'modified', ns['dct']), recursive=False)[0].text or dc(
+            #         partial(filter_tag_name_namespace, 'date', ns['dc']), recursive=False)[0].text,
+
+            version_PID=dc('description', 'Identifier.version:'),
         )
         if not unified['language']:
             unified['langdis'] = 'True'

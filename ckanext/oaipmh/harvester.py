@@ -275,7 +275,9 @@ class OAIPMHHarvester(HarvesterBase):
 
         package_dict = content.pop('unified')
         package_dict['extras'] = content
-        package_dict['name'] = harvest_object.guid
+
+        # Todo! Metadata Id or Data Id???
+        # package_dict['name'] = harvest_object.guid
 
         # package_dict = {
         #     'access': u'free',
