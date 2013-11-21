@@ -260,7 +260,7 @@ def dc_metadata_reader(xml):
         dc = bs.metadata.dc
 
         project_funder, project_funding, project_name, project_homepage = zip(*[
-            tuple(a.Project.comment.text.split(u' rahoituspäätös ')) + (a.Project.find('name').text,) + (a.Project.get('about'),)
+            tuple(a.Project.comment.string.split(u' rahoituspäätös ')) + (a.Project.find('name').string,) + (a.Project.get('about'),)
             for a in dc(filter_tag_name_namespace(name='contributor', namespace=ns['dct']))])
 
         access_application_url, access_request_url = NotImplemented, NotImplemented
@@ -293,10 +293,10 @@ def dc_metadata_reader(xml):
 
             # geographic_coverage=NotImplemented,
 
-            langtitle=[dict(lang=a.get('xml:lang', ''), value=a.text) for a in dc('title', recursive=False)],
+            langtitle=[dict(lang=a.get('xml:lang', ''), value=a.string) for a in dc('title', recursive=False)],
 
             # DONE!
-            language=','.join(sorted([a.text for a in dc('language', recursive=False)])),
+            language=','.join(sorted([a.string for a in dc('language', recursive=False)])),
 
             # license_id='notspecified',
 
@@ -310,12 +310,12 @@ def dc_metadata_reader(xml):
             name=dc('identifier', recursive=False),
 
             # TEST!
-            notes='\r\n\r\n'.join(sorted([a.text for a in dc(
+            notes='\r\n\r\n'.join(sorted([a.string for a in dc(
                 filter_tag_name_namespace('description', ns['dc']),
                 recursive=False)])),
 
             orgauth=NotImplemented,
-            # author=[dict(value=a.text) for a in dc('creator', recursive=False)],
+            # author=[dict(value=a.string) for a in dc('creator', recursive=False)],
             # author=dc('contributor', recursive=False) if "Person",
             # organization=dc('contributor', recursive=False) if "Organization",
 
@@ -327,16 +327,16 @@ def dc_metadata_reader(xml):
             project_name=list(project_name),
 
             # TEST!
-            tag_string=','.join(sorted([a.text for a in dc('subject', recursive=False)])),
+            tag_string=','.join(sorted([a.string for a in dc('subject', recursive=False)])),
 
             # temporal_coverage_begin=NotImplemented,
             # temporal_coverage_end=NotImplemented,
 
             # Todo! This should be more exactly picked
-            version=dc.modified.text or dc.date.text,
+            version=dc.modified.string or dc.date.string,
             # version=dc(
-            #     partial(filter_tag_name_namespace, 'modified', ns['dct']), recursive=False)[0].text or dc(
-            #         partial(filter_tag_name_namespace, 'date', ns['dc']), recursive=False)[0].text,
+            #     partial(filter_tag_name_namespace, 'modified', ns['dct']), recursive=False)[0].string or dc(
+            #         partial(filter_tag_name_namespace, 'date', ns['dc']), recursive=False)[0].string,
 
             version_PID=dc('description', 'Identifier.version:'),
         )
