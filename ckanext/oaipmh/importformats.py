@@ -263,6 +263,11 @@ def dc_metadata_reader(xml):
             tuple(a.Project.comment.string.split(u' rahoituspäätös ')) + (a.Project.find('name').string,) + (a.Project.get('about'),)
             for a in dc(filter_tag_name_namespace(name='contributor', namespace=ns['dct']))])
 
+        maintainer, maintainer_email, contact_phone, contact_URL = zip(*list(flatten(
+            [[(b.find('name').string, b.mbox.get('resource'), b.phone.get('resource'), b.get('about'))
+              for b in a(recursive=False)]
+                for a in dc(filter_tag_name_namespace(name='publisher', namespace=ns['dct']), recursive=False)])))
+
         access_application_url, access_request_url = NotImplemented, NotImplemented
 
         # Create a unified internal harvester format dict
@@ -277,10 +282,9 @@ def dc_metadata_reader(xml):
 
             checksum=dc.hasFormat.File.checksum.Checksum.checksumValue.string,
 
-            # Todo! This needs to be flattened down!
-            contact_URL=[[b.mbox.get('resource') for b in a(recursive=False)]
-                         for a in dc(filter_tag_name_namespace(name='publisher', namespace=ns['dct']), recursive=False)],
-            contact_phone=NotImplemented,
+            # Todo! Using only the first entry, for now
+            contact_URL=fst(contact_URL),
+            contact_phone=fst(contact_phone),
 
             direct_download_URL=dc.hasFormat.File.about,
 
@@ -302,8 +306,8 @@ def dc_metadata_reader(xml):
 
             maintainer=dc(
                 filter_tag_name_namespace('publisher', ns['dct']), recursive=False) or dc(
-                filter_tag_name_namespace('publisher', ns['dc']), recursive=False),
-            maintainer_email=dc('publisher', 'foaf:mbox'),
+                    filter_tag_name_namespace('publisher', ns['dc']), recursive=False),
+            maintainer_email=fst(maintainer_email),
 
             mimetype=dc('hasFormat', recursive=False) or dc('format', recursive=False),
 
