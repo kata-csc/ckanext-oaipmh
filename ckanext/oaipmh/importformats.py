@@ -268,6 +268,7 @@ def dc_metadata_reader(xml):
               for b in a(recursive=False)]
                 for a in dc(filter_tag_name_namespace(name='publisher', namespace=ns['dct']), recursive=False)])))
 
+        # Todo! Implement
         access_application_url, access_request_url = NotImplemented, NotImplemented
 
         # Create a unified internal harvester format dict
@@ -276,17 +277,20 @@ def dc_metadata_reader(xml):
             # ?=dc('relation', recursive=False),
             # ?=dc('type', recursive=False),
 
+            # Todo! Implement
             algorithm=NotImplemented,
 
+            # Todo! Implement
             availability=NotImplemented,
 
+            # Todo!
             checksum=dc.hasFormat.File.checksum.Checksum.checksumValue.string,
 
             # Todo! Using only the first entry, for now
             contact_URL=fst(contact_URL),
             contact_phone=fst(contact_phone),
 
-            direct_download_URL=dc.hasFormat.File.about,
+            direct_download_URL=dc.hasFormat.File.get('about'),
 
             # discipline=NotImplemented,
 
@@ -304,14 +308,17 @@ def dc_metadata_reader(xml):
 
             # license_id='notspecified',
 
+            # Todo! Using only the first entry, for now
             maintainer=dc(
                 filter_tag_name_namespace('publisher', ns['dct']), recursive=False) or dc(
                     filter_tag_name_namespace('publisher', ns['dc']), recursive=False),
             maintainer_email=fst(maintainer_email),
 
-            mimetype=dc('hasFormat', recursive=False) or dc('format', recursive=False),
+            # Todo! IDA currently doesn't produce this, maybe in future
+            # dc('hasFormat', recursive=False)
+            mimetype=fst([a.string for a in dc('format', text=re.compile('/'), recursive=False)]),
 
-            name=dc('identifier', recursive=False),
+            name=fst([a.string for a in dc('identifier', text=re.compile('urn', flags=re.I), recursive=False)]),
 
             # TEST!
             notes='\r\n\r\n'.join(sorted([a.string for a in dc(
@@ -323,12 +330,14 @@ def dc_metadata_reader(xml):
             # author=dc('contributor', recursive=False) if "Person",
             # organization=dc('contributor', recursive=False) if "Organization",
 
-            owner=[a.get('resource') for a in dc('rightsHolder', recursive=False)],
+            # Todo! Using only the first entry, for now
+            owner=fst([a.get('resource') for a in dc('rightsHolder', recursive=False)]),
 
-            project_funder=list(project_funder),
-            project_funding=list(project_funding),
-            project_homepage=list(project_homepage),
-            project_name=list(project_name),
+            # Todo! Using only the first entry, for now
+            project_funder=fst(project_funder),
+            project_funding=fst(project_funding),
+            project_homepage=fst(project_homepage),
+            project_name=fst(project_name),
 
             # TEST!
             tag_string=','.join(sorted([a.string for a in dc('subject', recursive=False)])),
