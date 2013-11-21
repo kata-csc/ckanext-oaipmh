@@ -2,6 +2,8 @@
 # vi:et:ts=8:
 
 import logging
+import itertools
+import re
 
 import oaipmh.common
 import oaipmh.metadata
@@ -13,7 +15,6 @@ import importcore
 
 xml_reader = importcore.generic_xml_metadata_reader
 rdf_reader = importcore.generic_rdf_metadata_reader
-logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
 
 
@@ -171,7 +172,7 @@ def nrd_metadata_reader(xml):
         return oaipmh.common.Metadata(result)
 
 
-@ExceptReturn(exception=Exception, returns=False)
+@ExceptReturn(exception=Exception, returns=None)
 def dc_metadata_reader(xml):
         '''Read metadata in oai_dc schema
 
@@ -237,10 +238,22 @@ def dc_metadata_reader(xml):
             '''
             return tag.name == name and tag.namespace == namespace
 
+        def fst(x):
+            '''
+            Return the first element in an Object without failing if not iterable
+            '''
+            try:
+                iter(x)
+                return x[0]
+            except TypeError:
+                return None
+
         ns = {
             'dct': 'http://purl.org/dc/terms/',
             'dc': 'http://purl.org/dc/elements/1.1/',
         }
+
+        flatten = itertools.chain.from_iterable
 
         # Populate a BeautifulSoup object
         bs = bs4.BeautifulSoup(lxml.etree.tostring(xml), 'xml')
