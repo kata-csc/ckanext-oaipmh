@@ -4,6 +4,8 @@
 import logging
 import itertools
 import re
+import functionally as fun
+from functionally import first
 
 import oaipmh.common
 import oaipmh.metadata
@@ -238,16 +240,6 @@ def dc_metadata_reader(xml):
             '''
             return tag.name == name and tag.namespace == namespace
 
-        def fst(x):
-            '''
-            Return the first element in an Object without failing if not iterable
-            '''
-            try:
-                iter(x)
-                return x[0]
-            except TypeError:
-                return None
-
         ns = {
             'dct': 'http://purl.org/dc/terms/',
             'dc': 'http://purl.org/dc/elements/1.1/',
@@ -263,6 +255,8 @@ def dc_metadata_reader(xml):
             tuple(a.Project.comment.string.split(u' rahoituspäätös ')) + (a.Project.find('name').string,) + (a.Project.get('about'),)
             for a in dc(filter_tag_name_namespace(name='contributor', namespace=ns['dct']))])
 
+        # Todo! This needs to be improved to use also simple-dc
+        # dc(filter_tag_name_namespace('publisher', ns['dc']), recursive=False)
         maintainer, maintainer_email, contact_phone, contact_URL = zip(*list(flatten(
             [[(b.find('name').string, b.mbox.get('resource'), b.phone.get('resource'), b.get('about'))
               for b in a(recursive=False)]
@@ -287,8 +281,8 @@ def dc_metadata_reader(xml):
             checksum=dc.hasFormat.File.checksum.Checksum.checksumValue.string,
 
             # Todo! Using only the first entry, for now
-            contact_URL=fst(contact_URL),
-            contact_phone=fst(contact_phone),
+            contact_URL=first(contact_URL),
+            contact_phone=first(contact_phone),
 
             direct_download_URL=dc.hasFormat.File.get('about'),
 
@@ -309,16 +303,14 @@ def dc_metadata_reader(xml):
             # license_id='notspecified',
 
             # Todo! Using only the first entry, for now
-            maintainer=dc(
-                filter_tag_name_namespace('publisher', ns['dct']), recursive=False) or dc(
-                    filter_tag_name_namespace('publisher', ns['dc']), recursive=False),
-            maintainer_email=fst(maintainer_email),
+            maintainer=first(maintainer),
+            maintainer_email=first(maintainer_email),
 
             # Todo! IDA currently doesn't produce this, maybe in future
             # dc('hasFormat', recursive=False)
-            mimetype=fst([a.string for a in dc('format', text=re.compile('/'), recursive=False)]),
+            mimetype=first([a.string for a in dc('format', text=re.compile('/'), recursive=False)]),
 
-            name=fst([a.string for a in dc('identifier', text=re.compile('urn', flags=re.I), recursive=False)]),
+            name=first([a.string for a in dc('identifier', text=re.compile('urn', flags=re.I), recursive=False)]),
 
             # TEST!
             notes='\r\n\r\n'.join(sorted([a.string for a in dc(
@@ -331,13 +323,13 @@ def dc_metadata_reader(xml):
             # organization=dc('contributor', recursive=False) if "Organization",
 
             # Todo! Using only the first entry, for now
-            owner=fst([a.get('resource') for a in dc('rightsHolder', recursive=False)]),
+            owner=first([a.get('resource') for a in dc('rightsHolder', recursive=False)]),
 
             # Todo! Using only the first entry, for now
-            project_funder=fst(project_funder),
-            project_funding=fst(project_funding),
-            project_homepage=fst(project_homepage),
-            project_name=fst(project_name),
+            project_funder=first(project_funder),
+            project_funding=first(project_funding),
+            project_homepage=first(project_homepage),
+            project_name=first(project_name),
 
             # TEST!
             tag_string=','.join(sorted([a.string for a in dc('subject', recursive=False)])),
