@@ -174,7 +174,7 @@ def nrd_metadata_reader(xml):
         return oaipmh.common.Metadata(result)
 
 
-@ExceptReturn(exception=Exception, returns=None)
+# @ExceptReturn(exception=Exception, returns=None)
 def dc_metadata_reader(xml):
         '''Read metadata in oai_dc schema
 
@@ -240,6 +240,18 @@ def dc_metadata_reader(xml):
             '''
             return tag.name == name and tag.namespace == namespace
 
+        def get_version_pid(tag_tree):
+            '''
+            Generate results for version_PID
+            :param tag: Metadata Tag in BeautifulSoup tree
+            :type tag: bs4.Tag
+            '''
+            # IDA
+            for a in tag_tree('description', recursive=False):
+                s = re.search('Identifier.version: (.+)', a.string)
+                if s and s.group(1):
+                    yield s.group(1)
+
         ns = {
             'dct': 'http://purl.org/dc/terms/',
             'dc': 'http://purl.org/dc/elements/1.1/',
@@ -272,10 +284,10 @@ def dc_metadata_reader(xml):
             # ?=dc('type', recursive=False),
 
             # Todo! Implement
-            algorithm=NotImplemented,
+            # algorithm=NotImplemented,
 
             # Todo! Implement
-            availability=NotImplemented,
+            # availability=NotImplemented,
 
             # Todo!
             checksum=dc.hasFormat.File.checksum.Checksum.checksumValue.string,
@@ -317,7 +329,8 @@ def dc_metadata_reader(xml):
                 filter_tag_name_namespace('description', ns['dc']),
                 recursive=False)])),
 
-            orgauth=NotImplemented,
+            # Todo! Implement
+            # orgauth=NotImplemented,
             # author=[dict(value=a.string) for a in dc('creator', recursive=False)],
             # author=dc('contributor', recursive=False) if "Person",
             # organization=dc('contributor', recursive=False) if "Organization",
@@ -334,16 +347,17 @@ def dc_metadata_reader(xml):
             # TEST!
             tag_string=','.join(sorted([a.string for a in dc('subject', recursive=False)])),
 
+            # Todo! Implement if possible
             # temporal_coverage_begin=NotImplemented,
             # temporal_coverage_end=NotImplemented,
 
             # Todo! This should be more exactly picked
-            version=dc.modified.string or dc.date.string,
+            version=(dc.modified or dc.date).string if (dc.modified or dc.date) else None,
             # version=dc(
             #     partial(filter_tag_name_namespace, 'modified', ns['dct']), recursive=False)[0].string or dc(
             #         partial(filter_tag_name_namespace, 'date', ns['dc']), recursive=False)[0].string,
 
-            version_PID=dc('description', 'Identifier.version:'),
+            version_PID=first(get_version_pid(dc)),
         )
         if not unified['language']:
             unified['langdis'] = 'True'
