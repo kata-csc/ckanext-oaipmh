@@ -260,6 +260,15 @@ def dc_metadata_reader(xml):
                     m = a.Project.get('about', '')
                     yield tuple(p) + (n,) + (m,)
 
+        def get_maintainer_stuff(tag_tree):
+            for a in tag_tree(filter_tag_name_namespace(name='publisher', namespace=ns['dct']), recursive=False):
+                for b in a(recursive=False):
+                    n = b.find('name').string if b.find('name') else ''
+                    m = b.mbox.get('resource', '') if b.mbox else ''
+                    p = b.phone.get('resource', '') if b.phone else ''
+                    h = b.get('about', '')
+                    yield (n, m, p, h)
+
         ns = {
             'dct': 'http://purl.org/dc/terms/',
             'dc': 'http://purl.org/dc/elements/1.1/',
@@ -275,10 +284,7 @@ def dc_metadata_reader(xml):
 
         # Todo! This needs to be improved to use also simple-dc
         # dc(filter_tag_name_namespace('publisher', ns['dc']), recursive=False)
-        maintainer, maintainer_email, contact_phone, contact_URL = zip(*list(flatten(
-            [[(b.find('name').string, b.mbox.get('resource'), b.phone.get('resource'), b.get('about'))
-              for b in a(recursive=False)]
-                for a in dc(filter_tag_name_namespace(name='publisher', namespace=ns['dct']), recursive=False)])))
+        maintainer, maintainer_email, contact_phone, contact_URL = zip(*get_maintainer_stuff(dc)) or ('', '', '', '')
 
         # Todo! Implement
         access_application_url, access_request_url = NotImplemented, NotImplemented
