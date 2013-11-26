@@ -1,5 +1,7 @@
+# coding: utf-8
+# vi:et:ts=8:
+
 import logging
-import pickle
 import json
 import pprint
 
@@ -142,13 +144,15 @@ class OAIPMHHarvester(HarvesterBase):
             config = json.loads(harvest_job.source.config)
         except ValueError as e:
             self._save_gather_error('Unable to decode config: %s for %s' % (e, harvest_job.source.config), harvest_job)
-        set_ids = config.get('set')
+        set_ids = list(config.get('set', ''))
         log.debug('Sets in config: %s' % set_ids)
 
         log.debug('listSets(): {s}'.format(s=list(client.listSets())))
 
-        # package_ids = [header.identifier() for header in client.listIdentifiers(metadataPrefix=md_format)]
-        package_ids = [header.identifier() for header in client.listIdentifiers(metadataPrefix=md_format, set=set_ids)]
+        for set_id in set_ids:
+            package_ids = [header.identifier() for header in client.listIdentifiers(metadataPrefix=md_format, set=set_id)]
+        else:
+            package_ids = [header.identifier() for header in client.listIdentifiers(metadataPrefix=md_format)]
         # package_ids = [header.identifier() for header in client.listRecords()]
         log.debug('Identifiers: {i}'.format(i=package_ids))
 
@@ -275,9 +279,8 @@ class OAIPMHHarvester(HarvesterBase):
 
         package_dict = content.pop('unified')
         package_dict['extras'] = content
-
         # Todo! Metadata Id or Data Id???
-        # package_dict['name'] = harvest_object.guid
+        package_dict['id'] = harvest_object.guid
 
         # package_dict = {
         #     'access': u'free',
