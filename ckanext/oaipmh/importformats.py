@@ -252,6 +252,14 @@ def dc_metadata_reader(xml):
                 if s and s.group(1):
                     yield s.group(1)
 
+        def get_project_stuff(tag_tree):
+            for a in tag_tree(filter_tag_name_namespace(name='contributor', namespace=ns['dct']), recursive=False):
+                if a.Project:
+                    p = a.Project.comment.string.split(u' rahoituspäätös ') if a.Project.comment else ('', '')
+                    n = a.Project.find('name').string if a.Project.find('name') else ''
+                    m = a.Project.get('about', '')
+                    yield tuple(p) + (n,) + (m,)
+
         ns = {
             'dct': 'http://purl.org/dc/terms/',
             'dc': 'http://purl.org/dc/elements/1.1/',
@@ -263,9 +271,7 @@ def dc_metadata_reader(xml):
         bs = bs4.BeautifulSoup(lxml.etree.tostring(xml), 'xml')
         dc = bs.metadata.dc
 
-        project_funder, project_funding, project_name, project_homepage = zip(*[
-            tuple(a.Project.comment.string.split(u' rahoituspäätös ')) + (a.Project.find('name').string,) + (a.Project.get('about'),)
-            for a in dc(filter_tag_name_namespace(name='contributor', namespace=ns['dct']))])
+        project_funder, project_funding, project_name, project_homepage = zip(*get_project_stuff(dc)) or ('', '', '', '')
 
         # Todo! This needs to be improved to use also simple-dc
         # dc(filter_tag_name_namespace('publisher', ns['dc']), recursive=False)
