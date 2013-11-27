@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-version = '0.1'
+version = '0.2'
 
 setup(
     name='ckanext-oaipmh',
@@ -21,7 +21,12 @@ setup(
     install_requires=[
         # -*- Extra requirements: -*-
         'pyoai',
-        'ckanext-harvest'
+        'ckanext-harvest',
+        'lxml',
+        'rdflib',
+        'bs4',
+        'pointfree',
+        'functionally'
     ],
     setup_requires=[
         'nose>=1.0',
