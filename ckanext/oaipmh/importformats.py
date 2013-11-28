@@ -274,9 +274,10 @@ def dc_metadata_reader(xml):
                 for p in t('identifier', recursive=False):
                     yield p.string
 
-            all_pids = pids(tag_tree)
+            all_pids = list(pids(tag_tree))
             pred = lambda x: re.search('urn', x, flags=re.I)
-            return itertools.chain(itertools.ifilter(pred, all_pids), itertools.ifilterfalse(pred, all_pids))
+            return itertools.chain(itertools.ifilter(pred, all_pids),
+                                   itertools.ifilterfalse(pred, all_pids))
 
         def get_checksum(tag_tree):
             try:
