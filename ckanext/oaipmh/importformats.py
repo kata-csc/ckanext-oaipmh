@@ -284,6 +284,12 @@ def dc_metadata_reader(xml):
             except Exception as e:
                 log.info('Checksum missing from dataset!')
 
+        def get_download(tag_tree):
+            try:
+                return tag_tree.hasFormat.File.get('about')
+            except Exception as e:
+                log.info('Download link missing from dataset!')
+
         ns = {
             'dct': 'http://purl.org/dc/terms/',
             'dc': 'http://purl.org/dc/elements/1.1/',
@@ -321,7 +327,7 @@ def dc_metadata_reader(xml):
             contact_URL=first(contact_URL),
             contact_phone=first(contact_phone),
 
-            direct_download_URL=dc.hasFormat.File.get('about'),
+            direct_download_URL=get_download(dc),
 
             # discipline=NotImplemented,
 

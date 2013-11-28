@@ -145,7 +145,7 @@ class OAIPMHHarvester(HarvesterBase):
             config = json.loads(harvest_job.source.config)
         except ValueError as e:
             self._save_gather_error('Unable to decode config: %s for %s' % (e, harvest_job.source.config), harvest_job)
-        set_ids = list(config.get('set', ''))
+        set_ids = [config.get('set', '')]
         log.debug('Sets in config: %s' % set_ids)
 
         log.debug('listSets(): {s}'.format(s=list(client.listSets())))
