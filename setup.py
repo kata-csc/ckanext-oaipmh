@@ -24,7 +24,7 @@ setup(
         'ckanext-harvest',
         'lxml',
         'rdflib',
-        'bs4',
+        'beautifulsoup4',
         'pointfree',
         'functionally'
     ],
