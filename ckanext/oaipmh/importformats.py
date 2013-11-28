@@ -396,6 +396,8 @@ def dc_metadata_reader(xml):
         )
         if not unified['language']:
             unified['langdis'] = 'True'
+        if not unified['project_name']:
+            unified['projdis'] = 'True'
 
         result = xml_reader(xml).getMap()
         result['unified'] = unified
