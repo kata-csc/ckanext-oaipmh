@@ -221,15 +221,21 @@ class OAIPMHHarvester(HarvesterBase):
         log.debug('Object id: %s' % harvest_object.guid)
         log.debug('Harvest job: %s' % dir(harvest_object))
 
-        # Todo! This should not be duplicated here. Should be some class' attributes
-        # Create a OAI-PMH Client
-        registry = importformats.create_metadata_registry()
-        client = oaipmh.client.Client(harvest_object.job.source.url, registry)
-        # Choose best md_format from md_formats, but let's use 'oai_dc' for now
-        md_format = 'oai_dc'
+        # Get metadata content from provider
+        try:
+            # Todo! This should not be duplicated here. Should be some class' attributes
+            # Create a OAI-PMH Client
+            registry = importformats.create_metadata_registry()
+            client = oaipmh.client.Client(harvest_object.job.source.url, registry)
+            # Choose best md_format from md_formats, but let's use 'oai_dc' for now
+            md_format = 'oai_dc'
 
-        # Get source URL
-        header, metadata, about = client.getRecord(identifier=harvest_object.guid, metadataPrefix=md_format)
+            # Get source URL
+            header, metadata, about = client.getRecord(identifier=harvest_object.guid, metadataPrefix=md_format)
+        except Exception as e:
+            self._save_object_error('Unable to get metadata from provider: %s: %r' % (
+                harvest_object.source.url, e), harvest_object)
+            return False
 
         # Get contents
         try:
@@ -361,8 +367,14 @@ class OAIPMHHarvester(HarvesterBase):
         ###   'extras': {}  ## JuhoL: filled directly with 'content' dict
         # }
 
-        result = self._create_or_update_package(package_dict, harvest_object)
-        log.debug("Exiting import_stage()")
+        try:
+            package_dict['title'] = ''
+            pprint.pprint(package_dict)
+            result = self._create_or_update_package(package_dict, harvest_object)
+            log.debug("Exiting import_stage()")
+        except Exception as e:
+            self._save_object_error('Could not create %s' % harvest_object.id, harvest_object, 'Import')
+            return False
 
         return result
         # return True
