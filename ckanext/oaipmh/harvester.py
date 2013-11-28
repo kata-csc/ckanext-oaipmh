@@ -13,6 +13,7 @@ import importformats
 from ckan.model import Session
 from ckanext.harvest.model import HarvestJob, HarvestObject
 from ckanext.harvest.harvesters.base import HarvesterBase
+import ckanext.kata.utils
 
 log = logging.getLogger(__name__)
 
@@ -278,8 +279,9 @@ class OAIPMHHarvester(HarvesterBase):
 
         package_dict = content.pop('unified')
         package_dict['extras'] = content
-        # Todo! Metadata Id or Data Id???
-        package_dict['id'] = harvest_object.guid
+
+        # Todo! Lookup from database needs to be implemented!!
+        package_dict['id'] = ckanext.kata.utils.generate_pid()
 
         # package_dict = {
         #     'access': u'free',
