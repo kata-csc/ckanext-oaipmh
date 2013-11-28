@@ -278,6 +278,12 @@ def dc_metadata_reader(xml):
             pred = lambda x: re.search('urn', x, flags=re.I)
             return itertools.chain(itertools.ifilter(pred, all_pids), itertools.ifilterfalse(pred, all_pids))
 
+        def get_checksum(tag_tree):
+            try:
+                return tag_tree.hasFormat.File.checksum.Checksum.checksumValue.string
+            except Exception as e:
+                log.info('Checksum missing from dataset!')
+
         ns = {
             'dct': 'http://purl.org/dc/terms/',
             'dc': 'http://purl.org/dc/elements/1.1/',
@@ -309,7 +315,7 @@ def dc_metadata_reader(xml):
             # availability=NotImplemented,
 
             # Todo!
-            checksum=dc.hasFormat.File.checksum.Checksum.checksumValue.string,
+            checksum=get_checksum(dc),
 
             # Todo! Using only the first entry, for now
             contact_URL=first(contact_URL),
