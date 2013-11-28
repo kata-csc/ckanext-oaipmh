@@ -377,9 +377,9 @@ class OAIPMHHarvester(HarvesterBase):
             log.debug("Exiting import_stage()")
         except Exception as e:
             self._save_object_error('{s}: Could not create {id}. {e}'.format(id=harvest_object.id,
-                                                                             obj=harvest_object,
                                                                              s='Import',
-                                                                             e=e))
+                                                                             e=e),
+                                    harvest_object)
             return False
 
         return result
