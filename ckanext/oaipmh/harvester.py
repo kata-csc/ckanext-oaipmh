@@ -152,8 +152,8 @@ class OAIPMHHarvester(HarvesterBase):
 
         for set_id in set_ids:
             package_ids = [header.identifier() for header in client.listIdentifiers(metadataPrefix=md_format, set=set_id)]
-        else:
-            package_ids = [header.identifier() for header in client.listIdentifiers(metadataPrefix=md_format)]
+        # else:
+            # package_ids = [header.identifier() for header in client.listIdentifiers(metadataPrefix=md_format)]
         # package_ids = [header.identifier() for header in client.listRecords()]
         log.debug('Identifiers: {i}'.format(i=package_ids))
 
