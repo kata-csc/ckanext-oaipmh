@@ -290,6 +290,9 @@ def dc_metadata_reader(xml):
             except Exception as e:
                 log.info('Download link missing from dataset!')
 
+        def get_org_auth(tag_tree):
+            return {'org': 'org', 'value': 'name'}
+
         ns = {
             'dct': 'http://purl.org/dc/terms/',
             'dc': 'http://purl.org/dc/elements/1.1/',
@@ -362,7 +365,7 @@ def dc_metadata_reader(xml):
                 recursive=False)])) or '',
 
             # Todo! Implement
-            orgauth='',
+            orgauth=[get_org_auth(dc)],
             # author=[dict(value=a.string) for a in dc('creator', recursive=False)],
             # author=dc('contributor', recursive=False) if "Person",
             # organization=dc('contributor', recursive=False) if "Organization",
