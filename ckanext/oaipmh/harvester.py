@@ -285,7 +285,7 @@ class OAIPMHHarvester(HarvesterBase):
         pprint.pprint(content)
 
         package_dict = content.pop('unified')
-        package_dict['extras'] = content
+        #package_dict['extras'] = content
 
         # Todo! Lookup from database needs to be implemented!!
         package_dict['id'] = ckanext.kata.utils.generate_pid()
