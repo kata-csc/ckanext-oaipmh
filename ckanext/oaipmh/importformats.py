@@ -291,7 +291,20 @@ def dc_metadata_reader(xml):
                 log.info('Download link missing from dataset!')
 
         def get_org_auth(tag_tree):
-            return {'org': 'org', 'value': 'name'}
+            def creator():
+                for c in tag_tree('creator', recursive=False):
+                    yield {'org': '', 'value': c.string}
+
+            def contributor():
+                for c in tag_tree('contributor', recursive=False):
+                    if c.Person and c.Organization:
+                        yield {'org': c.Organization.find('name').string, 'value': c.Person.find('name').string}
+                    elif c.Person:
+                        yield {'org': '', 'value': c.Person.find('name').string}
+                    elif c.Organization:
+                        yield {'org': c.Organization.find('name').string, 'value': ''}
+
+            return contributor() if first(contributor()) else creator()
 
         ns = {
             'dct': 'http://purl.org/dc/terms/',
@@ -364,11 +377,7 @@ def dc_metadata_reader(xml):
                 filter_tag_name_namespace('description', ns['dc']),
                 recursive=False)])) or '',
 
-            # Todo! Implement
-            orgauth=[get_org_auth(dc)],
-            # author=[dict(value=a.string) for a in dc('creator', recursive=False)],
-            # author=dc('contributor', recursive=False) if "Person",
-            # organization=dc('contributor', recursive=False) if "Organization",
+            orgauth=list(get_org_auth(dc)),
 
             # Todo! Using only the first entry, for now
             owner=first([a.get('resource') for a in dc('rightsHolder', recursive=False)]) or '',
