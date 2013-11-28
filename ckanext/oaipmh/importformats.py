@@ -321,13 +321,13 @@ def dc_metadata_reader(xml):
             # availability=NotImplemented,
 
             # Todo!
-            checksum=get_checksum(dc),
+            checksum=get_checksum(dc) or '',
 
             # Todo! Using only the first entry, for now
-            contact_URL=first(contact_URL),
-            contact_phone=first(contact_phone),
+            contact_URL=first(contact_URL) or '',
+            contact_phone=first(contact_phone) or '',
 
-            direct_download_URL=get_download(dc),
+            direct_download_URL=get_download(dc) or '',
 
             # discipline=NotImplemented,
 
@@ -347,49 +347,49 @@ def dc_metadata_reader(xml):
             # license_id='notspecified',
 
             # Todo! Using only the first entry, for now
-            maintainer=first(maintainer),
-            maintainer_email=first(maintainer_email),
+            maintainer=first(maintainer) or '',
+            maintainer_email=first(maintainer_email) or '',
 
             # Todo! IDA currently doesn't produce this, maybe in future
             # dc('hasFormat', recursive=False)
-            mimetype=first([a.string for a in dc('format', text=re.compile('/'), recursive=False)]),
+            mimetype=first([a.string for a in dc('format', text=re.compile('/'), recursive=False)]) or '',
 
-            name=first(get_data_pids(dc)),
+            name=first(get_data_pids(dc)) or '',
 
             # TEST!
             notes='\r\n\r\n'.join(sorted([a.string for a in dc(
                 filter_tag_name_namespace('description', ns['dc']),
-                recursive=False)])),
+                recursive=False)])) or '',
 
             # Todo! Implement
-            # orgauth=NotImplemented,
+            orgauth='',
             # author=[dict(value=a.string) for a in dc('creator', recursive=False)],
             # author=dc('contributor', recursive=False) if "Person",
             # organization=dc('contributor', recursive=False) if "Organization",
 
             # Todo! Using only the first entry, for now
-            owner=first([a.get('resource') for a in dc('rightsHolder', recursive=False)]),
+            owner=first([a.get('resource') for a in dc('rightsHolder', recursive=False)]) or '',
 
             # Todo! Using only the first entry, for now
-            project_funder=first(project_funder),
-            project_funding=first(project_funding),
-            project_homepage=first(project_homepage),
-            project_name=first(project_name),
+            project_funder=first(project_funder) or '',
+            project_funding=first(project_funding) or '',
+            project_homepage=first(project_homepage) or '',
+            project_name=first(project_name) or '',
 
             # TEST!
-            tag_string=','.join(sorted([a.string for a in dc('subject', recursive=False)])),
+            tag_string=','.join(sorted([a.string for a in dc('subject', recursive=False)])) or '',
 
             # Todo! Implement if possible
             # temporal_coverage_begin=NotImplemented,
             # temporal_coverage_end=NotImplemented,
 
             # Todo! This should be more exactly picked
-            version=(dc.modified or dc.date).string if (dc.modified or dc.date) else None,
+            version=(dc.modified or dc.date).string if (dc.modified or dc.date) else '',
             # version=dc(
             #     partial(filter_tag_name_namespace, 'modified', ns['dct']), recursive=False)[0].string or dc(
             #         partial(filter_tag_name_namespace, 'date', ns['dc']), recursive=False)[0].string,
 
-            version_PID=first(get_version_pid(dc)),
+            version_PID=first(get_version_pid(dc)) or '',
         )
         if not unified['language']:
             unified['langdis'] = 'True'
