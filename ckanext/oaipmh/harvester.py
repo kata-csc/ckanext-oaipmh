@@ -10,8 +10,6 @@ import oaipmh.error
 
 import importformats
 
-from ckan.plugins.core import SingletonPlugin, implements
-from ckanext.harvest.interfaces import IHarvester
 from ckan.model import Session
 from ckanext.harvest.model import HarvestJob, HarvestObject
 from ckanext.harvest.harvesters.base import HarvesterBase
@@ -73,7 +71,8 @@ class OAIPMHHarvester(HarvesterBase):
 
         # Try to decode JSON and "Let it Fail"
         # Todo: Write better try/except cases
-        json.loads(config)
+        if config:
+            json.loads(config)
         return config
 
     # def get_original_url(self, harvest_object_id):
@@ -237,7 +236,7 @@ class OAIPMHHarvester(HarvesterBase):
         except Exception as e:
             self._save_object_error('Unable to get content for package: %s: %r' % (
                 harvest_object.source.url, e), harvest_object)
-            return None
+            return False
 
         # Save the fetched contents in the HarvestObject
         harvest_object.content = content
@@ -338,6 +337,7 @@ class OAIPMHHarvester(HarvesterBase):
         #                      {'value': u'Kolmas Oy'}],
         #     'owner': u'Omistaja Aineiston',
         #     'phone': u'+35805050505',
+        #     'pids': { 'harvest_object.source.id': {'data: 'value', 'metadata': value, 'version': value} }
         #     'project_funding': u'1234-rahoitusp\xe4\xe4t\xf6snumero',
         #     'project_homepage': u'http://www.rahoittajan.kotisivu.fi/',
         #     'project_name': u'Rahoittajan Projekti',

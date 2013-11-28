@@ -4,14 +4,14 @@
 import logging
 import itertools
 import re
-import functionally as fun
-from functionally import first
 
 import oaipmh.common
 import oaipmh.metadata
 import lxml.etree
 import bs4
 import pointfree
+import functionally as fun
+from functionally import first
 
 import importcore
 
@@ -269,12 +269,19 @@ def dc_metadata_reader(xml):
                     h = b.get('about', '')
                     yield (n, m, p, h)
 
+        def get_data_pids(tag_tree):
+            def pids(t):
+                for p in t('identifier', recursive=False):
+                    yield p.string
+
+            all_pids = pids(tag_tree)
+            pred = lambda x: re.search('urn', x, flags=re.I)
+            return itertools.chain(itertools.ifilter(pred, all_pids), itertools.ifilterfalse(pred, all_pids))
+
         ns = {
             'dct': 'http://purl.org/dc/terms/',
             'dc': 'http://purl.org/dc/elements/1.1/',
         }
-
-        flatten = itertools.chain.from_iterable
 
         # Populate a BeautifulSoup object
         bs = bs4.BeautifulSoup(lxml.etree.tostring(xml), 'xml')
@@ -312,6 +319,7 @@ def dc_metadata_reader(xml):
 
             # discipline=NotImplemented,
 
+            # Todo! Should be possible to implement with QDC, but not with OAI_DC
             # evdescr=NotImplemented,
             # evtype=NotImplemented,
             # evwhen=NotImplemented,
@@ -334,7 +342,7 @@ def dc_metadata_reader(xml):
             # dc('hasFormat', recursive=False)
             mimetype=first([a.string for a in dc('format', text=re.compile('/'), recursive=False)]),
 
-            name=first([a.string for a in dc('identifier', text=re.compile('urn', flags=re.I), recursive=False)]),
+            name=first(get_data_pids(dc)),
 
             # TEST!
             notes='\r\n\r\n'.join(sorted([a.string for a in dc(
