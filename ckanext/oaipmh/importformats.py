@@ -292,12 +292,21 @@ def dc_metadata_reader(xml):
                 log.info('Download link missing from dataset!')
 
         def get_org_auth(tag_tree):
-            def creator():
-                for c in tag_tree('creator', recursive=False):
+            def oai_dc():
+                '''
+                Get 'author' and 'organization' information from OAI-DC
+                '''
+                for c in tag_tree(filter_tag_name_namespace(name='creator', namespace=ns['dc']), recursive=False):
+                    yield {'org': '', 'value': c.string}
+                for c in tag_tree(filter_tag_name_namespace(name='contributor', namespace=ns['dc']), recursive=False):
                     yield {'org': '', 'value': c.string}
 
-            def contributor():
-                for c in tag_tree('contributor', recursive=False):
+            def ida():
+                '''
+                Get 'author' and 'organization' information from IDA
+                '''
+                for c in tag_tree(filter_tag_name_namespace(name='contributor', namespace=ns['dct']), recursive=False):
+                    # Todo! Simplify this!
                     if c.Person and c.Organization:
                         yield {'org': c.Organization.find('name').string, 'value': c.Person.find('name').string}
                     elif c.Person:
@@ -305,7 +314,7 @@ def dc_metadata_reader(xml):
                     elif c.Organization:
                         yield {'org': c.Organization.find('name').string, 'value': ''}
 
-            return contributor() if first(contributor()) else creator()
+            return ida() if first(ida()) else oai_dc()
 
         ns = {
             'dct': 'http://purl.org/dc/terms/',
