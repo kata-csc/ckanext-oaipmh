@@ -14,6 +14,7 @@ from ckan.model import Session
 from ckanext.harvest.model import HarvestJob, HarvestObject
 from ckanext.harvest.harvesters.base import HarvesterBase
 import ckanext.kata.utils
+import ckanext.kata.plugin
 
 log = logging.getLogger(__name__)
 
@@ -370,7 +371,9 @@ class OAIPMHHarvester(HarvesterBase):
         try:
             package_dict['title'] = ''
             pprint.pprint(package_dict)
-            result = self._create_or_update_package(package_dict, harvest_object)
+            result = self._create_or_update_package(package_dict,
+                                                    harvest_object,
+                                                    schema=ckanext.kata.plugin.KataPlugin.create_package_schema())
             log.debug("Exiting import_stage()")
         except Exception as e:
             self._save_object_error('Could not create %s' % harvest_object.id, harvest_object, 'Import')
