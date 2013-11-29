@@ -243,8 +243,8 @@ def dc_metadata_reader(xml):
         def get_version_pid(tag_tree):
             '''
             Generate results for version_PID
-            :param tag: Metadata Tag in BeautifulSoup tree
-            :type tag: bs4.Tag
+            :param tag_tree: Metadata Tag in BeautifulSoup tree
+            :type tag_tree: bs4.Tag
             '''
             # IDA
             for a in tag_tree('description', recursive=False):
@@ -270,11 +270,17 @@ def dc_metadata_reader(xml):
                     yield (n, m, p, h)
 
         def get_data_pids(tag_tree):
+            '''
+            Returns an iterator over data PIDs from metadata
+            '''
             def pids(t):
+                '''
+                Get data 'PIDs' from OAI-DC and IDA
+                '''
                 for p in t('identifier', recursive=False):
                     yield p.string
 
-            all_pids = list(pids(tag_tree))
+            pids1, pids2 = it.tee(pids(tag_tree), 2)
             pred = lambda x: re.search('urn', x, flags=re.I)
             return it.chain(it.ifilter(pred, pids1), it.ifilterfalse(pred, pids2))
 
@@ -291,6 +297,9 @@ def dc_metadata_reader(xml):
                 log.info('Download link missing from dataset!')
 
         def get_org_auth(tag_tree):
+            '''
+            Returns an iterator over organization-author dicts from metadata
+            '''
             def oai_dc():
                 '''
                 Get 'author' and 'organization' information from OAI-DC
@@ -340,10 +349,10 @@ def dc_metadata_reader(xml):
             # ?=dc('type', recursive=False),
 
             # Todo! Implement
-            # algorithm=NotImplemented,
+            algorithm='',
 
             # Todo! Implement
-            # availability=NotImplemented,
+            availability='',
 
             checksum=get_checksum(dc) or '',
 
@@ -353,15 +362,17 @@ def dc_metadata_reader(xml):
 
             direct_download_URL=get_download(dc) or '',
 
-            # discipline=NotImplemented,
+            # Todo! Implement
+            discipline='',
 
             # Todo! Should be possible to implement with QDC, but not with OAI_DC
-            # evdescr=NotImplemented,
-            # evtype=NotImplemented,
-            # evwhen=NotImplemented,
-            # evwho=NotImplemented,
+            evdescr=[],
+            evtype=[],
+            evwhen=[],
+            evwho=[],
 
-            # geographic_coverage=NotImplemented,
+            # Todo! Implement
+            geographic_coverage='',
 
             langtitle=[dict(lang=a.get('xml:lang', ''), value=a.string) for a in dc('title', recursive=False)],
 
@@ -400,8 +411,8 @@ def dc_metadata_reader(xml):
             tag_string=','.join(sorted([a.string for a in dc('subject', recursive=False)])) or '',
 
             # Todo! Implement if possible
-            # temporal_coverage_begin=NotImplemented,
-            # temporal_coverage_end=NotImplemented,
+            temporal_coverage_begin='',
+            temporal_coverage_end='',
 
             # Todo! This should be more exactly picked
             version=(dc.modified or dc.date).string if (dc.modified or dc.date) else '',
