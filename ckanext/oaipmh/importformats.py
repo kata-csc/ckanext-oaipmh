@@ -247,10 +247,20 @@ def dc_metadata_reader(xml):
                 log.info('Checksum missing from dataset!')
 
         def get_download(tag_tree):
-            try:
-                return tag_tree.hasFormat.File.get('about')
-            except Exception as e:
-                log.info('Download link missing from dataset!')
+            # @ExceptReturn(exception=Exception, returns=None)
+            def ida():
+                try:
+                    yield tag_tree.hasFormat.File.get('about')
+                except Exception as e:
+                    pass
+
+            # @ExceptReturn(Exception, None)
+            def helda():
+                for pid in get_data_pids(tag_tree):
+                    if pid.startswith('http'):
+                        yield pid
+
+            return it.chain(ida(), helda())
 
         def get_org_auth(tag_tree):
             '''
@@ -316,7 +326,7 @@ def dc_metadata_reader(xml):
             contact_URL=first(contact_URL) or '',
             contact_phone=first(contact_phone) or '',
 
-            direct_download_URL=get_download(dc) or '',
+            direct_download_URL=first(get_download(dc)) or '',
 
             # Todo! Implement
             discipline='',
