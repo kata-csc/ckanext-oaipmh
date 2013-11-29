@@ -189,51 +189,6 @@ def dc_metadata_reader(xml):
         :rtype: a hash from string to any value
         '''
 
-        def foaf_handler(x, y, result):
-            '''Handler for foaf elements
-
-            :param x: Source element
-            :param y: Destination element
-            :param result: Metadata dictionary
-            :return: Nothing
-            :type x: str
-            :type y: str
-            '''
-            foaf_types = ('Agent', 'Organization', 'Group', 'Person', 'Project')
-            for t in foaf_types:
-                p = '{s}/foaf:{t}'.format(s=x, t=t)
-                if p + '.count' in result:
-                    for n in range(result[p + '.count']):
-                        r = p + '.0'
-                        person_attrs(r, y, result)
-
-        def publisher_handler(x, y, result):
-            '''Handler for publisher elements
-
-            :param x: Source element
-            :param y: Destination element
-            :param result: Metadata dictionary
-            :return: Nothing
-            :type x: str
-            :type y: str
-            '''
-            foaf_handler(x, y, result)
-            # # Clean out 'empty' entry. Should only occur in cases where sub-entries exist
-            # if y in result and not result[y]:
-            #     del result[y]
-
-        def contributor_handler(x, y, result):
-            '''Handler for contributor elements
-
-            :param x: Source element
-            :param y: Destination element
-            :param result: Metadata dictionary
-            :return: Nothing
-            :type x: str
-            :type y: str
-            '''
-            foaf_handler(x, y, result)
-
         @pf.partial
         def filter_tag_name_namespace(name, namespace, tag):
             '''
