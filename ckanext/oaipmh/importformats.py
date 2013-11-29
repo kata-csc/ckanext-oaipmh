@@ -2,14 +2,14 @@
 # vi:et:ts=8:
 
 import logging
-import itertools
+import itertools as it
 import re
 
-import oaipmh.common
-import oaipmh.metadata
+import oaipmh.common as oc
+import oaipmh.metadata as om
 import lxml.etree
 import bs4
-import pointfree
+import pointfree as pf
 import functionally as fun
 from functionally import first
 
@@ -171,7 +171,7 @@ def nrd_metadata_reader(xml):
                         result[u'accessURL'] = rights[0].text
         except:
             pass
-        return oaipmh.common.Metadata(result)
+        return oc.Metadata(result)
 
 
 # @ExceptReturn(exception=Exception, returns=None)
@@ -233,7 +233,7 @@ def dc_metadata_reader(xml):
             '''
             foaf_handler(x, y, result)
 
-        @pointfree.partial
+        @pf.partial
         def filter_tag_name_namespace(name, namespace, tag):
             '''
             Boolean filter function, for BeautifulSoup find functions, that checks tag's name and namespace
@@ -276,8 +276,7 @@ def dc_metadata_reader(xml):
 
             all_pids = list(pids(tag_tree))
             pred = lambda x: re.search('urn', x, flags=re.I)
-            return itertools.chain(itertools.ifilter(pred, all_pids),
-                                   itertools.ifilterfalse(pred, all_pids))
+            return it.chain(it.ifilter(pred, pids1), it.ifilterfalse(pred, pids2))
 
         def get_checksum(tag_tree):
             try:
@@ -346,7 +345,6 @@ def dc_metadata_reader(xml):
             # Todo! Implement
             # availability=NotImplemented,
 
-            # Todo!
             checksum=get_checksum(dc) or '',
 
             # Todo! Using only the first entry, for now
@@ -433,7 +431,7 @@ def dc_metadata_reader(xml):
         #                 if dest.endswith('.0'):
         #                         result[dest[:-2] % i + '.count'] = 1
 
-        return oaipmh.common.Metadata(result)
+        return oc.Metadata(result)
 
 
 def create_metadata_registry():
@@ -445,7 +443,7 @@ def create_metadata_registry():
         :returns: metadata registry instance
         :rtype: oaipmh.metadata.MetadataRegistry
         '''
-        registry = oaipmh.metadata.MetadataRegistry()
+        registry = om.MetadataRegistry()
         registry.registerReader('oai_dc', dc_metadata_reader)
         registry.registerReader('nrd', nrd_metadata_reader)
         registry.registerReader('rdf', rdf_reader)
