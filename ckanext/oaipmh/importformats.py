@@ -4,6 +4,7 @@
 import logging
 import itertools as it
 import re
+import urllib
 
 import oaipmh.common as oc
 import oaipmh.metadata as om
@@ -389,7 +390,8 @@ def dc_metadata_reader(xml):
             # dc('hasFormat', recursive=False)
             mimetype=first([a.string for a in dc('format', text=re.compile('/'), recursive=False)]) or '',
 
-            name=first(get_data_pids(dc)) or '',
+            name=first(it.imap(urllib.quote_plus, get_data_pids(dc))) or '',
+            # name=first(it.imap(pf.partial(urllib.quote_plus, safe=':'), get_data_pids(dc))) or '',
 
             # TEST!
             notes='\r\n\r\n'.join(sorted([a.string for a in dc(
