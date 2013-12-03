@@ -178,7 +178,7 @@ class OAIPMHHarvester(HarvesterBase):
                 #         package_ids.append(package_id)
                 pass
             else:
-                log.info('No packages have been updated on the remote CKAN instance since the last harvest job')
+                log.info('No packages have been updated on the provider since the last harvest job')
                 return None
 
         try:
@@ -285,7 +285,7 @@ class OAIPMHHarvester(HarvesterBase):
         pprint.pprint(content)
 
         package_dict = content.pop('unified')
-        #package_dict['extras'] = content
+        package_dict['extras'] = content
 
         # Todo! Lookup from database needs to be implemented!!
         package_dict['id'] = ckanext.kata.utils.generate_pid()
