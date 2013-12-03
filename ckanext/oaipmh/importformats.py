@@ -290,6 +290,15 @@ def dc_metadata_reader(xml):
 
             return ida() if first(ida()) else oai_dc()
 
+        def get_algorithm(tag_tree):
+            # @ExceptReturn(exception=Exception, passes=True)
+            def ida():
+                try:
+                    yield tag_tree.hasFormat.File.checksum.Checksum.generator.Algorithm.get('about').split('/')[-1]
+                except Exception as e:
+                    pass
+            return ida()
+
         ns = {
             'dct': 'http://purl.org/dc/terms/',
             'dc': 'http://purl.org/dc/elements/1.1/',
@@ -314,8 +323,7 @@ def dc_metadata_reader(xml):
             # ?=dc('relation', recursive=False),
             # ?=dc('type', recursive=False),
 
-            # Todo! Implement
-            algorithm='',
+            algorithm=first(get_algorithm(dc)) or '',
 
             # Todo! Implement
             availability='',
