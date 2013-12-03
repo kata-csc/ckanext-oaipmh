@@ -299,6 +299,47 @@ def dc_metadata_reader(xml):
                     pass
             return ida()
 
+        def get_rights(tag_tree):
+            def ida():
+                try:
+                    decl = tag_tree.find(filter_tag_name_namespace(name='rights', namespace=ns['dct'])).RightsDeclaration.string
+                    cat = tag_tree.find(filter_tag_name_namespace(name='rights', namespace=ns['dct'])).RightsDeclaration.get('RIGHTSCATEGORY')
+                    avail = lid = lurl = aaurl = None
+                    if cat == 'COPYRIGHTED':
+                        avail = 'contact_owner'
+                        lid = 'notspecified'
+                    elif cat == 'LICENSED':
+                        avail = 'direct_download'
+                        lid = 'notspecified'
+                        lurl = decl
+                    elif cat == 'CONTRACTUAL':
+                        avail = 'access_application'
+                        lid = 'notspecified'
+                        aaurl = decl
+                    elif cat == 'PUBLIC DOMAIN':
+                        avail = 'direct_download'
+                        lid = 'other-pd'
+                    elif cat == 'OTHER':
+                        avail = 'direct_download'
+                        lid = 'other-open'
+                        lurl = decl
+                    else:
+                        raise ValueError('Unfamiliar rights encountered from IDA!')
+                    return avail, lid, lurl, aaurl
+                except AttributeError as e:
+                    log.info('IDA rights not detected. Probably not harvesting IDA. {e}'.format(e=e))
+                    pass
+
+            # TODO! Does license text belong in url?
+            def oai_dc():
+                try:
+                    return '', '', tag_tree.find(filter_tag_name_namespace(name='rights', namespace=ns['dc'])).string, ''
+                except AttributeError as e:
+                    log.info('OAI_DC rights not detected. Probably just missing. {e}'.format(e=e))
+                    pass
+
+            return ida() or oai_dc()
+
         ns = {
             'dct': 'http://purl.org/dc/terms/',
             'dc': 'http://purl.org/dc/elements/1.1/',
@@ -314,8 +355,7 @@ def dc_metadata_reader(xml):
         # dc(filter_tag_name_namespace('publisher', ns['dc']), recursive=False)
         maintainer, maintainer_email, contact_phone, contact_URL = zip(*get_maintainer_stuff(dc)) or ('', '', '', '')
 
-        # Todo! Implement
-        access_application_url, access_request_url = NotImplemented, NotImplemented
+        availability, license_id, license_url, access_application_url = get_rights(dc) or ('', '', '', '')
 
         # Create a unified internal harvester format dict
         unified = dict(
@@ -323,10 +363,11 @@ def dc_metadata_reader(xml):
             # ?=dc('relation', recursive=False),
             # ?=dc('type', recursive=False),
 
+            access_application_URL=access_application_url or '',
+
             algorithm=first(get_algorithm(dc)) or '',
 
-            # Todo! Implement
-            availability='',
+            availability=availability or '',
 
             checksum=get_checksum(dc) or '',
 
@@ -353,7 +394,8 @@ def dc_metadata_reader(xml):
             # DONE!
             language=','.join(sorted([a.string for a in dc('language', recursive=False)])),
 
-            # license_id='notspecified',
+            license_URL=license_url or '',
+            license_id=license_id or 'notspecified',
 
             # Todo! Using only the first entry, for now
             maintainer=first(maintainer) or '',
