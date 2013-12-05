@@ -26,7 +26,8 @@ setup(
         'rdflib',
         'beautifulsoup4',
         'pointfree',
-        'functionally'
+        'functionally',
+        'fn'
     ],
     setup_requires=[
         'nose>=1.0',

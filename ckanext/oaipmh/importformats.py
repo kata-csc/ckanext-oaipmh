@@ -2,17 +2,17 @@
 # vi:et:ts=8:
 
 import logging
-import itertools as it
 import re
 import urllib
+from itertools import chain, tee
 
 import oaipmh.common as oc
 import oaipmh.metadata as om
 import lxml.etree
 import bs4
 import pointfree as pf
-import functionally as fun
 from functionally import first
+from fn.uniform import filter, filterfalse, map, range, reduce, zip
 
 import importcore
 
@@ -209,21 +209,25 @@ def dc_metadata_reader(xml):
                     yield s.group(1)
 
         def get_project_stuff(tag_tree):
-            for a in tag_tree(filter_tag_name_namespace(name='contributor', namespace=ns['dct']), recursive=False):
-                if a.Project:
-                    p = a.Project.comment.string.split(u' rahoituspäätös ') if a.Project.comment else ('', '')
-                    n = a.Project.find('name').string if a.Project.find('name') else ''
-                    m = a.Project.get('about', '')
-                    yield tuple(p) + (n,) + (m,)
+            def ida():
+                for a in tag_tree(filter_tag_name_namespace(name='contributor', namespace=ns['dct']), recursive=False):
+                    if a.Project:
+                        p = a.Project.comment.string.split(u' rahoituspäätös ') if a.Project.comment else ('', '')
+                        n = a.Project.find('name').string if a.Project.find('name') else ''
+                        m = a.Project.get('about', '')
+                        yield tuple(p) + (n,) + (m,)
+            return zip(*ida()) if first(ida()) else None
 
         def get_maintainer_stuff(tag_tree):
-            for a in tag_tree(filter_tag_name_namespace(name='publisher', namespace=ns['dct']), recursive=False):
-                for b in a(recursive=False):
-                    n = b.find('name').string if b.find('name') else ''
-                    m = b.mbox.get('resource', '') if b.mbox else ''
-                    p = b.phone.get('resource', '') if b.phone else ''
-                    h = b.get('about', '')
-                    yield (n, m, p, h)
+            def ida():
+                for a in tag_tree(filter_tag_name_namespace(name='publisher', namespace=ns['dct']), recursive=False):
+                    for b in a(recursive=False):
+                        n = b.find('name').string if b.find('name') else ''
+                        m = b.mbox.get('resource', '') if b.mbox else ''
+                        p = b.phone.get('resource', '') if b.phone else ''
+                        h = b.get('about', '')
+                        yield (n, m, p, h)
+            return zip(*ida()) if first(ida()) else None
 
         def get_data_pids(tag_tree):
             '''
@@ -236,9 +240,9 @@ def dc_metadata_reader(xml):
                 for p in t('identifier', recursive=False):
                     yield p.string
 
-            pids1, pids2 = it.tee(pids(tag_tree), 2)
+            pids1, pids2 = tee(pids(tag_tree), 2)
             pred = lambda x: re.search('urn', x, flags=re.I)
-            return it.chain(it.ifilter(pred, pids1), it.ifilterfalse(pred, pids2))
+            return chain(filter(pred, pids1), filterfalse(pred, pids2))
 
         def get_checksum(tag_tree):
             try:
@@ -260,7 +264,7 @@ def dc_metadata_reader(xml):
                     if pid.startswith('http'):
                         yield pid
 
-            return it.chain(ida(), helda())
+            return chain(ida(), helda())
 
         def get_org_auth(tag_tree):
             '''
@@ -349,11 +353,11 @@ def dc_metadata_reader(xml):
         bs = bs4.BeautifulSoup(lxml.etree.tostring(xml), 'xml')
         dc = bs.metadata.dc
 
-        project_funder, project_funding, project_name, project_homepage = zip(*get_project_stuff(dc)) or ('', '', '', '')
+        project_funder, project_funding, project_name, project_homepage = get_project_stuff(dc) or ('', '', '', '')
 
         # Todo! This needs to be improved to use also simple-dc
         # dc(filter_tag_name_namespace('publisher', ns['dc']), recursive=False)
-        maintainer, maintainer_email, contact_phone, contact_URL = zip(*get_maintainer_stuff(dc)) or ('', '', '', '')
+        maintainer, maintainer_email, contact_phone, contact_URL = get_maintainer_stuff(dc) or ('', '', '', '')
 
         availability, license_id, license_url, access_application_url = get_rights(dc) or ('', '', '', '')
 
@@ -364,6 +368,9 @@ def dc_metadata_reader(xml):
             # ?=dc('type', recursive=False),
 
             access_application_URL=access_application_url or '',
+
+            # Todo! Implement
+            access_request_URL='',
 
             algorithm=first(get_algorithm(dc)) or '',
 
@@ -405,8 +412,8 @@ def dc_metadata_reader(xml):
             # dc('hasFormat', recursive=False)
             mimetype=first([a.string for a in dc('format', text=re.compile('/'), recursive=False)]) or '',
 
-            name=first(it.imap(urllib.quote_plus, get_data_pids(dc))) or '',
-            # name=first(it.imap(pf.partial(urllib.quote_plus, safe=':'), get_data_pids(dc))) or '',
+            name=first(map(urllib.quote_plus, get_data_pids(dc))) or '',
+            # name=first(map(pf.partial(urllib.quote_plus, safe=':'), get_data_pids(dc))) or '',
 
             # TEST!
             notes='\r\n\r\n'.join(sorted([a.string for a in dc(
