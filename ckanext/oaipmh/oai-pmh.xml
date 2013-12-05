@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/
+            http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
+    <responseDate>2013-11-15T06:56:47Z</responseDate>
+    <request
+            identifier="urn:nbn:fi:csc-ida2013032600070s"
+            metadataPrefix="oai_dc"
+            verb="GetRecord">http://irods-test.csc.fi/cgi-bin/oai-pmh
+    </request>
+    <GetRecord>
+        <record>
+            <header>
+                <identifier>urn:nbn:fi:csc-ida2013032600070m</identifier>
+                <datestamp>2013-03-28T10:06:02Z</datestamp>
+                <setSpec>ida:dis:test:published:DesignSpecs</setSpec>
+            </header>
+            <metadata>
+                <oai_dc:dc xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/"
+                           xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dct="http://purl.org/dc/terms/"
+                           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                           xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd"
+                           xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                           xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+                           xmlns:fp="http://downlode.org/Code/RDF/File_Properties/schema#"
+                           xmlns:wn="http://xmlns.com/wordnet/1.6/"
+                           xmlns:foaf="http://xmlns.com/foaf/0.1/">
+                    <dc:identifier>urn:nbn:fi:csc-ida2013032600070s</dc:identifier>
+                    <dc:identifier>URN:ISBN:978-952-15-3015-9</dc:identifier>
+                    <dc:identifier>http://hdl.handle.net/1975/304</dc:identifier>
+                    <dc:language>fin</dc:language>
+                    <dc:language>eng</dc:language>
+                    <dc:subject>http://www.yso.fi/onto/yso/p2069</dc:subject>
+                    <dc:subject>pääpiirteissään</dc:subject>
+                    <dc:subject>kahvinkeitto</dc:subject>
+                    <dc:subject>tiedostavat</dc:subject>
+                    <dc:title xml:lang="fin">testi-aineisto</dc:title>
+                    <dc:title xml:lang="eng">test data</dc:title>
+                    <dc:title xml:lang="swe">test-data</dc:title>
+                    <dc:rights>Public Domain</dc:rights>
+                    <dct:rights rdf:parseType="Literal">
+                        <RightsDeclaration RIGHTSCATEGORY="PUBLIC DOMAIN">-</RightsDeclaration>
+                    </dct:rights>
+                    <dc:publisher>jaska.paananen@csc.fi</dc:publisher>
+                    <dc:publisher>alt-jaska.paananen@csc.fi</dc:publisher>
+                    <dct:publisher>
+                        <foaf:Person rdf:about="http://ida.csc.fi/objects/users/jpaanane">
+                            <foaf:name>Jaska Paananen</foaf:name>
+                            <foaf:mbox rdf:resource="jaska.paananen@csc.fi"/>
+                            <foaf:phone rdf:resource="-"/>
+                        </foaf:Person>
+                        <foaf:Person rdf:about="http://ida.csc.fi/objects/users/mmaikala">
+                            <foaf:name>Matti Maikalainen</foaf:name>
+                            <foaf:mbox rdf:resource="matti.maikalainen@csc.fi"/>
+                            <foaf:phone rdf:resource="-"/>
+                        </foaf:Person>
+                    </dct:publisher>
+                    <dct:publisher>
+                        <foaf:Person rdf:about="http://ida.csc.fi/objects/users/jpaanane2">
+                            <foaf:name>Alt-Jaska Paananen</foaf:name>
+                            <foaf:mbox rdf:resource="alt-jaska.paananen@csc.fi"/>
+                            <foaf:phone rdf:resource="-"/>
+                        </foaf:Person>
+                    </dct:publisher>
+                    <dc:contributor>test1</dc:contributor>
+                    <dc:contributor>test2</dc:contributor>
+                    <dct:contributor>
+                        <foaf:Project rdf:about="http://ida.csc.fi/objects/projects/TEKES/ZjMMYjIP">
+                            <foaf:name>test1</foaf:name>
+                            <rdfs:comment xml:lang="fi">TEKES rahoituspäätös ZjMMYjIP</rdfs:comment>
+                        </foaf:Project>
+                    </dct:contributor>
+                    <dct:contributor>
+                        <foaf:Project rdf:about="http://ida.csc.fi/objects/projects/SA/54gfs">
+                            <foaf:name>test2</foaf:name>
+                            <rdfs:comment xml:lang="fi">SA rahoituspäätös 54gfs</rdfs:comment>
+                        </foaf:Project>
+                    </dct:contributor>
+                    <dct:contributor>
+                        <foaf:Organization rdf:about="http://ida.csc.fi/objects/organization/YLE/54gfs">
+                            <foaf:name>CSC</foaf:name>
+                            <rdfs:comment xml:lang="fi">CSC - IT Center for Science</rdfs:comment>
+                        </foaf:Organization>
+                    </dct:contributor>
+                    <dct:contributor>
+                        <foaf:Person rdf:about="http://ida.csc.fi/objects/users/mmaikala">
+                            <foaf:name>Matti Maikalainen</foaf:name>
+                            <foaf:mbox rdf:resource="matti.maikalainen@csc.fi"/>
+                            <foaf:phone rdf:resource="7685457343"/>
+                        </foaf:Person>
+                    </dct:contributor>
+                    <dct:contributor>
+                        <foaf:Organization rdf:about="http://ida.csc.fi/objects/organization/YLE/54gfs">
+                            <foaf:name>CSC</foaf:name>
+                            <rdfs:comment xml:lang="fi">CSC - IT Center for Science</rdfs:comment>
+                        </foaf:Organization>
+                        <foaf:Person rdf:about="http://ida.csc.fi/objects/users/mmeikala">
+                            <foaf:name>Matti Meikäläinen</foaf:name>
+                            <foaf:mbox rdf:resource="matti.meikalainen@csc.fi"/>
+                            <foaf:phone rdf:resource="7685457347"/>
+                        </foaf:Person>
+                    </dct:contributor>
+                    <dct:modified rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2013-05-15T15:43:54</dct:modified>
+                    <dc:coverage>1900-luku</dc:coverage>
+                    <dc:date>2010-11-23T12:27:32</dc:date>
+                    <dc:date>2011-03-05T10:14:04</dc:date>
+                    <dc:date>2013-05-15T15:43:54</dc:date>
+                    <dc:description>rivi1</dc:description>
+                    <dc:description>rivi2</dc:description>
+                    <dc:description>rivi3</dc:description>
+                    <dc:description>Identifier.version: urn:nbn:fi:csc-ida2013032600037v</dc:description>
+                    <dc:source>Lähdemaailma-lehti</dc:source>
+                    <dc:format>207217 bytes</dc:format>
+                    <dc:format>application/pdf</dc:format>
+                    <dc:creator>Matti Meikäläinen</dc:creator>
+                    <dc:creator>Antti Alatalo</dc:creator>
+                    <dc:type>Article</dc:type>
+                    <dc:relation>xii, 97, [60]</dc:relation>
+                    <dc:relation>Tampereen teknillinen yliopisto. Julkaisu - Tampere University of Technology. Publication;1108</dc:relation>
+                    <dct:rightsHolder rdf:resource="http://orcid.org/0000-0003-0296-7410"/>
+                    <dct:hasFormat>
+                        <fp:File rdf:about="https://sui.csc.fi/my-files/ida/dis/test/published/DesignSpecs/CommandLineOptions">
+                            <fp:size>207217</fp:size>
+                            <fp:checksum>
+                                <fp:Checksum>
+                                    <fp:generator>
+                                        <wn:Algorithm rdf:about="http://en.wikipedia.org/wiki/MD5"/>
+                                    </fp:generator>
+                                    <fp:checksumValue>7932df5999a30bb70871359f700dbe23</fp:checksumValue>
+                                </fp:Checksum>
+                            </fp:checksum>
+                        </fp:File>
+                    </dct:hasFormat>
+                </oai_dc:dc>
+            </metadata>
+        </record>
+    </GetRecord>
+</OAI-PMH>
