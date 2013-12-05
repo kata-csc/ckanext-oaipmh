@@ -1,9 +1,13 @@
 # coding: utf-8
 # vi:et:ts=8:
 
+import logging
+
 import oaipmh.client
 
 import importformats
+
+logging.basicConfig(level=logging.DEBUG)
 
 
 def test_fetch(url, record_id, fmt):
