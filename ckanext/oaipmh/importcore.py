@@ -95,13 +95,13 @@ def generic_xml_metadata_reader(xml_element):
                 indices = {}
                 for child in element:
                         name = namespaced_name(child.tag, child.nsmap.items())
-                        child_path = namepath_for_element(prefix, name,
-                                        indices, result)
+                        child_path = namepath_for_element(
+                            prefix, name, indices, result)
                         flatten_with(child_path, child, result)
 
         result = {}
-        flatten_with(namespaced_name(xml_element.tag,
-                xml_element.nsmap.items()), xml_element, result)
+        flatten_with(namespaced_name(xml_element.tag, xml_element.nsmap.items()),
+                     xml_element, result)
         return oaipmh.common.Metadata(result)
 
 
