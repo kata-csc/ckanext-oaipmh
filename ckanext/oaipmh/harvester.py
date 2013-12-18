@@ -15,6 +15,7 @@ from ckanext.harvest.model import HarvestJob, HarvestObject
 from ckanext.harvest.harvesters.base import HarvesterBase
 import ckanext.kata.utils
 import ckanext.kata.plugin
+import ckanext.kata.converters
 
 log = logging.getLogger(__name__)
 
@@ -285,7 +286,7 @@ class OAIPMHHarvester(HarvesterBase):
         pprint.pprint(content)
 
         package_dict = content.pop('unified')
-        package_dict['extras'] = content
+        package_dict['xpaths'] = content
 
         # Todo! Lookup from database needs to be implemented!!
         package_dict['id'] = ckanext.kata.utils.generate_pid()
@@ -371,9 +372,11 @@ class OAIPMHHarvester(HarvesterBase):
         try:
             package_dict['title'] = ''
             pprint.pprint(package_dict)
+            schema = ckanext.kata.plugin.KataPlugin.create_package_schema_oai_dc()
+            schema['xpaths'] = [ckanext.kata.converters.xpath_to_extras]
             result = self._create_or_update_package(package_dict,
                                                     harvest_object,
-                                                    schema=ckanext.kata.plugin.KataPlugin.create_package_schema_oai_dc())
+                                                    schema=schema)
             log.debug("Exiting import_stage()")
         except Exception as e:
             self._save_object_error('{s}: Could not create {id}. {e}'.format(id=harvest_object.id,
@@ -383,4 +386,3 @@ class OAIPMHHarvester(HarvesterBase):
             return False
 
         return result
-        # return True
