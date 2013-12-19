@@ -69,10 +69,10 @@ def namepath_for_element(prefix, name, indices, md):
         '''
         index = indices.get(name, 0)
         indices[name] = index + 1
-        last_rel = prefix.split('/')[-1]
-        if not is_reverse_relation(name, last_rel):
-                md['%s/%s.count' % (prefix, name)] = index + 1
-        return '%s/%s.%d' % (prefix, name, index)
+        if index != 0:
+            return '%s/%s.%d' % (prefix, name, index)
+        else:
+            return '%s/%s' % (prefix, name)
 
 
 def generic_xml_metadata_reader(xml_element):
@@ -85,10 +85,8 @@ def generic_xml_metadata_reader(xml_element):
         '''
         def flatten_with(prefix, element, result):
                 '''Recursive traversal of XML tree'''
-                if element.text:
+                if element.text and element.text.strip():
                     result[prefix] = element.text.strip()
-                else:
-                    result[prefix] = ''
                 for attr in element.attrib:
                         name = namespaced_name(attr, element.nsmap.items())
                         result['%s/@%s' % (prefix, name)] = element.attrib[attr]
