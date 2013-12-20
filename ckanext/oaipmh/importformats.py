@@ -325,7 +325,8 @@ def dc_metadata_reader(xml):
             # TODO! Does license text belong in url?
             def oai_dc():
                 try:
-                    return '', '', tag_tree.find(filter_tag_name_namespace(name='rights', namespace=ns['dc'])).string, ''
+                    return 'direct_download', '', tag_tree.find(filter_tag_name_namespace(
+                        name='rights', namespace=ns['dc'])).string, ''
                 except AttributeError as e:
                     log.info('OAI_DC rights not detected. Probably just missing. {e}'.format(e=e))
                     pass
