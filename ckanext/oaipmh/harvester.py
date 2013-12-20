@@ -131,7 +131,8 @@ class OAIPMHHarvester(HarvesterBase):
         client = oaipmh.client.Client(harvest_job.source.url, registry)
         log.debug('Client: %s' % client)
 
-        # Choose best md_format from md_formats, but let's use 'oai_dc' for now
+        # Choose best md_format from md_formats,
+        # but let's use 'oai_dc' for now
         try:
             md_formats = client.listMetadataFormats()
             md_format = 'oai_dc'
@@ -283,96 +284,20 @@ class OAIPMHHarvester(HarvesterBase):
         log.debug('Content (packed): %s' % harvest_object.content)
         content = json.loads(harvest_object.content)
         log.debug('Content (unpacked): %s' % content)
-        pprint.pprint(content)
+        # pprint.pprint(content)
 
         package_dict = content.pop('unified')
         package_dict['xpaths'] = content
 
         # Todo! Lookup from database needs to be implemented!!
-        package_dict['id'] = ckanext.kata.utils.generate_pid()
-
-        # package_dict = {
-        #     'access': u'free',
-        #     'accessRights': u'',
-        #     'author': content.get('creator.0/name.0', ''),  # Todo! The metadata reader should return a complete list of dicts, use below with KATA schema
-        #     # 'author': [
-        #     #     {'value': content.get('creator.0/name.0', '')},
-        #     #     {'value': content.get('creator.1/name.0', '')},
-        #     #     {'value': content.get('creator.2/name.0', '')},
-        #     # ],
-        #     'contactURL': u'http://www.jakelija.julkaisija.fi',
-        #
-        #     'id': harvest_object.id,
-        #     'title': content.get('title.0', ''),
-        #     # 'title': content.get('title.0', harvest_object.guid),
-        #     'name': harvest_object.guid.replace(':', ''),  # Todo! Remove strip() with KATA schema
-        #     'version': content.get('modified.0', ''),
-        #     'versionPID': content.get('versionidentifier.0', ''),
-        #     'notes': content.get('description.0', ''),
-        #     'extras': content,
-        # }
-
-        # Example package dict
-        # {
-        #     'availability': u'direct_download' |
-        #                     u'access_application' |
-        #                     u'access_request' |
-        #                     u'contact_owner'    ## JuhoL: changed 'access' to 'availability'
-        #     'access_application_URL': u'',   ## JuhoL: changed 'accessRights' to 'access_application_URL
-        #     'author': [{'value': u'Tekij\xe4 Aineiston (DC:Creator)'},
-        #                {'value': u'Tekij\xe4 2'},
-        #                {'value': u'Tekij\xe4 3'}],
-        #     'contact_URL': u'http://www.jakelija.julkaisija.fi',  ## JuhoL: added underscore '_'
-        #     'discipline': u'Tilastotiede',
-        #     'evdescr': [],
-        #     'evtype': [{'value': u'collection'}, {'value': u'published'}],
-        #     'evwhen': [{'value': u'2007-06-06T10:17:44Z'}, {'value': u'2007-06-06T10:17:45Z'}],
-        #     'evwho': [],
-        #     'funder': u'Roope Rahoittaja',
-        #     'geographic_coverage': u'Espoo (city),Keilaniemi (populated place)',
-        #     'geographic_coverage_tmp': [u'Espoo (city)', u'Keilaniemi (populated place)'],
-        #     'groups': [],
-        #     'langtitle': [{'lang': u'fin', 'value': u'Aineiston nimi FIN'},
-        #                   {'lang': u'eng', 'value': u'Aineiston nimi ENG'},
-        #                   {'lang': u'swe', 'value': u'Aineiston nimi SWE'}],
-        ###     'langdis': u'True',
-        #     'language': u'eng, fin, swe',
-        #     'license_URL': u'Lisenssin URL (obsolete)',   ## JuhoL: added underscore '_'
-        #     'license_id': u'cc-zero',
-        #     'maintainer_email': u'jakelija.julkaisija@csc.fi',
-        #     'name': u'urn:nbn:fi:csc-kata20131105081851610265',
-        #     'notes': u'T\xe4m\xe4 on testiaineisto.',
-        #     'organization': [{'value': u'T. Aineiston Oy'},
-        #                      {'value': u'Toinen Oy'},
-        #                      {'value': u'Kolmas Oy'}],
-        #     'owner': u'Omistaja Aineiston',
-        #     'phone': u'+35805050505',
-        #     'pids': { 'harvest_object.source.id': {'data: 'value', 'metadata': value, 'version': value} }
-        #     'project_funding': u'1234-rahoitusp\xe4\xe4t\xf6snumero',
-        #     'project_homepage': u'http://www.rahoittajan.kotisivu.fi/',
-        #     'project_name': u'Rahoittajan Projekti',
-        #     'maintainer': u'Jakelija / Julkaisija',   ## JuhoL: changed 'publisher' to 'maintainer'
-        ###  JuhoL: Mikko muokkaa koko resurssin käsittelyn uusiksi.
-        ###  Harvestoidaan tähän liittyvät vasta sitten.
-        ###     'resources': [{'algorithm': u'MD5',
-        ###                    'hash': u'f60e586509d99944e2d62f31979a802f',
-        ###                    'mimetype': u'application/csv',
-        ###                    'name': None,
-        ###                    'resource_type': 'dataset',
-        ###                    'url': u'http://aineiston.osoite.fi/tiedosto.csv'}],
-        #     'save': u'finish',
-        #     'tag_string': u'tragikomiikka,dadaismi,asiasanastot',
-        #     'temporal_coverage_begin': u'1976-11-06T00:00:00Z',
-        #     'temporal_coverage_end': u'2003-11-06T00:00:00Z',
-        #     'version': u'2007-06-06T10:17:44Z',
-        #     'version_PID': u'Aineistoversion-tunniste-PID'   ## JuhoL: added underscore '_'
-        ###   'extras': {}  ## JuhoL: filled directly with 'content' dict
-        # }
+        pid = False
+        package_dict['id'] = pid if pid else ckanext.kata.utils.generate_pid()
 
         try:
             package_dict['title'] = ''
-            pprint.pprint(package_dict)
-            schema = ckanext.kata.plugin.KataPlugin.create_package_schema_oai_dc()
+            # pprint.pprint(package_dict)
+            schema = ckanext.kata.plugin.KataPlugin.update_package_schema_oai_dc() if pid \
+                else ckanext.kata.plugin.KataPlugin.create_package_schema_oai_dc()
             schema['xpaths'] = [ckanext.kata.converters.xpath_to_extras]
             result = self._create_or_update_package(package_dict,
                                                     harvest_object,
