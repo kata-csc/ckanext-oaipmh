@@ -362,7 +362,7 @@ def dc_metadata_reader(xml):
 
             algorithm=first(get_algorithm(dc)) or '',
 
-            availability=availability or '',
+            availability=availability or 'direct_download' if first(get_download(dc)) else '',
 
             checksum=get_checksum(dc) or '',
 
@@ -438,8 +438,6 @@ def dc_metadata_reader(xml):
             unified['langdis'] = 'True'
         if not unified['project_name']:
             unified['projdis'] = 'True'
-        if not unified['availability'] and unified['direct_download_URL']:
-            unified['availability'] = 'direct_download'
 
         result = xml_reader(xml).getMap()
         result['unified'] = unified
