@@ -13,7 +13,8 @@ from ckanext.oaipmh.harvester import OAIPMHHarvester
 import ckanext.harvest.model as harvest_model
 from ckanext.kata import model as kata_model
 
-class Test_OAIPMHHarvester(TestCase):
+
+class TestOAIPMHHarvester(TestCase):
 
     @classmethod
     def setup_class(cls):
@@ -35,6 +36,12 @@ class Test_OAIPMHHarvester(TestCase):
     def test_fetch_stage(self):
         # should throw some exception with parameter None
         self.assertRaises(Exception, self.harvester.fetch_stage, (None))
+
+    def test_import_stage(self):
+        # should throw some exception with parameter None
+        self.assertRaises(Exception, self.harvester.import_stage, (None))
+
+    # TODO: Sensible tests.
 
     @classmethod
     def teardown_class(cls):
