@@ -38,8 +38,8 @@ class TestOAIPMHHarvester(TestCase):
         self.assertRaises(Exception, self.harvester.fetch_stage, (None))
 
     def test_import_stage(self):
-        # should throw some exception with parameter None
-        self.assertRaises(Exception, self.harvester.import_stage, (None))
+        # should return false
+        assert not self.harvester.import_stage(None)
 
     # TODO: Sensible tests.
 
