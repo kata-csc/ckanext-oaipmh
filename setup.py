@@ -27,14 +27,14 @@ setup(
         'beautifulsoup4',
         'pointfree',
         'functionally',
-        'fn'
-    ],
-    setup_requires=[
+        'fn',
+
+        # These are required only for testing, but are listed here as
+        # production requirements as PIP doesn't support 'tests_require' keyword.
+        # Another option would be to include them in a pip requirements file
+        # and install with: pip install -e -r 'pip-requirements-test.txt'.
         'nose>=1.0',
-        'coverage'
-    ],
-    tests_require=[
-        'nose',
+        'coverage',
         'mock',
     ],
     entry_points=\
