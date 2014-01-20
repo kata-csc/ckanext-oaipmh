@@ -10,7 +10,7 @@ import oaipmh.error
 
 import importformats
 
-from ckan.model import Session
+from ckan.model import Session, Package
 from ckanext.harvest.model import HarvestJob, HarvestObject
 from ckanext.harvest.harvesters.base import HarvesterBase
 import ckanext.kata.utils
@@ -298,8 +298,8 @@ class OAIPMHHarvester(HarvesterBase):
         package_dict = content.pop('unified')
         package_dict['xpaths'] = content
 
-        # Todo! Lookup from database needs to be implemented!!
-        pid = False
+        # If package exists use old PID, otherwise create new
+        pid = Session.query(Package).filter(Package.name == package_dict['name']).first()
         package_dict['id'] = pid if pid else ckanext.kata.utils.generate_pid()
 
         try:
