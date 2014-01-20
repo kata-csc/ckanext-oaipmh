@@ -386,7 +386,6 @@ def dc_metadata_reader(xml):
 
             langtitle=[dict(lang=a.get('xml:lang', ''), value=a.string) for a in dc('title', recursive=False)],
 
-            # DONE!
             language=','.join(sorted([a.string for a in dc('language', recursive=False)])),
 
             license_URL=license_url or '',
@@ -403,7 +402,6 @@ def dc_metadata_reader(xml):
             name=first(map(urllib.quote_plus, get_data_pids(dc))) or '',
             # name=first(map(pf.partial(urllib.quote_plus, safe=':'), get_data_pids(dc))) or '',
 
-            # TEST!
             notes='\r\n\r\n'.join(sorted([a.string for a in dc(
                 filter_tag_name_namespace('description', ns['dc']),
                 recursive=False)])) or '',
@@ -419,7 +417,6 @@ def dc_metadata_reader(xml):
             project_homepage=first(project_homepage) or '',
             project_name=first(project_name) or '',
 
-            # TEST!
             tag_string=','.join(sorted([a.string for a in dc('subject', recursive=False)])) or '',
 
             # Todo! Implement if possible
@@ -441,18 +438,6 @@ def dc_metadata_reader(xml):
 
         result = xml_reader(xml).getMap()
         result['unified'] = unified
-
-        # for source, dest, callback in mapping:
-        #     # if callback:
-        #     #     copy_element(source, dest, result, callback)
-        #     # else:
-        #         count = result.get('metadata/oai_dc:dc.0/%s.count' % source, 0)
-        #         result[dest[:dest.index('.%d')] + '.count'] = count
-        #         for i in range(count):
-        #                 source_n = 'metadata/oai_dc:dc.0/%s.%d' % (source, i)
-        #                 copy_element(source_n, dest % i, result, callback)
-        #                 if dest.endswith('.0'):
-        #                         result[dest[:-2] % i + '.count'] = 1
 
         return oc.Metadata(result)
 

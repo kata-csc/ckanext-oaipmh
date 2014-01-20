@@ -128,9 +128,9 @@ class OAIPMHHarvester(HarvesterBase):
 
         # Create a OAI-PMH Client
         registry = importformats.create_metadata_registry()
-        log.debug('Registry: %s' % registry)
+        log.debug('Registry: {r}'.format(r=registry))
         client = oaipmh.client.Client(harvest_job.source.url, registry)
-        log.debug('Client: %s' % client)
+        log.debug('Client: {c}'.format(c=client))
 
         # Choose best md_format from md_formats,
         # but let's use 'oai_dc' for now
@@ -140,7 +140,7 @@ class OAIPMHHarvester(HarvesterBase):
         except oaipmh.error.BadVerbError as e:
             log.warning('Provider does not support listMetadataFormats verb. Using oai_dc as fallback format.')
             md_format = 'oai_dc'
-        log.debug('Metadata format: %s' % md_format)
+        log.debug('Metadata format: {mf}'.format(mf=md_format))
 
         # Decode JSON formatted config
         set_ids = []
@@ -177,7 +177,8 @@ class OAIPMHHarvester(HarvesterBase):
             last_time = previous_job.gather_finished.isoformat()
             # url = base_search_url + '/revision?since_time=%s' % last_time
             if False:
-                self._save_gather_error('Unable to get content for: %s: %s' % (harvest_job.source.url, str(e)), harvest_job)
+                self._save_gather_error('Gather: Unable to get content for: {u}: {e}'.format(
+                    u=harvest_job.source.url, e=e), harvest_job)
 
             if True:
                 # for package_id in package_ids:
@@ -199,10 +200,12 @@ class OAIPMHHarvester(HarvesterBase):
                 log.debug('Object ids: {i}'.format(i=object_ids))
                 return object_ids
             else:
-                self._save_gather_error('No packages received for URL: %s' % harvest_job.source.url, harvest_job)
+                self._save_gather_error('No packages received for URL: {u}'.format(
+                    u=harvest_job.source.url), harvest_job)
                 return None
         except Exception as e:
-            self._save_gather_error('%r' % e.message, harvest_job)
+            self._save_gather_error('Gather: {e}'.format(e=e), harvest_job)
+            raise
 
         log.debug("Exiting gather_stage()")
 
@@ -241,16 +244,16 @@ class OAIPMHHarvester(HarvesterBase):
             # Get source URL
             header, metadata, about = client.getRecord(identifier=harvest_object.guid, metadataPrefix=md_format)
         except Exception as e:
-            self._save_object_error('Unable to get metadata from provider: %s: %r' % (
-                harvest_object.source.url, e), harvest_object)
+            self._save_object_error('Unable to get metadata from provider: {u}: {e}'.format(
+                u=harvest_object.source.url, e=e), harvest_object)
             return False
 
         # Get contents
         try:
             content = json.dumps(metadata.getMap())
         except Exception as e:
-            self._save_object_error('Unable to get content for package: %s: %r' % (
-                harvest_object.source.url, e), harvest_object)
+            self._save_object_error('Unable to get content for package: {u}: {e}'.format(
+                u=harvest_object.source.url, e=e), harvest_object)
             return False
 
         # Save the fetched contents in the HarvestObject
@@ -283,7 +286,8 @@ class OAIPMHHarvester(HarvesterBase):
             return False
 
         if harvest_object.content is None:
-            self._save_object_error('Empty content for object %s' % harvest_object.id, harvest_object, 'Import')
+            self._save_object_error('Import: Empty content for object {id}'.format(
+                id=harvest_object.id), harvest_object)
             return False
 
         log.debug('Content (packed): %s' % harvest_object.content)
@@ -304,15 +308,11 @@ class OAIPMHHarvester(HarvesterBase):
             schema = ckanext.kata.plugin.KataPlugin.update_package_schema_oai_dc() if pid \
                 else ckanext.kata.plugin.KataPlugin.create_package_schema_oai_dc()
             schema['xpaths'] = [ckanext.kata.converters.xpath_to_extras]
-            result = self._create_or_update_package(package_dict,
-                                                    harvest_object,
-                                                    schema=schema)
+            result = self._create_or_update_package(package_dict, harvest_object, schema=schema)
             log.debug("Exiting import_stage()")
         except Exception as e:
-            self._save_object_error('{s}: Could not create {id}. {e}'.format(id=harvest_object.id,
-                                                                             s='Import',
-                                                                             e=e),
-                                    harvest_object)
+            self._save_object_error('Import: Could not create {id}. {e}'.format(
+                id=harvest_object.id, e=e), harvest_object)
             return False
 
         return result
