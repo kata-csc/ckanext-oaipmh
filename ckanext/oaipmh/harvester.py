@@ -72,10 +72,11 @@ class OAIPMHHarvester(HarvesterBase):
         :returns: A string with the validated configuration options
         '''
 
-        # Try to decode JSON and "Let it Fail"
         # Todo: Write better try/except cases
         if config:
-            json.loads(config)
+            d = json.loads(config)
+            if 'set' in d and not isinstance(d['set'], list):
+                raise TypeError('Set needs to be a list')
         return config
 
     # def get_original_url(self, harvest_object_id):
@@ -142,12 +143,16 @@ class OAIPMHHarvester(HarvesterBase):
         log.debug('Metadata format: %s' % md_format)
 
         # Decode JSON formatted config
-        log.debug('Config: %s' % harvest_job.source.config)
-        try:
-            config = json.loads(harvest_job.source.config)
-        except ValueError as e:
-            self._save_gather_error('Unable to decode config: %s for %s' % (e, harvest_job.source.config), harvest_job)
-        set_ids = [config.get('set', '')]
+        set_ids = []
+        if harvest_job.source.config:
+            log.debug('Config: %s' % harvest_job.source.config)
+            try:
+                config = json.loads(harvest_job.source.config)
+            except ValueError as e:
+                self._save_gather_error('Gather: Unable to decode config from: {c}, {e}'.format(
+                    e=e, c=harvest_job.source.config), harvest_job)
+                raise
+            set_ids = config.get('set', [])
         log.debug('Sets in config: %s' % set_ids)
 
         log.debug('listSets(): {s}'.format(s=list(client.listSets())))
