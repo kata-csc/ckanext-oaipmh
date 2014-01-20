@@ -292,7 +292,13 @@ def dc_metadata_reader(xml):
             return ida()
 
         def get_rights(tag_tree):
+            '''
+            Returns a quadruple of rights information (availability, license-id, license-url, access-application-url)
+            '''
             def ida():
+                '''
+                Get rights information from IDA
+                '''
                 try:
                     decl = tag_tree.find(filter_tag_name_namespace(name='rights', namespace=ns['dct'])).RightsDeclaration.string
                     cat = tag_tree.find(filter_tag_name_namespace(name='rights', namespace=ns['dct'])).RightsDeclaration.get('RIGHTSCATEGORY')
@@ -323,6 +329,9 @@ def dc_metadata_reader(xml):
                     pass
 
             def oai_dc():
+                '''
+                Get rights information from OAI-DC
+                '''
                 try:
                     return '', '', tag_tree.find(filter_tag_name_namespace(
                         name='rights', namespace=ns['dc'])).string, ''
