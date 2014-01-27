@@ -12,7 +12,7 @@ setup(
     keywords='',
     author='Mikael Karlsson',
     author_email='i8myshoes@gmail.com',
-    url='http://not.yet.there',
+    url='https://github.com/kata-csc/ckanext-oaipmh',
     license='AGPL',
     packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
     namespace_packages=['ckanext', 'ckanext.oaipmh'],
@@ -28,14 +28,6 @@ setup(
         'pointfree',
         'functionally',
         'fn',
-
-        # These are required only for testing, but are listed here as
-        # production requirements as PIP doesn't support 'tests_require' keyword.
-        # Another option would be to include them in a pip requirements file
-        # and install with: pip install -e -r 'pip-requirements-test.txt'.
-        'nose>=1.0',
-        'coverage',
-        'mock',
     ],
     entry_points=\
         """
