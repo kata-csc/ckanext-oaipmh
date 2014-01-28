@@ -131,6 +131,18 @@ class OAIPMHHarvester(HarvesterBase):
         :type harvest_job: HarvestJob
         '''
 
+        def get_package_ids():
+            args = dict(filter(lambda (x, y): x in ['to', 'from'], config.items()))
+            args['metadataPrefix'] = md_format
+            if set_ids:
+                for set_id in set_ids:
+                    for header in client.listIdentifiers(set=set_id, **args):
+                        yield header.identifier()
+            else:
+                for header in client.listIdentifiers(**args):
+                    yield header.identifier()
+                    # package_ids = [header.identifier() for header in client.listRecords()]
+
         log.debug('Entering gather_stage()')
 
         log.debug('Harvest source: {s}'.format(s=harvest_job.source.url))
@@ -166,11 +178,8 @@ class OAIPMHHarvester(HarvesterBase):
 
         log.debug('listSets(): {s}'.format(s=list(client.listSets())))
 
-        for set_id in set_ids:
-            package_ids = [header.identifier() for header in client.listIdentifiers(metadataPrefix=md_format, set=set_id)]
-        # else:
-            # package_ids = [header.identifier() for header in client.listIdentifiers(metadataPrefix=md_format)]
-        # package_ids = [header.identifier() for header in client.listRecords()]
+        # Collect package ids
+        package_ids = get_package_ids()
         log.debug('Identifiers: {i}'.format(i=package_ids))
 
         # Check if this source has been harvested before
@@ -215,8 +224,8 @@ class OAIPMHHarvester(HarvesterBase):
         except Exception as e:
             self._save_gather_error('Gather: {e}'.format(e=e), harvest_job)
             raise
-
-        log.debug("Exiting gather_stage()")
+        finally:
+            log.debug("Exiting gather_stage()")
 
     def fetch_stage(self, harvest_object):
         '''
