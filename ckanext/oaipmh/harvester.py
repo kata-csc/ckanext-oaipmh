@@ -4,6 +4,7 @@
 import logging
 import json
 import pprint
+from itertools import islice
 
 import oaipmh.client
 import oaipmh.error
@@ -210,7 +211,7 @@ class OAIPMHHarvester(HarvesterBase):
         try:
             object_ids = []
             if len(package_ids):
-                for package_id in package_ids:
+                for package_id in islice(package_ids, config['limit']) if 'limit' in config else package_ids:
                     # Create a new HarvestObject for this identifier
                     obj = HarvestObject(guid=package_id, job=harvest_job)
                     obj.save()
