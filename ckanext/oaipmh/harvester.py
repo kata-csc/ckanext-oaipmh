@@ -72,11 +72,20 @@ class OAIPMHHarvester(HarvesterBase):
         :returns: A string with the validated configuration options
         '''
 
+        def validate_param(p, t):
+            '''
+            Check if 'p' is specified and is of type 't'
+            '''
+            if p in d and not isinstance(d[p], t):
+                raise TypeError("'{p}' needs to be a '{t}'".format(t=t, p=p))
+
         # Todo: Write better try/except cases
         if config:
             d = json.loads(config)
-            if 'set' in d and not isinstance(d['set'], list):
-                raise TypeError('Set needs to be a list')
+            validate_param('set', list)
+            validate_param('to', str)
+            validate_param('from', str)
+            validate_param('limit', int)
         return config
 
     # def get_original_url(self, harvest_object_id):
