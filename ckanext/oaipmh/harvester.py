@@ -180,7 +180,7 @@ class OAIPMHHarvester(HarvesterBase):
         log.debug('listSets(): {s}'.format(s=list(client.listSets())))
 
         # Collect package ids
-        package_ids = get_package_ids()
+        package_ids = list(get_package_ids())
         log.debug('Identifiers: {i}'.format(i=package_ids))
 
         # Check if this source has been harvested before
