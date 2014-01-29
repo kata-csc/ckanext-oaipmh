@@ -84,7 +84,7 @@ class OAIPMHHarvester(HarvesterBase):
         if config:
             d = json.loads(config)
             validate_param('set', list)
-            validate_param('to', basestring)
+            validate_param('until', basestring)
             validate_param('from', basestring)
             validate_param('limit', int)
         return config
@@ -133,7 +133,7 @@ class OAIPMHHarvester(HarvesterBase):
         '''
 
         def get_package_ids():
-            args = dict(filter(lambda (x, y): x in ['to', 'from'], config.items()))
+            args = dict(filter(lambda (x, y): x in ['until', 'from'], config.items()))
             args['metadataPrefix'] = md_format
             if set_ids:
                 for set_id in set_ids:
