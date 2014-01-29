@@ -135,6 +135,8 @@ class OAIPMHHarvester(HarvesterBase):
         def get_package_ids():
             args = dict(filter(lambda (x, y): x in ['until', 'from'], config.items()))
             args['metadataPrefix'] = md_format
+            if last_time and 'from' not in args:
+                args['from'] = last_time
             if set_ids:
                 for set_id in set_ids:
                     for header in client.listIdentifiers(set=set_id, **args):
@@ -179,10 +181,6 @@ class OAIPMHHarvester(HarvesterBase):
 
         log.debug('listSets(): {s}'.format(s=list(client.listSets())))
 
-        # Collect package ids
-        package_ids = list(get_package_ids())
-        log.debug('Identifiers: {i}'.format(i=package_ids))
-
         # Check if this source has been harvested before
         previous_job = Session.query(HarvestJob) \
             .filter(HarvestJob.source==harvest_job.source) \
@@ -191,6 +189,7 @@ class OAIPMHHarvester(HarvesterBase):
             .order_by(HarvestJob.gather_finished.desc()) \
             .limit(1).first()
 
+        last_time = None
         if previous_job and not previous_job.gather_errors and not len(previous_job.objects) == 0:
             # Request only the packages modified since last harvest job
             last_time = previous_job.gather_finished.isoformat()
@@ -207,6 +206,10 @@ class OAIPMHHarvester(HarvesterBase):
             else:
                 log.info('No packages have been updated on the provider since the last harvest job')
                 return None
+
+        # Collect package ids
+        package_ids = list(get_package_ids())
+        log.debug('Identifiers: {i}'.format(i=package_ids))
 
         try:
             object_ids = []
