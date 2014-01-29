@@ -84,8 +84,8 @@ class OAIPMHHarvester(HarvesterBase):
         if config:
             d = json.loads(config)
             validate_param('set', list)
-            validate_param('to', str)
-            validate_param('from', str)
+            validate_param('to', basestring)
+            validate_param('from', basestring)
             validate_param('limit', int)
         return config
 
