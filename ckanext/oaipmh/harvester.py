@@ -87,10 +87,7 @@ class OAIPMHHarvester(HarvesterBase):
             Validate a date parameter by trying to parse it
             '''
             if validate_param(d, p, t):
-                # TODO! Think of better way to remove timezone
-                if d[p][-1] == 'Z':
-                    d[p] = d[p][:-1]
-                dp(d[p])
+                dp(d[p]).replace(tzinfo=None)
 
         # Todo: Write better try/except cases
         if config:
@@ -154,12 +151,12 @@ class OAIPMHHarvester(HarvesterBase):
                     if x in ['until', 'from']:
                         if x == 'from':
                             x = 'from_'
-                        yield (x, dp(y))
+                        yield (x, dp(y).replace(tzinfo=None))
 
             args = dict(filter_map_args(config.items()))
             args['metadataPrefix'] = md_format
             if last_time and 'from_' not in args:
-                args['from_'] = last_time
+                args['from_'] = dp(last_time).replace(tzinfo=None)
             if set_ids:
                 for set_id in set_ids:
                     for header in client.listIdentifiers(set=set_id, **args):
