@@ -8,6 +8,7 @@ from itertools import islice
 
 import oaipmh.client
 import oaipmh.error
+from dateutil.parser import parse as dp
 
 import importformats
 
@@ -73,20 +74,31 @@ class OAIPMHHarvester(HarvesterBase):
         :returns: A string with the validated configuration options
         '''
 
-        def validate_param(p, t):
+        def validate_param(d, p, t):
             '''
             Check if 'p' is specified and is of type 't'
             '''
             if p in d and not isinstance(d[p], t):
                 raise TypeError("'{p}' needs to be a '{t}'".format(t=t, p=p))
+            return p in d
+
+        def validate_date_param(d, p, t):
+            '''
+            Validate a date parameter by trying to parse it
+            '''
+            if validate_param(d, p, t):
+                # TODO! Think of better way to remove timezone
+                if d[p][-1] == 'Z':
+                    d[p] = d[p][:-1]
+                dp(d[p])
 
         # Todo: Write better try/except cases
         if config:
-            d = json.loads(config)
-            validate_param('set', list)
-            validate_param('until', basestring)
-            validate_param('from', basestring)
-            validate_param('limit', int)
+            dj = json.loads(config)
+            validate_param(dj, 'set', list)
+            validate_param(dj, 'limit', int)
+            validate_date_param(dj, 'until', basestring)
+            validate_date_param(dj, 'from', basestring)
         return config
 
     # def get_original_url(self, harvest_object_id):
@@ -133,10 +145,21 @@ class OAIPMHHarvester(HarvesterBase):
         '''
 
         def get_package_ids():
-            args = dict(filter(lambda (x, y): x in ['until', 'from'], config.items()))
+            '''
+            '''
+            # TODO! This should be cleaned up somewhat, ie. no globals, etc.
+
+            def filter_map_args(list_tuple):
+                for x, y in list_tuple:
+                    if x in ['until', 'from']:
+                        if x == 'from':
+                            x = 'from_'
+                        yield (x, dp(y))
+
+            args = dict(filter_map_args(config.items()))
             args['metadataPrefix'] = md_format
-            if last_time and 'from' not in args:
-                args['from'] = last_time
+            if last_time and 'from_' not in args:
+                args['from_'] = last_time
             if set_ids:
                 for set_id in set_ids:
                     for header in client.listIdentifiers(set=set_id, **args):
