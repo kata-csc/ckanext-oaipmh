@@ -10,8 +10,8 @@ setup(
         """,
     classifiers=[],  # Get strings from http://pypi.python.org/pypi?%3Aaction=list_classifiers
     keywords='',
-    author='Mikael Karlsson',
-    author_email='i8myshoes@gmail.com',
+    author='CSC - IT Center for Science Ltd.',
+    author_email='kata-project@postit.csc.fi',
     url='https://github.com/kata-csc/ckanext-oaipmh',
     license='AGPL',
     packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
