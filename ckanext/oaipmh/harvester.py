@@ -341,13 +341,14 @@ class OAIPMHHarvester(HarvesterBase):
         package_dict['xpaths'] = content
 
         # If package exists use old PID, otherwise create new
-        pid = Session.query(Package).filter(Package.name == package_dict['name']).first()
-        package_dict['id'] = pid if pid else ckanext.kata.utils.generate_pid()
+        pkg = Session.query(Package).filter(Package.name == package_dict['name']).first()
+        log.debug('Package: "{pkg}"'.format(pkg=pkg))
+        package_dict['id'] = pkg.id if pkg else ckanext.kata.utils.generate_pid()
 
         try:
             package_dict['title'] = ''
             # pprint.pprint(package_dict)
-            schema = ckanext.kata.plugin.KataPlugin.update_package_schema_oai_dc() if pid \
+            schema = ckanext.kata.plugin.KataPlugin.update_package_schema_oai_dc() if pkg \
                 else ckanext.kata.plugin.KataPlugin.create_package_schema_oai_dc()
             schema['xpaths'] = [ckanext.kata.converters.xpath_to_extras]
             result = self._create_or_update_package(package_dict, harvest_object, schema=schema)
