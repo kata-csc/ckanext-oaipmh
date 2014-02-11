@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
+<responseDate>2014-02-11T08:06:41Z</responseDate>
+<request metadataPrefix="oai_dc" verb="GetRecord" identifier="oai:helda.helsinki.fi:10138/1074">http://helda.helsinki.fi/oai/request</request>
+<GetRecord>
+    <record>
+        <header>
+            <identifier>oai:helda.helsinki.fi:10138/1074</identifier>
+            <datestamp>2010-09-29T21:00:17Z</datestamp>
+            <setSpec>hdl_10138_6</setSpec>
+        </header>
+        <metadata>
+            <oai_dc:dc xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+            <dc:title>Neutralization of solvated protons and formation of noble-gas hydride molecules: matrix-isolation indications of tunneling mechanisms?</dc:title>
+            <dc:creator>Khriachtchev, Leonid</dc:creator>
+            <dc:creator>Lignell, Antti</dc:creator>
+            <dc:creator>Räsänen, Markku</dc:creator>
+            <dc:publisher>American Institute of Physics</dc:publisher>
+            <dc:date>2005-08-08</dc:date>
+            <dc:type>Article</dc:type>
+            <dc:identifier>http://link.aip.org/link/?jcp/123/064507</dc:identifier>
+            <dc:identifier>http://hdl.handle.net/10138/1074</dc:identifier>
+            <dc:source>J. Chem. Phys. 123, 064507 (2005) (6 pages)</dc:source>
+            <dc:language>en</dc:language>
+            <dc:rights>Copyright 2005 American Institute of Physics. This article may be downloaded for personal use only. Any other use requires prior permission of the author and the American Institute of Physics.</dc:rights>
+        </oai_dc:dc>
+    </metadata>
+</record>
+</GetRecord>
+</OAI-PMH>
