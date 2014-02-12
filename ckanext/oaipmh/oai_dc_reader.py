@@ -62,7 +62,8 @@ def dc_metadata_reader(xml):
 
             algorithm=first(_get_algorithm(dc)) or '',
 
-            availability=availability or 'direct_download' if first(_get_download(dc)) else '',
+            # TODO: Handle availabilities better
+            availability=availability or 'through_provider' if first(_get_download(dc)) else '',
 
             checksum=_get_checksum(dc) or '',
 
@@ -122,6 +123,8 @@ def dc_metadata_reader(xml):
             # Todo! Implement if possible
             temporal_coverage_begin='',
             temporal_coverage_end='',
+
+            through_provider_URL=first(_get_download(dc)) or '',
 
             # Todo! This should be more exactly picked
             version=(dc.modified or dc.date).string if (dc.modified or dc.date) else '',
@@ -210,7 +213,7 @@ def _get_data_pids(tag_tree):
 
 def _get_checksum(tag_tree):
     '''
-    Get checksum of file (metadata file or data file?)
+    Get checksum of data file
     '''
     try:
         return tag_tree.hasFormat.File.checksum.Checksum.checksumValue.string

@@ -15,7 +15,7 @@ import ckan
 from ckanext.oaipmh.harvester import OAIPMHHarvester
 import ckanext.harvest.model as harvest_model
 import ckanext.kata.model as kata_model
-from ckanext.oaipmh.oai_dc_reader import dc_metadata_reader, _filter_tag_name_namespace, NS, _get_data_pids, _get_download, _get_version_pid
+from ckanext.oaipmh.oai_dc_reader import dc_metadata_reader, _filter_tag_name_namespace, NS, _get_data_pids, _get_download, _get_version_pid, _get_checksum, _get_org_auth
 
 FIXTURE_HELDA = "ckanext-oaipmh/ckanext/oaipmh/test_fixtures/helda_oai_dc.xml"
 FIXTURE_IDA = "ckanext-oaipmh/ckanext/oaipmh/test_fixtures/oai-pmh.xml"
@@ -110,6 +110,10 @@ class TestOAIDCReaderHelda(TestCase):
         # We should get atleast some download link from the pids:
         assert len(list(output)) > 0
 
+    def test_get_org_auth(self):
+        output = _get_org_auth(self.dc)
+
+        assert output
 
 class TestOAIDCReaderIda(TestCase):
 
@@ -146,3 +150,15 @@ class TestOAIDCReaderIda(TestCase):
 
         assert pid
         assert 'ida' in next(pid)
+
+    def test_get_checksum(self):
+
+        hash = _get_checksum(self.dc)
+
+        assert hash == u'7932df5999a30bb70871359f700dbe23'
+
+    def test_get_download(self):
+        output = _get_download(self.dc)
+
+        # We should get atleast some download link:
+        assert len(list(output)) > 0

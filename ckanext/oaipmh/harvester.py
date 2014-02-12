@@ -74,6 +74,8 @@ class OAIPMHHarvester(HarvesterBase):
         :returns: A string with the validated configuration options
         '''
 
+        # TODO: Tests
+
         def validate_param(d, p, t):
             '''
             Check if 'p' is specified and is of type 't'
