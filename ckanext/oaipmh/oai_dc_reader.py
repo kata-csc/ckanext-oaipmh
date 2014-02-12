@@ -35,6 +35,8 @@ def dc_metadata_reader(xml):
         :rtype: a hash from string to any value
         '''
 
+        # TODO: Return Nones rather than empty strings
+
         # Populate a BeautifulSoup object
         bs = bs4.BeautifulSoup(lxml.etree.tostring(xml), 'xml')
         dc = bs.metadata.dc
@@ -151,7 +153,8 @@ def _filter_tag_name_namespace(name, namespace, tag):
 def _get_version_pid(tag_tree):
     '''
     Generate results for version_PID
-    :param tag_tree: Metadata Tag in BeautifulSoup tree
+
+    :param tag_tree: Metadata (dc) Tag in BeautifulSoup tree
     :type tag_tree: bs4.Tag
     '''
     # IDA
@@ -162,6 +165,11 @@ def _get_version_pid(tag_tree):
 
 
 def _get_project_stuff(tag_tree):
+    '''
+    Get project_funder, project_funding, project_name, project_homepage
+
+    :param tag_tree: metadata (dc) element in BeautifulSoup tree
+    '''
     def ida():
         for a in tag_tree(_filter_tag_name_namespace(name='contributor', namespace=NS['dct']), recursive=False):
             if a.Project:
@@ -201,6 +209,9 @@ def _get_data_pids(tag_tree):
 
 
 def _get_checksum(tag_tree):
+    '''
+    Get checksum of file (metadata file or data file?)
+    '''
     try:
         return tag_tree.hasFormat.File.checksum.Checksum.checksumValue.string
     except Exception as e:
