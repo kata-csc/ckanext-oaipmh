@@ -13,6 +13,7 @@ from dateutil.parser import parse as dp
 import importformats
 
 from ckan.model import Session, Package
+from ckan.lib.navl.validators import ignore_missing
 from ckanext.harvest.model import HarvestJob, HarvestObject
 from ckanext.harvest.harvesters.base import HarvesterBase
 import ckanext.kata.utils
@@ -98,6 +99,8 @@ class OAIPMHHarvester(HarvesterBase):
             validate_param(dj, 'limit', int)
             validate_date_param(dj, 'until', basestring)
             validate_date_param(dj, 'from', basestring)
+        else:
+            config = '{}'
         return config
 
     # def get_original_url(self, harvest_object_id):
@@ -190,6 +193,7 @@ class OAIPMHHarvester(HarvesterBase):
 
         # Decode JSON formatted config
         set_ids = []
+        config = {}
         if harvest_job.source.config:
             log.debug('Config: %s' % harvest_job.source.config)
             try:
@@ -352,8 +356,11 @@ class OAIPMHHarvester(HarvesterBase):
             # pprint.pprint(package_dict)
             schema = ckanext.kata.plugin.KataPlugin.update_package_schema_oai_dc() if pkg \
                 else ckanext.kata.plugin.KataPlugin.create_package_schema_oai_dc()
-            schema['xpaths'] = [ckanext.kata.converters.xpath_to_extras]
-            result = self._create_or_update_package(package_dict, harvest_object, schema=schema)
+            schema['xpaths'] = [ignore_missing, ckanext.kata.converters.xpath_to_extras]
+            result = self._create_or_update_package(package_dict,
+                                                    harvest_object,
+                                                    schema=schema,
+                                                    s_schema=ckanext.kata.plugin.KataPlugin.show_package_schema())
             log.debug("Exiting import_stage()")
         except Exception as e:
             self._save_object_error('Import: Could not create {id}. {e}'.format(
