@@ -126,6 +126,8 @@ def dc_metadata_reader(xml):
 
             through_provider_URL=first(_get_download(dc)) or '',
 
+            type='dataset',
+
             # Todo! This should be more exactly picked
             version=(dc.modified or dc.date).string if (dc.modified or dc.date) else '',
             # version=dc(
