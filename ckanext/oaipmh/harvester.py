@@ -347,6 +347,8 @@ class OAIPMHHarvester(HarvesterBase):
         package_dict['xpaths'] = content
 
         # If package exists use old PID, otherwise create new
+
+        # TODO: Search with all dataset data pids against all data pids in database
         pkg = Session.query(Package).filter(Package.name == package_dict['name']).first()
         log.debug('Package: "{pkg}"'.format(pkg=pkg))
         package_dict['id'] = pkg.id if pkg else ckanext.kata.utils.generate_pid()
@@ -356,7 +358,7 @@ class OAIPMHHarvester(HarvesterBase):
             # pprint.pprint(package_dict)
             schema = ckanext.kata.plugin.KataPlugin.update_package_schema_oai_dc() if pkg \
                 else ckanext.kata.plugin.KataPlugin.create_package_schema_oai_dc()
-            schema['xpaths'] = [ignore_missing, ckanext.kata.converters.xpath_to_extras]
+            # schema['xpaths'] = [ignore_missing, ckanext.kata.converters.xpath_to_extras]
             result = self._create_or_update_package(package_dict,
                                                     harvest_object,
                                                     schema=schema,
