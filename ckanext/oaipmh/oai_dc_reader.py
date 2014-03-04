@@ -314,17 +314,14 @@ def _get_rights(tag_tree):
             return avail, lid, lurl, aaurl
         except AttributeError as e:
             log.info('IDA rights not detected. Probably not harvesting IDA. {e}'.format(e=e))
-            pass
 
     def oai_dc():
         '''
         Get rights information from OAI-DC
         '''
         try:
-            return '', '', tag_tree.find(_filter_tag_name_namespace(
-                name='rights', namespace=NS['dc'])).string, ''
+            return '', '', tag_tree.find(_filter_tag_name_namespace(name='rights', namespace=NS['dc'])).string, ''
         except AttributeError as e:
             log.info('OAI_DC rights not detected. Probably just missing. {e}'.format(e=e))
-            pass
 
     return ida() or oai_dc()

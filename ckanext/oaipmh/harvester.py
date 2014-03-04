@@ -362,7 +362,8 @@ class OAIPMHHarvester(HarvesterBase):
             result = self._create_or_update_package(package_dict,
                                                     harvest_object,
                                                     schema=schema,
-                                                    s_schema=ckanext.kata.plugin.KataPlugin.show_package_schema())
+                                                    # s_schema=ckanext.kata.plugin.KataPlugin.show_package_schema()
+                                                    )
             log.debug("Exiting import_stage()")
         except Exception as e:
             self._save_object_error('Import: Could not create {id}. {e}'.format(
