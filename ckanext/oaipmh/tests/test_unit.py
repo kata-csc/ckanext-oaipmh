@@ -5,22 +5,22 @@
 """
 Unit tests for OAI-PMH harvester.
 """
+from unittest import TestCase
+
 import bs4
 from lxml import etree
-
-from unittest import TestCase
-import lxml
 
 import ckan
 from ckanext.oaipmh.harvester import OAIPMHHarvester
 import ckanext.harvest.model as harvest_model
 import ckanext.kata.model as kata_model
-#from ckanext.oaipmh.oai_dc_reader import dc_metadata_reader, _filter_tag_name_namespace, NS, _get_data_pids, _get_download, _get_version_pid, _get_checksum, _get_org_auth
 from ckanext.oaipmh.importformats import create_metadata_registry
 import ckanext.oaipmh.oai_dc_reader as dcr
 
+
 FIXTURE_HELDA = "ckanext-oaipmh/ckanext/oaipmh/test_fixtures/helda_oai_dc.xml"
 FIXTURE_IDA = "ckanext-oaipmh/ckanext/oaipmh/test_fixtures/oai-pmh.xml"
+
 
 class TestOAIPMHHarvester(TestCase):
 
@@ -107,14 +107,12 @@ class TestOAIDCReaderHelda(TestCase):
         assert 'availability' in metadata.getMap()['unified']
 
     def test_filter_tag_name_namespace(self):
-
         output = dcr._filter_tag_name_namespace('creator', dcr.NS['dc'])
         creators = [creator for creator in self.dc(output, recursive=False)]
 
         assert len(creators) == 3
 
     def test_get_data_pids(self):
-
         expected_pids = set([u'http://link.aip.org/link/?jcp/123/064507', u'http://hdl.handle.net/10138/1074'])
         output = dcr._get_data_pids(self.dc)
 
@@ -152,6 +150,70 @@ class TestOAIDCReaderHelda(TestCase):
         assert license_url
         assert license_url.startswith('Copyright')
 
+    def test_dc_metadata_reader_fields(self):
+        '''
+        Test reading a whole file and check that fields are what they are supposed to be
+        '''
+        EXPECTED_FIELDS = {'access_application_URL': '',
+                           'access_request_URL': '',
+                           'algorithm': '',
+                           'availability': 'through_provider',
+                           'checksum': '',
+                           'contact_URL': '',
+                           'contact_phone': '',
+                           'direct_download_URL': u'http://link.aip.org/link/?jcp/123/064507',
+                           'discipline': '',
+                           'geographic_coverage': '',
+                           'langtitle': [{'lang': '',
+                                          'value': u'Neutralization of solvated protons and formation of noble-gas hydride molecules: matrix-isolation indications of tunneling mechanisms?'}],
+                           'language': u'en',
+                           'license_URL': u'Copyright 2005 American Institute of Physics. This article may be downloaded for personal use only. Any other use requires prior permission of the author and the American Institute of Physics.',
+                           'license_id': 'notspecified',
+                           'maintainer': '',
+                           'maintainer_email': '',
+                           'mimetype': '',
+                           'name': u'http%3A%2F%2Flink.aip.org%2Flink%2F%3Fjcp%2F123%2F064507',
+                           'notes': '',
+                           'orgauth': [{'org': '', 'value': u'Khriachtchev, Leonid'},
+                                       {'org': '', 'value': u'Lignell, Antti'},
+                                       {'org': '', 'value': u'R\xe4s\xe4nen, Markku'}],
+                           'owner': '',
+                           'pids': [{'id': u'http://hdl.handle.net/10138/1074',
+                                     'provider': u'http://helda.helsinki.fi/oai/request',
+                                     'type': 'data'},
+                                    ],
+                           'projdis': 'True',
+                           'project_funder': '',
+                           'project_funding': '',
+                           'project_homepage': '',
+                           'project_name': '',
+                           'tag_string': '',
+                           'temporal_coverage_begin': '',
+                           'temporal_coverage_end': '',
+                           'through_provider_URL': u'http://link.aip.org/link/?jcp/123/064507',
+                           'type': 'dataset',
+                           'version': u'2005-08-08'}
+
+        metadata = dcr.dc_metadata_reader(etree.fromstring(self.xml))
+        assert metadata
+
+        data_dict = metadata['unified']
+
+        for (key, value) in EXPECTED_FIELDS.items():
+            assert key in data_dict, "Key not found: %r" % key
+
+            output_value = data_dict.get(key)
+
+            assert unicode(output_value) == unicode(value), "Values for key %r not matching: %r versus %r" % (
+                key, value, output_value)
+
+
+    # TODO: Implement this in harvester first
+    # def test_get_provider(self):
+    #     output = dcr._get_provider(self.dc)
+    #
+    #     assert output == u'http://helda.helsinki.fi/oai/request', output
+
 
 class TestOAIDCReaderIda(TestCase):
 
@@ -183,14 +245,12 @@ class TestOAIDCReaderIda(TestCase):
         assert 'availability' in metadata.getMap()['unified']
 
     def test_get_version_pid(self):
-
         pid = dcr._get_version_pid(self.dc)
 
         assert pid
         assert 'ida' in next(pid)
 
     def test_get_checksum(self):
-
         hash = dcr._get_checksum(self.dc)
 
         assert hash == u'7932df5999a30bb70871359f700dbe23'
@@ -201,11 +261,14 @@ class TestOAIDCReaderIda(TestCase):
         # We should get atleast some download link:
         assert len(list(output)) > 0
 
+    def test_get_provider(self):
+        output = dcr._get_provider(self.dc)
+
+        assert output == 'ida', output
+
 
 class TestImportFormats(TestCase):
-
     def test_create_metadata_registry(self):
-
         reg = create_metadata_registry()
 
         assert reg
