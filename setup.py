@@ -1,11 +1,11 @@
 from setuptools import setup, find_packages
 
-version = '0.2'
+version = '0.3'
 
 setup(
     name='ckanext-oaipmh',
     version=version,
-    description="OAI-PMH harvester for CKAN",
+    description="OAI-PMH server and harvester for CKAN",
     long_description="""\
         """,
     classifiers=[],  # Get strings from http://pypi.python.org/pypi?%3Aaction=list_classifiers
@@ -33,6 +33,7 @@ setup(
         """
         [ckan.plugins]
         # Add plugins here, eg
+        oaipmh=ckanext.oaipmh.plugin:OAIPMHPlugin
         oaipmh_harvester=ckanext.oaipmh.harvester:OAIPMHHarvester
         """,
 )
