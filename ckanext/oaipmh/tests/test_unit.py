@@ -1,6 +1,10 @@
 # coding: utf-8
 #
 # pylint: disable=no-self-use, missing-docstring, too-many-public-methods, invalid-name
+import json
+import os
+from ckan import model
+from ckan.logic import get_action
 
 """
 Unit tests for OAI-PMH harvester.
@@ -20,6 +24,15 @@ import ckanext.oaipmh.oai_dc_reader as dcr
 
 FIXTURE_HELDA = "ckanext-oaipmh/ckanext/oaipmh/test_fixtures/helda_oai_dc.xml"
 FIXTURE_IDA = "ckanext-oaipmh/ckanext/oaipmh/test_fixtures/oai-pmh.xml"
+
+class _FakeHarvestObject():
+    def __init__(self, content, identification):
+        self.content = content
+        self.id = identification
+        self.guid = self.id
+
+    def add(self):
+        pass
 
 
 class TestOAIPMHHarvester(TestCase):
@@ -50,8 +63,18 @@ class TestOAIPMHHarvester(TestCase):
         self.assertRaises(Exception, self.harvester.fetch_stage, (None))
 
     def test_import_stage(self):
-        # should return false
-        assert not self.harvester.import_stage(None)
+        model.User(name='harvest', sysadmin=True).save()
+        get_action('organization_create')({'user': 'harvest'}, {'name': 'test'})
+
+        for name in ('helda_4721.json',):
+            with open(os.path.join("ckanext-oaipmh/ckanext/oaipmh/test_fixtures", name)) as source:
+                content = json.loads(source.read())
+                content['unified']['owner_org'] = 'test'
+                content = json.dumps(content)
+
+            harvest_object = _FakeHarvestObject(content, 'test_id')
+            self.harvester.import_stage(harvest_object)
+
 
     def test_validate_config_valid(self):
         config = '{"from": "2014-03-03", "limit": 5}'
@@ -159,8 +182,7 @@ class TestOAIDCReaderHelda(TestCase):
                            'algorithm': '',
                            'availability': 'through_provider',
                            'checksum': '',
-                           'contact_URL': '',
-                           'contact_phone': '',
+                           'contact': [{'URL': '', 'phone': '', 'email': '', 'name': ''}],
                            'direct_download_URL': u'http://link.aip.org/link/?jcp/123/064507',
                            'discipline': '',
                            'geographic_coverage': '',
@@ -169,24 +191,13 @@ class TestOAIDCReaderHelda(TestCase):
                            'language': u'en',
                            'license_URL': u'Copyright 2005 American Institute of Physics. This article may be downloaded for personal use only. Any other use requires prior permission of the author and the American Institute of Physics.',
                            'license_id': 'notspecified',
-                           'maintainer': '',
-                           'maintainer_email': '',
                            'mimetype': '',
                            'name': u'http%3A%2F%2Flink.aip.org%2Flink%2F%3Fjcp%2F123%2F064507',
                            'notes': '',
-                           'orgauth': [{'org': '', 'value': u'Khriachtchev, Leonid'},
-                                       {'org': '', 'value': u'Lignell, Antti'},
-                                       {'org': '', 'value': u'R\xe4s\xe4nen, Markku'}],
-                           'owner': '',
                            'pids': [{'id': u'http://hdl.handle.net/10138/1074',
                                      'provider': u'http://helda.helsinki.fi/oai/request',
                                      'type': 'data'},
                                     ],
-                           'projdis': 'True',
-                           'project_funder': '',
-                           'project_funding': '',
-                           'project_homepage': '',
-                           'project_name': '',
                            'tag_string': '',
                            'temporal_coverage_begin': '',
                            'temporal_coverage_end': '',
@@ -204,9 +215,24 @@ class TestOAIDCReaderHelda(TestCase):
 
             output_value = data_dict.get(key)
 
+            # Note. Possibility for random fail, because data order is not promised by python
             assert unicode(output_value) == unicode(value), "Values for key %r not matching: %r versus %r" % (
                 key, value, output_value)
 
+        fail_agent = 1
+        fail_author = 3
+        for agent in data_dict.get('agent', []):
+            if agent['role'] == 'funder':
+                for key, value in ('URL', ''), ('id', ''), ('fundingid', ''), ('name', ''):
+                    self.assertTrue(key in agent, "Expected to find key %s" % key)
+                    self.assertEquals(agent[key], value)
+                fail_agent -= 1
+            elif agent['role'] == 'author':
+                self.assertTrue(agent['name'] in (u'Khriachtchev, Leonid', u'Lignell, Antti', u'R\xe4s\xe4nen, Markku'))
+                fail_author -= 1
+
+        self.assertEqual(fail_agent, 0, "Invalid agent data")
+        self.assertEqual(fail_author, 0, "Invalid author data")
 
     # TODO: Implement this in harvester first
     # def test_get_provider(self):

@@ -42,9 +42,6 @@ def dc_metadata_reader(xml):
     bs = bs4.BeautifulSoup(lxml.etree.tostring(xml), 'xml')
     dc = bs.metadata.dc
 
-    import pprint
-    pprint.pprint(xml)
-
     project_funder, project_funding, project_name, project_homepage = _get_project_stuff(dc) or ('', '', '', '')
     #project_funder, project_funding, project_name, project_homepage = ('', '', '', '')
 
@@ -75,10 +72,6 @@ def dc_metadata_reader(xml):
 
         checksum=_get_checksum(dc) or '',
 
-        # Todo! Using only the first entry, for now
-        #contact_URL=first(contact_URL) or '',
-        #contact_phone=first(contact_phone) or '',
-
         direct_download_URL=first(_get_download(dc)) or '',
 
         # Todo! Implement
@@ -101,8 +94,6 @@ def dc_metadata_reader(xml):
         license_id=license_id or 'notspecified',
 
         # Todo! Using only the first entry, for now
-        #maintainer=first(maintainer) or '',
-        #maintainer_email=first(maintainer_email) or '',
         contact=[dict(name=first(maintainer) or '', email=first(maintainer_email) or '', 
                       URL=first(contact_URL) or '', phone=first(contact_phone) or '')],
 
@@ -117,9 +108,6 @@ def dc_metadata_reader(xml):
             _filter_tag_name_namespace('description', NS['dc']),
             recursive=False)])) or '',
 
-        #orgauth=list(_get_org_auth(dc)),
-        
-
         # Todo! Using only the first entry, for now
         #owner=first([a.get('resource') for a in dc('rightsHolder', recursive=False)]) or '',
 
@@ -127,12 +115,6 @@ def dc_metadata_reader(xml):
              [dict(id=pid, provider=_get_provider(bs), type='version') for pid in _get_version_pid(dc)] +
              [dict(id=pid, provider=_get_provider(bs), type='metadata') for pid in _get_metadata_pid(dc)],
 
-        # Todo! Using only the first entry, for now
-        #project_funder=first(project_funder) or '',
-        #project_funding=first(project_funding) or '',
-        #project_homepage=first(project_homepage) or '',
-        #project_name=first(project_name) or '',
-        
         agent=[dict(role='author', name=orgauth.get('value', ''), id='', organisation=orgauth.get('org', ''), URL='', fundingid='') for orgauth in _get_org_auth(dc)] +
               [dict(role='funder', name=first(project_funder) or '', id=first(project_name) or '', URL=first(project_homepage) or '', fundingid=first(project_funding) or '',)] +
               [dict(role='owner', name=first([a.get('resource') for a in dc('rightsHolder', recursive=False)]) or '', id='', organisation='', URL='', fundingid='')],
@@ -157,7 +139,7 @@ def dc_metadata_reader(xml):
     )
     if not unified['language']:
         unified['langdis'] = 'True'
-        
+
     #if not unified['project_name']:
     #    unified['projdis'] = 'True'
 
