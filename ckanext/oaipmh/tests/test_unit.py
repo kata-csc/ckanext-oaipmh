@@ -1,11 +1,6 @@
 # coding: utf-8
 #
 # pylint: disable=no-self-use, missing-docstring, too-many-public-methods, invalid-name
-import json
-import os
-from ckan import model
-from ckan.logic import get_action
-
 """
 Unit tests for OAI-PMH harvester.
 """
@@ -24,16 +19,6 @@ import ckanext.oaipmh.oai_dc_reader as dcr
 
 FIXTURE_HELDA = "ckanext-oaipmh/ckanext/oaipmh/test_fixtures/helda_oai_dc.xml"
 FIXTURE_IDA = "ckanext-oaipmh/ckanext/oaipmh/test_fixtures/oai-pmh.xml"
-
-class _FakeHarvestObject():
-    def __init__(self, content, identification):
-        self.content = content
-        self.id = identification
-        self.guid = self.id
-
-    def add(self):
-        pass
-
 
 class TestOAIPMHHarvester(TestCase):
 
@@ -63,18 +48,7 @@ class TestOAIPMHHarvester(TestCase):
         self.assertRaises(Exception, self.harvester.fetch_stage, (None))
 
     def test_import_stage(self):
-        model.User(name='harvest', sysadmin=True).save()
-        get_action('organization_create')({'user': 'harvest'}, {'name': 'test'})
-
-        for name in ('helda_4721.json',):
-            with open(os.path.join("ckanext-oaipmh/ckanext/oaipmh/test_fixtures", name)) as source:
-                content = json.loads(source.read())
-                content['unified']['owner_org'] = 'test'
-                content = json.dumps(content)
-
-            harvest_object = _FakeHarvestObject(content, 'test_id')
-            self.harvester.import_stage(harvest_object)
-
+        self.assertRaises(Exception, self.harvester.fetch_stage, (None))
 
     def test_validate_config_valid(self):
         config = '{"from": "2014-03-03", "limit": 5}'
