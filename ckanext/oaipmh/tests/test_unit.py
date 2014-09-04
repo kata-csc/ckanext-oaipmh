@@ -15,10 +15,30 @@ import ckanext.harvest.model as harvest_model
 import ckanext.kata.model as kata_model
 from ckanext.oaipmh.importformats import create_metadata_registry
 import ckanext.oaipmh.oai_dc_reader as dcr
+from ckanext.oaipmh.oai_dc_reader import dc_metadata_reader
+import lxml.etree
+import os
+from ckan import model
+from ckan.logic import get_action
+import json
 
 
 FIXTURE_HELDA = "ckanext-oaipmh/ckanext/oaipmh/test_fixtures/helda_oai_dc.xml"
 FIXTURE_IDA = "ckanext-oaipmh/ckanext/oaipmh/test_fixtures/oai-pmh.xml"
+
+class _FakeHarvestSource():
+    def __init__(self, config):
+        self.config = json.dumps(config)
+
+class _FakeHarvestObject():
+    def __init__(self, content, identification, config):
+        self.content = content
+        self.id = identification
+        self.guid = self.id
+        self.source = _FakeHarvestSource(config)
+
+    def add(self):
+        pass
 
 class TestOAIPMHHarvester(TestCase):
 
@@ -48,7 +68,24 @@ class TestOAIPMHHarvester(TestCase):
         self.assertRaises(Exception, self.harvester.fetch_stage, (None))
 
     def test_import_stage(self):
-        self.assertRaises(Exception, self.harvester.fetch_stage, (None))
+        assert not self.harvester.import_stage(None)
+
+    def _get_fixture(self, filename):
+        return os.path.join(os.path.dirname(__file__), "..", "test_fixtures", filename)
+
+    def manual_test_import_stage(self):
+        model.User(name='harvest', sysadmin=True).save()
+        get_action('organization_create')({'user': 'harvest'}, {'name': 'test'})
+
+        tree = lxml.etree.parse(self._get_fixture('ida.xml'))
+        record = tree.xpath('/oai:OAI-PMH/*/oai:record', namespaces={'oai': 'http://www.openarchives.org/OAI/2.0/'})[0]
+
+        metadata = dc_metadata_reader('ida')(record)
+        metadata['unified']['owner_org'] = "test"
+        harvest_object = _FakeHarvestObject(json.dumps(metadata.getMap()), "test_id", {'type': 'ida'})
+        self.harvester.import_stage(harvest_object)
+        package = model.Session.query(model.Package).all()[0]
+        self.assertTrue('direct_download' not in package.notes)
 
     def test_validate_config_valid(self):
         config = '{"from": "2014-03-03", "limit": 5}'
@@ -96,7 +133,7 @@ class TestOAIDCReaderHelda(TestCase):
         Test reading a whole file
         '''
 
-        metadata = dcr.dc_metadata_reader(etree.fromstring(self.xml))
+        metadata = dcr.dc_metadata_reader('default')(etree.fromstring(self.xml))
 
         assert metadata
 
@@ -179,7 +216,7 @@ class TestOAIDCReaderHelda(TestCase):
                            'type': 'dataset',
                            'version': u'2005-08-08'}
 
-        metadata = dcr.dc_metadata_reader(etree.fromstring(self.xml))
+        metadata = dcr.dc_metadata_reader('default')(etree.fromstring(self.xml))
         assert metadata
 
         data_dict = metadata['unified']
@@ -237,7 +274,7 @@ class TestOAIDCReaderIda(TestCase):
         Test reading a whole file
         '''
 
-        metadata = dcr.dc_metadata_reader(etree.fromstring(self.xml))
+        metadata = dcr.dc_metadata_reader('default')(etree.fromstring(self.xml))
 
         assert metadata
 

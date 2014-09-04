@@ -23,130 +23,160 @@ NS = {
 
 # TODO: Change this file to class structure to allow harvester to set values also with OAI-PMH verb 'Identify'.
 
-def dc_metadata_reader(xml):
-    '''Read metadata in oai_dc schema
+def dc_metadata_reader(harvest_type):
+    """ Get correct reader for given harvest_type. Currently supports 'ida' or 'default'. """
+    def method(xml):
+        reader_class = {u'ida': IdaDcMetadataReader}.get(unicode(harvest_type).lower(), DefaultDcMetadataReader)
+        reader = reader_class(xml)
+        return reader.read()
+    return method
 
-        This function takes oai_dc metadata as an lxml.etree.Element
-        object, and returns the same metadata as a dictionary, with
-        central TTA elements picked to format-independent keys.
 
-        :param xml: oai_dc metadata
-        :type xml: lxml.etree.Element instance
-        :returns: a metadata dictionary
-        :rtype: a hash from string to any value
-        '''
+class DcMetadataReader():
+    def __init__(self, xml):
+        """ Create new instanse from given XML element. """
+        self.xml = xml
+        self.bs = bs4.BeautifulSoup(lxml.etree.tostring(self.xml), 'xml')
+        self.dc = self.bs.metadata.dc
 
-    # TODO: Return Nones rather than empty strings
+    def read(self):
+        """ Parse metadata and return metadata (oaipmh.common.Metadata) with unified dictionty. """
+        unified = self._read()
+        result = xml_reader(self.xml).getMap()
+        result['unified'] = unified
+        return oc.Metadata(result)
 
-    # Populate a BeautifulSoup object
-    bs = bs4.BeautifulSoup(lxml.etree.tostring(xml), 'xml')
-    dc = bs.metadata.dc
+    def _skip_note(self, note):
+        return False
 
-    project_funder, project_funding, project_name, project_homepage = _get_project_stuff(dc) or ('', '', '', '')
-    #project_funder, project_funding, project_name, project_homepage = ('', '', '', '')
+    def _read_notes(self):
+        return '\r\n\r\n'.join(sorted([a.string for a in self.dc(_filter_tag_name_namespace('description', NS['dc']),
+                                                                 recursive=False) if not self._skip_note(a)])) or ''
 
-    # Todo! This needs to be improved to use also simple-dc
-    # dc(filter_tag_name_namespace('publisher', ns['dc']), recursive=False)
-    maintainer, maintainer_email, contact_phone, contact_URL = _get_maintainer_stuff(dc) or ('', '', '', '')
+    def _get_maintainer_stuff(self):
+        def ida():
+            for a in self.dc(_filter_tag_name_namespace(name='publisher', namespace=NS['dct']), recursive=False):
+                for b in a(recursive=False):
+                    n = b.find('name').string if b.find('name') else ''
+                    m = b.mbox.get('resource', '') if b.mbox else ''
+                    p = b.phone.get('resource', '') if b.phone else ''
+                    h = b.get('about', '')
+                    yield (n, m, p, h)
 
-    availability, license_id, license_url, access_application_url = _get_rights(dc) or ('', '', '', '')
+        return zip(*ida()) if first(ida()) else None
 
-    # data_pids = map(urllib.quote_plus, _get_data_pids(dc))      # Must be URL encoded for package.name
-    data_pids = _get_data_pids(dc)
+    def _read(self):
+        project_funder, project_funding, project_name, project_homepage = _get_project_stuff(self.dc) or ('', '', '', '')
 
-    # Create a unified internal harvester format dict
-    unified = dict(
-        # ?=dc('source', recursive=False),
-        # ?=dc('relation', recursive=False),
-        # ?=dc('type', recursive=False),
+        # Todo! This needs to be improved to use also simple-dc
+        # dc(filter_tag_name_namespace('publisher', ns['dc']), recursive=False)
+        maintainer, maintainer_email, contact_phone, contact_URL = self._get_maintainer_stuff() or ('', '', '', '')
 
-        access_application_URL=access_application_url or '',
+        availability, license_id, license_url, access_application_url = _get_rights(self.dc) or ('', '', '', '')
 
-        # Todo! Implement
-        access_request_URL='',
+        data_pids = _get_data_pids(self.dc)
 
-        algorithm=first(_get_algorithm(dc)) or '',
+        # Create a unified internal harvester format dict
+        unified = dict(
+            # ?=dc('source', recursive=False),
+            # ?=dc('relation', recursive=False),
+            # ?=dc('type', recursive=False),
 
-        # TODO: Handle availabilities better
-        availability=availability or 'through_provider' if first(_get_download(dc)) else '',
+            access_application_URL=access_application_url or '',
 
-        checksum=_get_checksum(dc) or '',
+            # Todo! Implement
+            access_request_URL='',
 
-        direct_download_URL=first(_get_download(dc)) or '',
+            algorithm=first(_get_algorithm(self.dc)) or '',
 
-        # Todo! Implement
-        discipline='',
+            # TODO: Handle availabilities better
+            availability=availability or 'through_provider' if first(_get_download(self.dc)) else '',
 
-        # Todo! Should be possible to implement with QDC, but not with OAI_DC
-        # evdescr=[],
-        # evtype=[],
-        # evwhen=[],
-        # evwho=[],
+            checksum=_get_checksum(self.dc) or '',
 
-        # Todo! Implement
-        geographic_coverage='',
+            direct_download_URL=first(_get_download(self.dc)) or '',
 
-        langtitle=[dict(lang=a.get('xml:lang', ''), value=a.string) for a in dc('title', recursive=False)],
+            # Todo! Implement
+            discipline='',
 
-        language=','.join(sorted([a.string for a in dc('language', recursive=False)])),
+            # Todo! Should be possible to implement with QDC, but not with OAI_DC
+            # evdescr=[],
+            # evtype=[],
+            # evwhen=[],
+            # evwho=[],
 
-        license_URL=license_url or '',
-        license_id=license_id or 'notspecified',
+            # Todo! Implement
+            geographic_coverage='',
 
-        # Todo! Using only the first entry, for now
-        contact=[dict(name=first(maintainer) or '', email=first(maintainer_email) or '', 
-                      URL=first(contact_URL) or '', phone=first(contact_phone) or '')],
+            langtitle=[dict(lang=a.get('xml:lang', ''), value=a.string) for a in self.dc('title', recursive=False)],
 
-        # Todo! IDA currently doesn't produce this, maybe in future
-        # dc('hasFormat', recursive=False)
-        mimetype=first([a.string for a in dc('format', text=re.compile('/'), recursive=False)]) or '',
+            language=','.join(sorted([a.string for a in self.dc('language', recursive=False)])),
 
-        name=urllib.quote_plus(first(data_pids)) or '',
-        # name=first(map(pf.partial(urllib.quote_plus, safe=':'), get_data_pids(dc))) or '',
+            license_URL=license_url or '',
+            license_id=license_id or 'notspecified',
 
-        notes='\r\n\r\n'.join(sorted([a.string for a in dc(
-            _filter_tag_name_namespace('description', NS['dc']),
-            recursive=False)])) or '',
+            # Todo! Using only the first entry, for now
+            contact=[dict(name=first(maintainer) or '', email=first(maintainer_email) or '',
+                          URL=first(contact_URL) or '', phone=first(contact_phone) or '')],
 
-        # Todo! Using only the first entry, for now
-        #owner=first([a.get('resource') for a in dc('rightsHolder', recursive=False)]) or '',
+            # Todo! IDA currently doesn't produce this, maybe in future
+            # dc('hasFormat', recursive=False)
+            mimetype=first([a.string for a in self.dc('format', text=re.compile('/'), recursive=False)]) or '',
 
-        pids=[dict(id=pid, provider=_get_provider(bs), type='data') for pid in data_pids] +
-             [dict(id=pid, provider=_get_provider(bs), type='version') for pid in _get_version_pid(dc)] +
-             [dict(id=pid, provider=_get_provider(bs), type='metadata') for pid in _get_metadata_pid(dc)],
+            name=urllib.quote_plus(first(data_pids)) or '',
+            # name=first(map(pf.partial(urllib.quote_plus, safe=':'), get_data_pids(dc))) or '',
 
-        agent=[dict(role='author', name=orgauth.get('value', ''), id='', organisation=orgauth.get('org', ''), URL='', fundingid='') for orgauth in _get_org_auth(dc)] +
-              [dict(role='funder', name=first(project_funder) or '', id=first(project_name) or '', URL=first(project_homepage) or '', fundingid=first(project_funding) or '',)] +
-              [dict(role='owner', name=first([a.get('resource') for a in dc('rightsHolder', recursive=False)]) or '', id='', organisation='', URL='', fundingid='')],
+            notes=self._read_notes(),
 
-        tag_string=','.join(sorted([a.string for a in dc('subject', recursive=False)])) or '',
+            # Todo! Using only the first entry, for now
+            # owner=first([a.get('resource') for a in dc('rightsHolder', recursive=False)]) or '',
 
-        # Todo! Implement if possible
-        temporal_coverage_begin='',
-        temporal_coverage_end='',
+            pids=[dict(id=pid, provider=_get_provider(self.bs), type='data') for pid in data_pids] +
+                 [dict(id=pid, provider=_get_provider(self.bs), type='version') for pid in _get_version_pid(self.dc)] +
+                 [dict(id=pid, provider=_get_provider(self.bs), type='metadata') for pid in _get_metadata_pid(self.dc)],
 
-        through_provider_URL=first(_get_download(dc)) or '',
+            agent=[dict(role='author', name=orgauth.get('value', ''), id='', organisation=orgauth.get('org', ''), URL='', fundingid='') for orgauth in _get_org_auth(self.dc)] +
+                  [dict(role='funder', name=first(project_funder) or '', id=first(project_name) or '', URL=first(project_homepage) or '', fundingid=first(project_funding) or '',)] +
+                  [dict(role='owner', name=first([a.get('resource') for a in self.dc('rightsHolder', recursive=False)]) or '', id='', organisation='', URL='', fundingid='')],
 
-        type='dataset',
+            tag_string=','.join(sorted([a.string for a in self.dc('subject', recursive=False)])) or '',
 
-        # Todo! This should be more exactly picked
-        version=(dc.modified or dc.date).string if (dc.modified or dc.date) else '',
-        # version=dc(
-        #     partial(filter_tag_name_namespace, 'modified', ns['dct']), recursive=False)[0].string or dc(
-        #         partial(filter_tag_name_namespace, 'date', ns['dc']), recursive=False)[0].string,
+            # Todo! Implement if possible
+            temporal_coverage_begin='',
+            temporal_coverage_end='',
 
-        # version_PID=first(_get_version_pid(dc)) or '',
-    )
-    if not unified['language']:
-        unified['langdis'] = 'True'
+            through_provider_URL=first(_get_download(self.dc)) or '',
 
-    #if not unified['project_name']:
-    #    unified['projdis'] = 'True'
+            type='dataset',
 
-    result = xml_reader(xml).getMap()
-    result['unified'] = unified
+            # Todo! This should be more exactly picked
+            version=(self.dc.modified or self.dc.date).string if (self.dc.modified or self.dc.date) else '',
+            # version=dc(
+            #     partial(filter_tag_name_namespace, 'modified', ns['dct']), recursive=False)[0].string or dc(
+            #         partial(filter_tag_name_namespace, 'date', ns['dc']), recursive=False)[0].string,
 
-    return oc.Metadata(result)
+            # version_PID=first(_get_version_pid(dc)) or '',
+        )
+        if not unified['language']:
+            unified['langdis'] = 'True'
+
+        # if not unified['project_name']:
+        #    unified['projdis'] = 'True'
+        return unified
+
+class IdaDcMetadataReader(DcMetadataReader):
+    def _skip_note(self, note):
+        """ Skip directo_download descriptions """
+        return not note or 'direct_download' in str(note)
+
+    def _get_maintainer_stuff(self):
+        """ IDA does not provide valid url for maintainer. Instead it might gives something like 'person'. This omits the URL data. """
+        maintainer, maintainer_email, contact_phone, _contact_URL = DcMetadataReader._get_maintainer_stuff(self) or ('', '', '', '')
+        return maintainer, maintainer_email, contact_phone, ''
+
+
+class DefaultDcMetadataReader(DcMetadataReader):
+    pass
 
 
 @pf.partial
@@ -184,19 +214,6 @@ def _get_project_stuff(tag_tree):
                 n = a.Project.find('name').string if a.Project.find('name') else ''
                 m = a.Project.get('about', '')
                 yield tuple(p) + (n,) + (m,)
-
-    return zip(*ida()) if first(ida()) else None
-
-
-def _get_maintainer_stuff(tag_tree):
-    def ida():
-        for a in tag_tree(_filter_tag_name_namespace(name='publisher', namespace=NS['dct']), recursive=False):
-            for b in a(recursive=False):
-                n = b.find('name').string if b.find('name') else ''
-                m = b.mbox.get('resource', '') if b.mbox else ''
-                p = b.phone.get('resource', '') if b.phone else ''
-                h = b.get('about', '')
-                yield (n, m, p, h)
 
     return zip(*ida()) if first(ida()) else None
 
@@ -351,7 +368,6 @@ def _get_provider(tag_tree):
     provider = None
     try:
         for ident in tag_tree('identifier', recursive=True):
-            print ident
             if 'helda.helsinki.fi' in str(ident.contents[0]):
                 provider = u'http://helda.helsinki.fi/oai/request'
                 break

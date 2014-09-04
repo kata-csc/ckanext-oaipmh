@@ -28,6 +28,18 @@ class OAIPMHHarvester(HarvesterBase):
     OAI-PMH Harvester
     '''
 
+    def _get_configuration(self, harvest_job):
+        configuration = {}
+        if harvest_job.source.config:
+            log.debug('Config: %s' % harvest_job.source.config)
+            try:
+                configuration = json.loads(harvest_job.source.config)
+            except ValueError as e:
+                self._save_gather_error('Gather: Unable to decode config from: {c}, {e}'.format(
+                    e=e, c=harvest_job.source.config), harvest_job)
+                raise
+        return configuration
+
     def info(self):
         '''
         Harvesting implementations must provide this method, which will return a
@@ -97,6 +109,7 @@ class OAIPMHHarvester(HarvesterBase):
             dj = json.loads(config)
             validate_param(dj, 'set', list)
             validate_param(dj, 'limit', int)
+            validate_param(dj, 'type', basestring)
             validate_date_param(dj, 'until', basestring)
             validate_date_param(dj, 'from', basestring)
         else:
@@ -174,9 +187,11 @@ class OAIPMHHarvester(HarvesterBase):
         log.debug('Entering gather_stage()')
 
         log.debug('Harvest source: {s}'.format(s=harvest_job.source.url))
-
+        
+        config = self._get_configuration(harvest_job)
+        harvest_type = config.get('type', 'default')
         # Create a OAI-PMH Client
-        registry = importformats.create_metadata_registry()
+        registry = importformats.create_metadata_registry(harvest_type)
         log.debug('Registry: {r}'.format(r=registry))
         client = oaipmh.client.Client(harvest_job.source.url, registry)
         log.debug('Client: {c}'.format(c=client))
@@ -191,18 +206,8 @@ class OAIPMHHarvester(HarvesterBase):
             md_format = 'oai_dc'
         log.debug('Metadata format: {mf}'.format(mf=md_format))
 
-        # Decode JSON formatted config
-        set_ids = []
-        config = {}
-        if harvest_job.source.config:
-            log.debug('Config: %s' % harvest_job.source.config)
-            try:
-                config = json.loads(harvest_job.source.config)
-            except ValueError as e:
-                self._save_gather_error('Gather: Unable to decode config from: {c}, {e}'.format(
-                    e=e, c=harvest_job.source.config), harvest_job)
-                raise
-            set_ids = config.get('set', [])
+        
+        set_ids = config.get('set', [])
         log.debug('Sets in config: %s' % set_ids)
 
         log.debug('listSets(): {s}'.format(s=list(client.listSets())))
@@ -284,7 +289,9 @@ class OAIPMHHarvester(HarvesterBase):
         try:
             # Todo! This should not be duplicated here. Should be some class' attributes
             # Create a OAI-PMH Client
-            registry = importformats.create_metadata_registry()
+            config = self._get_configuration(harvest_object)
+            harvest_type = config.get('type', 'default')
+            registry = importformats.create_metadata_registry(harvest_type)
             client = oaipmh.client.Client(harvest_object.job.source.url, registry)
             # Choose best md_format from md_formats, but let's use 'oai_dc' for now
             md_format = 'oai_dc'
@@ -356,8 +363,13 @@ class OAIPMHHarvester(HarvesterBase):
         try:
             package_dict['title'] = ''
             # pprint.pprint(package_dict)
-            schema = ckanext.kata.plugin.KataPlugin.update_package_schema_oai_dc() if pkg \
-                else ckanext.kata.plugin.KataPlugin.create_package_schema_oai_dc()
+            config = self._get_configuration(harvest_object)
+            if config.get('type', 'default') != 'ida':
+                schema = ckanext.kata.plugin.KataPlugin.update_package_schema_oai_dc() if pkg \
+                    else ckanext.kata.plugin.KataPlugin.create_package_schema_oai_dc()
+            else:
+                schema = ckanext.kata.plugin.KataPlugin.update_package_schema_oai_dc_ida() if pkg \
+                    else ckanext.kata.plugin.KataPlugin.create_package_schema_oai_dc_ida()
             # schema['xpaths'] = [ignore_missing, ckanext.kata.converters.xpath_to_extras]
             result = self._create_or_update_package(package_dict,
                                                     harvest_object,

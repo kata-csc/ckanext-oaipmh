@@ -158,7 +158,7 @@ def nrd_metadata_reader(xml):
         return oc.Metadata(result)
 
 
-def create_metadata_registry():
+def create_metadata_registry(harvest_type=None):
         '''Return new metadata registry with all common metadata readers
 
         The readers currently implemented are for metadataPrefixes
@@ -168,7 +168,7 @@ def create_metadata_registry():
         :rtype: oaipmh.metadata.MetadataRegistry
         '''
         registry = om.MetadataRegistry()
-        registry.registerReader('oai_dc', dc_metadata_reader)
+        registry.registerReader('oai_dc', dc_metadata_reader(harvest_type or 'default'))
         registry.registerReader('nrd', nrd_metadata_reader)
         registry.registerReader('rdf', rdf_reader)
         registry.registerReader('xml', xml_reader)
