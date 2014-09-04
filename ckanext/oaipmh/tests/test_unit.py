@@ -73,7 +73,7 @@ class TestOAIPMHHarvester(TestCase):
     def _get_fixture(self, filename):
         return os.path.join(os.path.dirname(__file__), "..", "test_fixtures", filename)
 
-    def manual_test_import_stage(self):
+    def manual_import_stage(self):
         model.User(name='harvest', sysadmin=True).save()
         get_action('organization_create')({'user': 'harvest'}, {'name': 'test'})
 
