@@ -12,12 +12,13 @@ from dateutil.parser import parse as dp
 import importformats
 
 from ckan.model import Session, Package
-from ckan.lib.navl.validators import ignore_missing
+from ckan.logic import get_action, NotFound
+from ckan import model
+
 from ckanext.harvest.model import HarvestJob, HarvestObject
 from ckanext.harvest.harvesters.base import HarvesterBase
 import ckanext.kata.utils
 import ckanext.kata.plugin
-import ckanext.kata.converters
 
 log = logging.getLogger(__name__)
 
@@ -28,16 +29,34 @@ class OAIPMHHarvester(HarvesterBase):
     '''
 
     def _get_configuration(self, harvest_job):
+        """ Parse configuration from given harvest object """
         configuration = {}
         if harvest_job.source.config:
-            log.debug('Config: %s' % harvest_job.source.config)
+            log.debug('Config: %s', harvest_job.source.config)
             try:
                 configuration = json.loads(harvest_job.source.config)
             except ValueError as e:
-                self._save_gather_error('Gather: Unable to decode config from: {c}, {e}'.format(
-                    e=e, c=harvest_job.source.config), harvest_job)
+                self._save_gather_error('Gather: Unable to decode config from: {c}, {e}'.
+                                        format(e=e, c=harvest_job.source.config), harvest_job)
                 raise
         return configuration
+
+    def _create_or_update_package(self, package_dict, harvest_object, schema=None, s_schema=None):
+        """ Add prevent-recreate functionality """
+        configuration = self._get_configuration(harvest_object)
+
+        recreate = configuration.get('recreate', configuration.get('type') != 'ida')
+        if not recreate:
+            try:
+                package_id = package_dict['id']
+                get_action('package_show')({'model': model, 'session': model.Session, 'user': 'harvest'}, {'id': package_id})
+                log.debug("Not re-creating package: %s", package_id)
+                return True
+            except NotFound:
+                pass
+
+        return HarvesterBase._create_or_update_package(self, package_dict, harvest_object, schema=schema, s_schema=s_schema)
+
 
     def info(self):
         '''

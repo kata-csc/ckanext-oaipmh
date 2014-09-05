@@ -50,6 +50,9 @@ class _FakeHarvestObject():
     def add(self):
         pass
 
+    def save(self):
+        pass
+
 class TestOAIPMHHarvester(TestCase):
 
     @classmethod
@@ -80,21 +83,33 @@ class TestOAIPMHHarvester(TestCase):
     def test_import_stage(self):
         assert not self.harvester.import_stage(None)
 
+    def _run_import(self, xml, ida, config=None):
+        if not model.User.get('harvest'):
+            model.User(name='harvest', sysadmin=True).save()
+        if not model.Group.get('test'):
+            get_action('organization_create')({'user': 'harvest'}, {'name': 'test'})
+
+        record = _get_record(xml)
+        harvest_type = 'ida' if ida else 'default'
+        if config is None:
+            config = {'type': harvest_type}
+
+        metadata = dc_metadata_reader(harvest_type)(record)
+        metadata['unified']['owner_org'] = "test"
+        harvest_object = _FakeHarvestObject(json.dumps(metadata.getMap()), "test_id", config)
+
+        self.harvester.import_stage(harvest_object)
+
+    def _get_single_package(self):
+        packages = model.Session.query(model.Package).filter_by(state=model.State.ACTIVE)
+        self.assertEquals(len(list(packages)), 1)
+        return packages[0]
+
     def manual_import_stage(self):
         """ Manual test for import stage. Currently Jenkins fails this test so we do not run this automatically. """
-        model.User(name='harvest', sysadmin=True).save()
-        get_action('organization_create')({'user': 'harvest'}, {'name': 'test'})
-
         for xml_path, ida in ('ida.xml', True), ('helda.xml', False):
-            record = _get_record(xml_path)
-            harvest_type = 'ida' if ida else 'default'
-
-            metadata = dc_metadata_reader(harvest_type)(record)
-            metadata['unified']['owner_org'] = "test"
-            harvest_object = _FakeHarvestObject(json.dumps(metadata.getMap()), "test_id", {'type': harvest_type})
-
-            self.harvester.import_stage(harvest_object)
-            package = model.Session.query(model.Package).all()[0]
+            self._run_import(xml_path, ida)
+            package = self._get_single_package()
             if ida:
                 self.assertTrue('direct_download' not in package.notes)
                 self.assertEquals(package.extras.get('availability', None), 'direct_download')
@@ -103,6 +118,33 @@ class TestOAIPMHHarvester(TestCase):
 
             package.delete()
             model.repo.commit()
+
+    def manual_import_stage_recreate(self):
+        """ Manual test for recreating harvested dataset multiple times """
+
+        for xml, recreate in ('ida.xml', False), ('ida2.xml', False), ('ida2.xml', True):
+            configuration = {'type': 'ida'}
+            if recreate:
+                configuration['recreate'] = True
+            self._run_import(xml, True, configuration)
+            package = self._get_single_package()
+            if recreate:
+                self.assertEquals(package.extras.get('availability', None), 'MODIFIED')
+            else:
+                self.assertEquals(package.extras.get('availability', None), 'direct_download')
+
+        package.delete()
+        model.repo.commit()
+
+        for xml, expected, recreate in ('helda.xml', 'ORIGINAL', True), ('helda2.xml', 'MODIFIED', True), ('helda.xml', 'MODIFIED', False):
+            configuration = {'type': 'default'}
+            if not recreate:
+                configuration['recreate'] = False
+
+            self._run_import(xml, False, configuration)
+            package = self._get_single_package()
+            self.assertEquals(package.extras.get('agent_1_name', None), expected)
+
 
     def test_validate_config_valid(self):
         config = '{"from": "2014-03-03", "limit": 5}'
@@ -304,7 +346,7 @@ class TestOAIDCReaderIda(TestCase):
         for reader_class, xml, ida in tests:
             reader = reader_class(_get_record(xml))
             # Testing private method. This can be removed when manual tests start to work.
-            pid = reader._get_version_pid() # pylint: disable=W0212
+            pid = reader._get_version_pid()  # pylint: disable=W0212
             if ida:
                 self.assertTrue(bool(pid))
             else:
