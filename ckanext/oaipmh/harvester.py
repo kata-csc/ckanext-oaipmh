@@ -3,7 +3,6 @@
 
 import logging
 import json
-import pprint
 from itertools import islice
 
 import oaipmh.client
@@ -348,7 +347,7 @@ class OAIPMHHarvester(HarvesterBase):
         log.debug('Content (packed): %s' % harvest_object.content)
         content = json.loads(harvest_object.content)
         log.debug('Content (unpacked): %s' % content)
-        # pprint.pprint(content)
+        # import pprint; pprint.pprint(content)
 
         package_dict = content.pop('unified')
         package_dict['xpaths'] = content
@@ -362,7 +361,7 @@ class OAIPMHHarvester(HarvesterBase):
 
         try:
             package_dict['title'] = ''
-            # pprint.pprint(package_dict)
+            # import import pprint; pprint.pprint(package_dict)
             config = self._get_configuration(harvest_object)
             if config.get('type', 'default') != 'ida':
                 schema = ckanext.kata.plugin.KataPlugin.update_package_schema_oai_dc() if pkg \

@@ -30,6 +30,7 @@
         <dc:date>2014-01-08T12:53:45Z</dc:date>
         <dc:description>availability: direct_download</dc:description>
         <dc:description>Identifier.version: urn:nbn:fi:csc-ida2014010800372v</dc:description>
+        <dc:description>äåðþr€×ʒ</dc:description>
         <dct:hasFormat>
          <fp:File rdf:about="https://sui.csc.fi/my-files/ida/sa/smear/data/smear/database/HYY/HYY_jotain.csv" >
           <fp:size>632262</fp:size>

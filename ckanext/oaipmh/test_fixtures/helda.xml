@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/ http://www.openarchives.org/OAI/2.0/OAI-PMH.xsd">
+    <responseDate>2014-09-05T11:21:57Z</responseDate>
+    <request verb="GetRecord" metadataPrefix="oai_dc" identifier="oai:helda.helsinki.fi:10138/8487">http://helda.helsinki.fi/oai/request</request>
+    <GetRecord>
+        <record>
+            <header>
+                <identifier>oai:helda.helsinki.fi:10138/8487</identifier>
+                <datestamp>2010-09-29T21:00:31Z</datestamp>
+                <setSpec>hdl_10138_6901</setSpec>
+            </header>
+            <metadata>
+                <oai_dc:dc xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
+                    <dc:title>Kansantanssiesitys, kuva 11</dc:title>
+                    <dc:creator>Helsingin yliopisto, kulttuurien tutkimuksen laitos, kansatiede</dc:creator>
+                    <dc:subject>Suomi</dc:subject>
+                    <dc:subject>Uusimaa</dc:subject>
+                    <dc:subject>Helsinki</dc:subject>
+                    <dc:subject>Seurasaari</dc:subject>
+                    <dc:subject>1970-luku</dc:subject>
+                    <dc:subject>juhannus</dc:subject>
+                    <dc:subject>kansantanssi</dc:subject>
+                    <dc:subject>kansallispuvut</dc:subject>
+                    <dc:description>Kansantanssijat esiintyvät juhlakentällä Seurasaaren juhannusjuhlassa.</dc:description>
+                    <dc:publisher>Helsingin yliopisto, kulttuurien tutkimuksen laitos, kansatiede</dc:publisher>
+                    <dc:contributor>Launis, Marja</dc:contributor>
+                    <dc:date>1974-06-21</dc:date>
+                    <dc:type>image</dc:type>
+                    <dc:format>image/jpeg</dc:format>
+                    <dc:identifier>http://hdl.handle.net/10138/8487</dc:identifier>
+                    <dc:source>mv-valokuva</dc:source>
+                    <dc:relation>Kenttätyökurssi: Juhannus 1974</dc:relation>
+                    <dc:coverage>Suomi</dc:coverage>
+                    <dc:coverage>Uusimaa</dc:coverage>
+                    <dc:coverage>Helsinki</dc:coverage>
+                    <dc:coverage>Seurasaari</dc:coverage>
+                    <dc:coverage>1970-luku</dc:coverage>
+                    <dc:rights>Helsingin yliopisto, kulttuurien tutkimuksen laitos. Käyttö sallittu opetukseen ja tutkimukseen.</dc:rights>
+                </oai_dc:dc>
+            </metadata>
+        </record>
+    </GetRecord>
+</OAI-PMH>

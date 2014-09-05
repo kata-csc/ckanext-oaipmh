@@ -26,6 +26,16 @@ import json
 FIXTURE_HELDA = "ckanext-oaipmh/ckanext/oaipmh/test_fixtures/helda_oai_dc.xml"
 FIXTURE_IDA = "ckanext-oaipmh/ckanext/oaipmh/test_fixtures/oai-pmh.xml"
 
+
+def _get_fixture(filename):
+    return os.path.join(os.path.dirname(__file__), "..", "test_fixtures", filename)
+
+
+def _get_record(filename):
+    tree = lxml.etree.parse(_get_fixture(filename))
+    return tree.xpath('/oai:OAI-PMH/*/oai:record', namespaces={'oai': 'http://www.openarchives.org/OAI/2.0/'})[0]
+
+
 class _FakeHarvestSource():
     def __init__(self, config):
         self.config = json.dumps(config)
@@ -70,22 +80,29 @@ class TestOAIPMHHarvester(TestCase):
     def test_import_stage(self):
         assert not self.harvester.import_stage(None)
 
-    def _get_fixture(self, filename):
-        return os.path.join(os.path.dirname(__file__), "..", "test_fixtures", filename)
-
     def manual_import_stage(self):
+        """ Manual test for import stage. Currently Jenkins fails this test so we do not run this automatically. """
         model.User(name='harvest', sysadmin=True).save()
         get_action('organization_create')({'user': 'harvest'}, {'name': 'test'})
 
-        tree = lxml.etree.parse(self._get_fixture('ida.xml'))
-        record = tree.xpath('/oai:OAI-PMH/*/oai:record', namespaces={'oai': 'http://www.openarchives.org/OAI/2.0/'})[0]
+        for xml_path, ida in ('ida.xml', True), ('helda.xml', False):
+            record = _get_record(xml_path)
+            harvest_type = 'ida' if ida else 'default'
 
-        metadata = dc_metadata_reader('ida')(record)
-        metadata['unified']['owner_org'] = "test"
-        harvest_object = _FakeHarvestObject(json.dumps(metadata.getMap()), "test_id", {'type': 'ida'})
-        self.harvester.import_stage(harvest_object)
-        package = model.Session.query(model.Package).all()[0]
-        self.assertTrue('direct_download' not in package.notes)
+            metadata = dc_metadata_reader(harvest_type)(record)
+            metadata['unified']['owner_org'] = "test"
+            harvest_object = _FakeHarvestObject(json.dumps(metadata.getMap()), "test_id", {'type': harvest_type})
+
+            self.harvester.import_stage(harvest_object)
+            package = model.Session.query(model.Package).all()[0]
+            if ida:
+                self.assertTrue('direct_download' not in package.notes)
+                self.assertEquals(package.extras.get('availability', None), 'direct_download')
+                for key, value in (u'pids_0_id', u'urn:nbn:fi:csc-ida2014010800372v'), (u'pids_0_provider', u'ida'), (u'pids_0_type', u'version'):
+                    self.assertEquals(package.extras.get(key), value)
+
+            package.delete()
+            model.repo.commit()
 
     def test_validate_config_valid(self):
         config = '{"from": "2014-03-03", "limit": 5}'
@@ -282,10 +299,16 @@ class TestOAIDCReaderIda(TestCase):
         assert 'availability' in metadata.getMap()['unified']
 
     def test_get_version_pid(self):
-        pid = dcr._get_version_pid(self.dc)
-
-        assert pid
-        assert 'ida' in next(pid)
+        tests = ((dcr.IdaDcMetadataReader, 'ida.xml', True), (dcr.DefaultDcMetadataReader, 'helda.xml', False),
+                 (dcr.IdaDcMetadataReader, 'oai-pmh.xml', True))
+        for reader_class, xml, ida in tests:
+            reader = reader_class(_get_record(xml))
+            # Testing private method. This can be removed when manual tests start to work.
+            pid = reader._get_version_pid() # pylint: disable=W0212
+            if ida:
+                self.assertTrue(bool(pid))
+            else:
+                self.assertFalse(bool(pid))
 
     def test_get_checksum(self):
         hash = dcr._get_checksum(self.dc)

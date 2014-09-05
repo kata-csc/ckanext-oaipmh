@@ -51,7 +51,7 @@ class DcMetadataReader():
 
     def _read_notes(self):
         return '\r\n\r\n'.join(sorted([a.string for a in self.dc(_filter_tag_name_namespace('description', NS['dc']),
-                                                                 recursive=False) if not self._skip_note(a)])) or ''
+                                                                 recursive=False) if not self._skip_note(a.string)])) or ''
 
     def _get_maintainer_stuff(self):
         def ida():
@@ -65,6 +65,14 @@ class DcMetadataReader():
 
         return zip(*ida()) if first(ida()) else None
 
+    def _get_availability(self):
+        """ Get fallback availability. By default does not return any data. """
+        return []
+
+    def _get_version_pid(self):
+        """ Get version pid. By default does not return any data. """
+        return []
+
     def _read(self):
         project_funder, project_funding, project_name, project_homepage = _get_project_stuff(self.dc) or ('', '', '', '')
 
@@ -73,6 +81,8 @@ class DcMetadataReader():
         maintainer, maintainer_email, contact_phone, contact_URL = self._get_maintainer_stuff() or ('', '', '', '')
 
         availability, license_id, license_url, access_application_url = _get_rights(self.dc) or ('', '', '', '')
+        if not availability:
+            availability = first(self._get_availability())
 
         data_pids = _get_data_pids(self.dc)
 
@@ -132,7 +142,7 @@ class DcMetadataReader():
             # owner=first([a.get('resource') for a in dc('rightsHolder', recursive=False)]) or '',
 
             pids=[dict(id=pid, provider=_get_provider(self.bs), type='data') for pid in data_pids] +
-                 [dict(id=pid, provider=_get_provider(self.bs), type='version') for pid in _get_version_pid(self.dc)] +
+                 [dict(id=pid, provider=_get_provider(self.bs), type='version') for pid in self._get_version_pid()] +
                  [dict(id=pid, provider=_get_provider(self.bs), type='metadata') for pid in _get_metadata_pid(self.dc)],
 
             agent=[dict(role='author', name=orgauth.get('value', ''), id='', organisation=orgauth.get('org', ''), URL='', fundingid='') for orgauth in _get_org_auth(self.dc)] +
@@ -155,7 +165,6 @@ class DcMetadataReader():
             #     partial(filter_tag_name_namespace, 'modified', ns['dct']), recursive=False)[0].string or dc(
             #         partial(filter_tag_name_namespace, 'date', ns['dc']), recursive=False)[0].string,
 
-            # version_PID=first(_get_version_pid(dc)) or '',
         )
         if not unified['language']:
             unified['langdis'] = 'True'
@@ -167,13 +176,40 @@ class DcMetadataReader():
 class IdaDcMetadataReader(DcMetadataReader):
     def _skip_note(self, note):
         """ Skip directo_download descriptions """
-        return not note or 'direct_download' in str(note)
+        return not note or u'direct_download' in unicode(note)
 
     def _get_maintainer_stuff(self):
         """ IDA does not provide valid url for maintainer. Instead it might gives something like 'person'. This omits the URL data. """
         maintainer, maintainer_email, contact_phone, _contact_URL = DcMetadataReader._get_maintainer_stuff(self) or ('', '', '', '')
         return maintainer, maintainer_email, contact_phone, ''
 
+    def _get_description_parameters(self):
+        """ Get parameters from description tags. Format is 'key: value'.
+            If key parameter is given then filter results by that key.
+        """
+        for description in self.dc(_filter_tag_name_namespace('description', NS['dc']), recursive=False):
+            description = description.string.strip()
+            split = re.split(r'\s*:\s*', description, 1)
+            if len(split) == 2:
+                yield split
+
+    def _get_description_values(self, key):
+        for description_key, value in self._get_description_parameters():
+            if key == description_key:
+                yield value
+
+    def _get_availability(self):
+        """ Get availibility from description tags """
+        return self._get_description_values('availability')
+
+    def _get_version_pid(self):
+        '''
+        Generate results for version_PID
+
+        :param tag_tree: Metadata (dc) Tag in BeautifulSoup tree
+        :type tag_tree: bs4.Tag
+        '''
+        return self._get_description_values('Identifier.version')
 
 class DefaultDcMetadataReader(DcMetadataReader):
     pass
@@ -185,20 +221,6 @@ def _filter_tag_name_namespace(name, namespace, tag):
     Boolean filter function, for BeautifulSoup find functions, that checks tag's name and namespace
     '''
     return tag.name == name and tag.namespace == namespace
-
-
-def _get_version_pid(tag_tree):
-    '''
-    Generate results for version_PID
-
-    :param tag_tree: Metadata (dc) Tag in BeautifulSoup tree
-    :type tag_tree: bs4.Tag
-    '''
-    # IDA
-    for a in tag_tree('description', recursive=False):
-        s = re.search('Identifier.version: (.+)', a.string)
-        if s and s.group(1):
-            yield s.group(1)
 
 
 def _get_project_stuff(tag_tree):
