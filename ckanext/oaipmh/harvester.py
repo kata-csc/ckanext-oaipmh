@@ -379,15 +379,16 @@ class OAIPMHHarvester(HarvesterBase):
 
         try:
             package_dict['title'] = ''
+            package = model.Package.get(harvest_object.harvest_source_id)
+            if package and package.owner_org:
+                package_dict['owner_org'] = package.owner_org
 
             config = self._get_configuration(harvest_object)
             if config.get('type', 'default') != 'ida':
                 schema = ckanext.kata.plugin.KataPlugin.update_package_schema_oai_dc() if pkg \
                     else ckanext.kata.plugin.KataPlugin.create_package_schema_oai_dc()
             else:
-                package = model.Package.get(harvest_object.harvest_source_id)
-                if package and package.owner_org:
-                    package_dict['owner_org'] = package.owner_org
+                if package_dict.get('owner_org', False):
                     package_dict['private'] = "true"
                 schema = ckanext.kata.plugin.KataPlugin.update_package_schema_oai_dc_ida() if pkg \
                     else ckanext.kata.plugin.KataPlugin.create_package_schema_oai_dc_ida()
