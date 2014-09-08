@@ -205,7 +205,7 @@ class OAIPMHHarvester(HarvesterBase):
         log.debug('Entering gather_stage()')
 
         log.debug('Harvest source: {s}'.format(s=harvest_job.source.url))
-        
+
         config = self._get_configuration(harvest_job)
         harvest_type = config.get('type', 'default')
         # Create a OAI-PMH Client
@@ -224,7 +224,6 @@ class OAIPMHHarvester(HarvesterBase):
             md_format = 'oai_dc'
         log.debug('Metadata format: {mf}'.format(mf=md_format))
 
-        
         set_ids = config.get('set', [])
         log.debug('Sets in config: %s' % set_ids)
 
@@ -380,12 +379,16 @@ class OAIPMHHarvester(HarvesterBase):
 
         try:
             package_dict['title'] = ''
-            # import import pprint; pprint.pprint(package_dict)
+
             config = self._get_configuration(harvest_object)
             if config.get('type', 'default') != 'ida':
                 schema = ckanext.kata.plugin.KataPlugin.update_package_schema_oai_dc() if pkg \
                     else ckanext.kata.plugin.KataPlugin.create_package_schema_oai_dc()
             else:
+                package = model.Package.get(harvest_object.harvest_source_id)
+                if package and package.owner_org:
+                    package_dict['owner_org'] = package.owner_org
+                    package_dict['private'] = "true"
                 schema = ckanext.kata.plugin.KataPlugin.update_package_schema_oai_dc_ida() if pkg \
                     else ckanext.kata.plugin.KataPlugin.create_package_schema_oai_dc_ida()
             # schema['xpaths'] = [ignore_missing, ckanext.kata.converters.xpath_to_extras]

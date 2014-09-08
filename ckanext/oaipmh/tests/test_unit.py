@@ -46,6 +46,7 @@ class _FakeHarvestObject():
         self.id = identification
         self.guid = self.id
         self.source = _FakeHarvestSource(config)
+        self.harvest_source_id = None
 
     def add(self):
         pass
