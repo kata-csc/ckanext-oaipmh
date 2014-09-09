@@ -390,7 +390,7 @@ def _get_provider(tag_tree):
     provider = None
     try:
         for ident in tag_tree('identifier', recursive=True):
-            if 'helda.helsinki.fi' in str(ident.contents[0]):
+            if u'helda.helsinki.fi' in unicode(ident.contents[0]):
                 provider = u'http://helda.helsinki.fi/oai/request'
                 break
     except AttributeError as e:
@@ -399,7 +399,7 @@ def _get_provider(tag_tree):
     if not provider:
         try:
             for ident in tag_tree('identifier', recursive=True):
-                if str(ident.contents[0]).startswith(u'urn:nbn:fi:csc-ida'):
+                if unicode(ident.contents[0]).startswith(u'urn:nbn:fi:csc-ida'):
                     provider = 'ida'
                     break
 
