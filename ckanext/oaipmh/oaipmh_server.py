@@ -157,7 +157,7 @@ class CKANServer(ResumptionOAIPMH):
                     filter(PackageRevision.revision_timestamp < until).all()
             if from_ and until:
                 packages = Session.query(Package).filter(
-                    between(PackageRevision.revision_timestamp,from_,until)).\
+                    between(PackageRevision.revision_timestamp, from_, until)).\
                     all()
         else:
             group = Group.get(set)

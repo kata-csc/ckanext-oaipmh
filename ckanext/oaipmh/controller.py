@@ -48,4 +48,4 @@ class OAIPMHController(BaseController):
                 response.headers['content-type'] = 'text/xml; charset=utf-8'
                 return res
         else:
-            return render('ckanext/oaipmh/oaipmh.xhtml')
+            return render('ckanext/oaipmh/oaipmh.html')
