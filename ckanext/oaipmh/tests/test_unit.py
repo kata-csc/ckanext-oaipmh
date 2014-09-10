@@ -16,7 +16,6 @@ import ckanext.kata.model as kata_model
 from ckanext.oaipmh.importformats import create_metadata_registry
 import ckanext.oaipmh.oai_dc_reader as dcr
 from ckanext.oaipmh.oai_dc_reader import dc_metadata_reader
-import lxml.etree
 import os
 from ckan import model
 from ckan.logic import get_action
@@ -32,7 +31,7 @@ def _get_fixture(filename):
 
 
 def _get_record(filename):
-    tree = lxml.etree.parse(_get_fixture(filename))
+    tree = etree.parse(_get_fixture(filename))
     return tree.xpath('/oai:OAI-PMH/*/oai:record', namespaces={'oai': 'http://www.openarchives.org/OAI/2.0/'})[0]
 
 

@@ -155,7 +155,6 @@ class TestOaipmhServer(WsgiAppCase, TestCase):
 
                 self.assertTrue(header.xpath("string(o:identifier)", namespaces=self._namespaces) in package_identifiers)
                 self.assertTrue(header.xpath("string(o:setSpec)", namespaces=self._namespaces) in package_names)
-                self.assertTrue(metadata.xpath("string(oai_dc:dc/dc:title)", namespaces=self._namespaces) in package_names)
 
             self.assertFalse(fail_record, "No records received")
 

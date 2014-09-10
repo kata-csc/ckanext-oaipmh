@@ -12,8 +12,10 @@ from sqlalchemy import between
 
 from oaipmh.common import ResumptionOAIPMH
 from oaipmh import common
-
+from ckanext.kata import helpers
 import logging
+from ckan.logic import get_action
+from oaipmh.error import IdDoesNotExistError
 
 log = logging.getLogger(__name__)
 
@@ -25,11 +27,8 @@ class CKANServer(ResumptionOAIPMH):
         '''Return identification information for this server.
         '''
         return common.Identify(
-            repositoryName=config.get('site.title') if config.get('site.title')
-                                                    else 'repository',
-            baseURL=url_for(
-                        controller='ckanext.oaipmh.controller:OAIPMHController',
-                        action='index'),
+            repositoryName=config.get('site.title') if config.get('site.title') else 'repository',
+            baseURL=url_for(controller='ckanext.oaipmh.controller:OAIPMHController', action='index'),
             protocolVersion="2.0",
             adminEmails=[config.get('email_to')],
             earliestDatestamp=datetime(2004, 1, 1),
@@ -40,24 +39,26 @@ class CKANServer(ResumptionOAIPMH):
     def _record_for_dataset(self, dataset):
         '''Show a tuple of a header and metadata for this dataset.
         '''
+        package = get_action('package_show')({}, {'id': dataset.id})
+        maintainer = package.get('maintainer', None)
         meta = {
-                'title': [dataset.name],
-                'creator': [dataset.author] if dataset.author else None,
-                'contributor': [dataset.maintainer]
-                    if dataset.maintainer else None,
+                'title': [package.get('title', None) or package.get('name')],
+                'creator': [author['name'] for author in helpers.get_authors(package) if 'name' in author],
+                'publisher': [agent['name'] for agent in helpers.get_distributors(package) + helpers.get_contacts(package) if 'name' in agent],
+                'contributor': [maintainer] if maintainer else None,
                 'identifier': [
                     config.get('ckan.site_url') +
-                    url_for(controller="package", action='read', id=dataset.id),
-                    dataset.url if dataset.url else dataset.id],
+                    url_for(controller="package", action='read', id=package['id']),
+                    package['url'] if package.get('url', None) else package['id']],
                 'type': ['dataset'],
-                'description': [dataset.notes] if dataset.notes else None,
-                'subject': [tag.name for tag in dataset.get_tags()]
-                    if len(dataset.get_tags()) >= 1 else None,
+                'description': [package.get('notes')] if package.get('notes', None) else None,
+                'subject': [tag.get('display_name') for tag in package['tags']]
+                    if package.get('tags', None) else None,
                 'date': [dataset.metadata_created.strftime('%Y-%m-%d')]
                     if dataset.metadata_created else None,
-                'rights': [dataset.license.title if dataset.license else '']
-                    if dataset.license else None,
+                'rights': [package['license_title']] if package.get('license_title', None) else None,
         }
+
         iters = dataset.extras.items()
         meta = dict(meta.items() + iters)
         metadata = {}
@@ -68,17 +69,16 @@ class CKANServer(ResumptionOAIPMH):
                 metadata[str(key)] = [value]
             else:
                 metadata[str(key)] = value
-        return (common.Header(dataset.id,
-                              dataset.metadata_created,
-                              [dataset.name],
-                              False),
-                common.Metadata(metadata),
-                None)
+
+        return (common.Header(dataset.id, dataset.metadata_created, [dataset.name], False),
+                common.Metadata(metadata), None)
 
     def getRecord(self, metadataPrefix, identifier):
         '''Simple getRecord for a dataset.
         '''
         package = Package.get(identifier)
+        if not package:
+            raise IdDoesNotExistError("No dataset with id %s" % identifier)
         return self._record_for_dataset(package)
 
     def listIdentifiers(self, metadataPrefix, set=None, cursor=None,
@@ -92,19 +92,11 @@ class CKANServer(ResumptionOAIPMH):
                 packages = Session.query(Package).all()
             else:
                 if from_:
-                    packages = Session.query(Package).\
-                        filter(PackageRevision.revision_timestamp > from_).\
-                        all()
+                    packages = Session.query(Package).filter(PackageRevision.revision_timestamp > from_).all()
                 if until:
-                    packages = Session.query(Package).\
-                        filter(PackageRevision.revision_timestamp < until).\
-                        all()
+                    packages = Session.query(Package).filter(PackageRevision.revision_timestamp < until).all()
                 if from_ and until:
-                    packages = Session.query(Package).\
-                        filter(between(PackageRevision.revision_timestamp,
-                                       from_,
-                                       until)\
-                               ).all()
+                    packages = Session.query(Package).filter(between(PackageRevision.revision_timestamp, from_, until)).all()
         else:
             group = Group.get(set)
             if group:
@@ -116,18 +108,13 @@ class CKANServer(ResumptionOAIPMH):
                     packages = packages.\
                         filter(PackageRevision.revision_timestamp < until)
                 if from_ and until:
-                    packages = packages.filter(
-                        between(PackageRevision.revision_timestamp,
-                                from_,
-                                until))
+                    packages = packages.filter(between(PackageRevision.revision_timestamp, from_, until))
                 packages = packages.all()
         if cursor:
             packages = packages[:cursor]
         for package in packages:
-            data.append(common.Header(package.id,
-                                      package.metadata_created,
-                                      [package.name],
-                                      False))
+            data.append(common.Header(package.id, package.metadata_created, [package.name], False))
+
         return data
 
     def listMetadataFormats(self):
@@ -157,26 +144,19 @@ class CKANServer(ResumptionOAIPMH):
                     filter(PackageRevision.revision_timestamp < until).all()
             if from_ and until:
                 packages = Session.query(Package).filter(
-                    between(PackageRevision.revision_timestamp, from_, until)).\
-                    all()
+                    between(PackageRevision.revision_timestamp, from_, until)).all()
         else:
             group = Group.get(set)
             if group:
                 packages = group.packages(return_query=True)
                 if from_ and not until:
                     packages = packages.\
-                        filter(PackageRevision.revision_timestamp > from_).\
-                        all()
+                        filter(PackageRevision.revision_timestamp > from_).all()
                 if until and not from_:
                     packages = packages.\
-                        filter(PackageRevision.revision_timestamp < until).\
-                        all()
+                        filter(PackageRevision.revision_timestamp < until).all()
                 if from_ and until:
-                    packages = packages.filter(
-                            between(PackageRevision.revision_timestamp,
-                                    from_,
-                                    until))\
-                                    .all()
+                    packages = packages.filter(between(PackageRevision.revision_timestamp, from_, until)).all()
         if cursor:
             packages = packages[:cursor]
         for res in packages:
