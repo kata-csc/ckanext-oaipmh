@@ -90,6 +90,14 @@ class TestOaipmhServer(WsgiAppCase, TestCase):
                    'oai_dc': "http://www.openarchives.org/OAI/2.0/oai_dc/",
                    'dc': "http://purl.org/dc/elements/1.1/"}
 
+    @classmethod
+    def setup_class(cls):
+        '''
+        Setup database
+        '''
+        harvest_model.setup()
+        kata_model.setup()
+
     def _get_single_result(self, xml, xpath):
         results = xml.xpath(xpath, namespaces=self._namespaces)
         self.assertEquals(len(results), 1)
