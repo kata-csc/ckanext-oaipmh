@@ -289,6 +289,8 @@ class OAIPMHHarvester(HarvesterBase):
         package_ids = list(self.get_package_ids(set_ids, config, md_format, last_time, client))
         log.debug('Identifiers: {i}'.format(i=package_ids))
 
+        # TODO: Search with all package_ids against all pids in package.extras.pids which have type='data'.
+
         if not self._recreate(harvest_job):
             converted_identifiers = []
             for identifier in [urllib.quote_plus(identifier) for identifier in package_ids]:
