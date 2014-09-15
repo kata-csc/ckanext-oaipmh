@@ -274,7 +274,7 @@ class TestOAIDCReaderHelda(TestCase):
                            'license_URL': u'Copyright 2005 American Institute of Physics. This article may be downloaded for personal use only. Any other use requires prior permission of the author and the American Institute of Physics.',
                            'license_id': 'notspecified',
                            'mimetype': '',
-                           'name': u'http%3A%2F%2Flink.aip.org%2Flink%2F%3Fjcp%2F123%2F064507',
+                           'name': 'http:__link.aip.org_link__jcp_123_064507',
                            'notes': '',
                            'pids': [{'id': u'http://hdl.handle.net/10138/1074',
                                      'provider': u'http://helda.helsinki.fi/oai/request',
@@ -298,6 +298,7 @@ class TestOAIDCReaderHelda(TestCase):
             output_value = data_dict.get(key)
 
             # Note. Possibility for random fail, because data order is not promised by python
+            # TODO: testfixtures.compare() could be used here to prevent random failing
             assert unicode(output_value) == unicode(value), "Values for key %r not matching: %r versus %r" % (
                 key, value, output_value)
 

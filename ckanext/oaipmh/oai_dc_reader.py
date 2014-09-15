@@ -12,6 +12,7 @@ from functionally import first
 
 from oaipmh import common as oc
 from ckanext.oaipmh import importcore
+import ckanext.kata.utils
 
 xml_reader = importcore.generic_xml_metadata_reader
 log = logging.getLogger(__name__)
@@ -133,7 +134,7 @@ class DcMetadataReader():
             # dc('hasFormat', recursive=False)
             mimetype=first([a.string for a in self.dc('format', text=re.compile('/'), recursive=False)]) or '',
 
-            name=urllib.quote_plus(first(data_pids)) or '',
+            name=ckanext.kata.utils.datapid_to_name(first(data_pids) or ''),
             # name=first(map(pf.partial(urllib.quote_plus, safe=':'), get_data_pids(dc))) or '',
 
             notes=self._read_notes(),
