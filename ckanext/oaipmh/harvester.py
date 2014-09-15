@@ -19,6 +19,7 @@ from ckanext.harvest.model import HarvestJob, HarvestObject
 from ckanext.harvest.harvesters.base import HarvesterBase
 import ckanext.kata.utils
 import ckanext.kata.plugin
+import urllib
 
 log = logging.getLogger(__name__)
 
@@ -41,12 +42,18 @@ class OAIPMHHarvester(HarvesterBase):
                 raise
         return configuration
 
+    def _recreate(self, harvest_object):
+        """ Check if packages should be recreated or not.
+            Default for IDA is false. For other true.
+            Configuration parameter is `recreate`.
+        """
+        configuration = self._get_configuration(harvest_object)
+        return configuration.get('recreate', configuration.get('type') != 'ida')
+
     def _create_or_update_package(self, package_dict, harvest_object, schema=None, s_schema=None):
         """ Add prevent-recreate functionality """
-        configuration = self._get_configuration(harvest_object)
 
-        recreate = configuration.get('recreate', configuration.get('type') != 'ida')
-        if not recreate:
+        if not self._recreate(harvest_object):
             try:
                 package_id = package_dict['id']
                 get_action('package_show')({'model': model, 'session': model.Session, 'user': 'harvest'}, {'id': package_id})
@@ -195,11 +202,17 @@ class OAIPMHHarvester(HarvesterBase):
                 args['from_'] = dp(last_time).replace(tzinfo=None)
             if set_ids:
                 for set_id in set_ids:
-                    for header in client.listIdentifiers(set=set_id, **args):
-                        yield header.identifier()
+                    try:
+                        for header in client.listIdentifiers(set=set_id, **args):
+                            yield header.identifier()
+                    except oaipmh.error.NoRecordsMatchError:
+                        pass
             else:
-                for header in client.listIdentifiers(**args):
-                    yield header.identifier()
+                try:
+                    for header in client.listIdentifiers(**args):
+                        yield header.identifier()
+                except oaipmh.error.NoRecordsMatchError:
+                    pass
                     # package_ids = [header.identifier() for header in client.listRecords()]
 
         log.debug('Entering gather_stage()')
@@ -258,6 +271,19 @@ class OAIPMHHarvester(HarvesterBase):
         # Collect package ids
         package_ids = list(get_package_ids())
         log.debug('Identifiers: {i}'.format(i=package_ids))
+
+        if not self._recreate(harvest_job):
+            converted_identifiers = []
+            for identifier in [urllib.quote_plus(identifier) for identifier in package_ids]:
+                converted_identifiers.append(identifier)
+                if identifier.endswith('m'):
+                    converted_identifiers.append("%ss" % identifier[0:-1])
+
+            for package in model.Session.query(model.Package).filter(model.Package.name.in_(converted_identifiers)).all():
+                package_name = urllib.unquote_plus(package.name)
+                if package_name not in package_ids:
+                    package_name = "%sm" % package_name[0:-1]
+                package_ids.remove(package_name)
 
         try:
             object_ids = []

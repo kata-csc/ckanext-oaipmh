@@ -16,7 +16,6 @@ import ckanext.kata.model as kata_model
 from ckanext.oaipmh.importformats import create_metadata_registry
 import ckanext.oaipmh.oai_dc_reader as dcr
 from ckanext.oaipmh.oai_dc_reader import dc_metadata_reader
-import lxml.etree
 import os
 from ckan import model
 from ckan.logic import get_action
@@ -32,21 +31,27 @@ def _get_fixture(filename):
 
 
 def _get_record(filename):
-    tree = lxml.etree.parse(_get_fixture(filename))
+    tree = etree.parse(_get_fixture(filename))
     return tree.xpath('/oai:OAI-PMH/*/oai:record', namespaces={'oai': 'http://www.openarchives.org/OAI/2.0/'})[0]
 
 
 class _FakeHarvestSource():
-    def __init__(self, config):
+    def __init__(self, config, url):
         self.config = json.dumps(config)
+        self.url = url
+
+class _FakeHarvestJob():
+    def __init__(self, source):
+        self.source = source
 
 class _FakeHarvestObject():
-    def __init__(self, content, identification, config):
+    def __init__(self, content, identification, config, source_url=None):
         self.content = content
         self.id = identification
         self.guid = self.id
-        self.source = _FakeHarvestSource(config)
+        self.source = _FakeHarvestSource(config, source_url)
         self.harvest_source_id = None
+        self.job = _FakeHarvestJob(self.source)
 
     def add(self):
         pass
@@ -78,8 +83,14 @@ class TestOAIPMHHarvester(TestCase):
         self.assertRaises(Exception, self.harvester.gather_stage, (None))
 
     def test_fetch_stage(self):
-        # should throw some exception with parameter None
-        self.assertRaises(Exception, self.harvester.fetch_stage, (None))
+        url = "file://%s" % _get_fixture('ida.xml')
+        harvest_object = _FakeHarvestObject(None, "test_fetch_id", {'type': 'ida'}, url)
+        self.harvester.fetch_stage(harvest_object)
+
+    def test_fetch_stage_invalid(self):
+        url = "file://%s" % _get_fixture('ida_invalid.xml')
+        harvest_object = _FakeHarvestObject(None, "test_fetch_id", {'type': 'ida'}, url)
+        self.assertRaises(Exception, self.harvester.fetch_stage, harvest_object)
 
     def test_import_stage(self):
         assert not self.harvester.import_stage(None)
