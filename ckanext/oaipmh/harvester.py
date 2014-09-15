@@ -20,6 +20,8 @@ from ckanext.harvest.harvesters.base import HarvesterBase
 import ckanext.kata.utils
 import ckanext.kata.plugin
 import urllib
+import fnmatch
+import re
 
 log = logging.getLogger(__name__)
 
@@ -164,6 +166,36 @@ class OAIPMHHarvester(HarvesterBase):
     #     :returns: A string with the URL to the original document
     #     '''
 
+    def get_package_ids(self, set_ids, config, md_format, last_time, client):
+        ''' Get package identifiers from given set identifiers.
+        '''
+        def filter_map_args(list_tuple):
+            for x, y in list_tuple:
+                if x in ['until', 'from']:
+                    if x == 'from':
+                        x = 'from_'
+                    yield (x, dp(y).replace(tzinfo=None))
+
+        kwargs = dict(filter_map_args(config.items()))
+        kwargs['metadataPrefix'] = md_format
+        if last_time and 'from_' not in kwargs:
+            kwargs['from_'] = dp(last_time).replace(tzinfo=None)
+        if set_ids:
+            for set_id in set_ids:
+                try:
+                    for header in client.listIdentifiers(set=set_id, **kwargs):
+                        yield header.identifier()
+                except oaipmh.error.NoRecordsMatchError:
+                    pass
+        else:
+            try:
+                for header in client.listIdentifiers(**kwargs):
+                    yield header.identifier()
+            except oaipmh.error.NoRecordsMatchError:
+                pass
+                # package_ids = [header.identifier() for header in client.listRecords()]
+
+
     def gather_stage(self, harvest_job):
         '''
         The gather stage will receive a HarvestJob object and will be
@@ -184,37 +216,6 @@ class OAIPMHHarvester(HarvesterBase):
         :type harvest_job: HarvestJob
         '''
 
-        def get_package_ids():
-            '''
-            '''
-            # TODO! This should be cleaned up somewhat, ie. no globals, etc.
-
-            def filter_map_args(list_tuple):
-                for x, y in list_tuple:
-                    if x in ['until', 'from']:
-                        if x == 'from':
-                            x = 'from_'
-                        yield (x, dp(y).replace(tzinfo=None))
-
-            args = dict(filter_map_args(config.items()))
-            args['metadataPrefix'] = md_format
-            if last_time and 'from_' not in args:
-                args['from_'] = dp(last_time).replace(tzinfo=None)
-            if set_ids:
-                for set_id in set_ids:
-                    try:
-                        for header in client.listIdentifiers(set=set_id, **args):
-                            yield header.identifier()
-                    except oaipmh.error.NoRecordsMatchError:
-                        pass
-            else:
-                try:
-                    for header in client.listIdentifiers(**args):
-                        yield header.identifier()
-                except oaipmh.error.NoRecordsMatchError:
-                    pass
-                    # package_ids = [header.identifier() for header in client.listRecords()]
-
         log.debug('Entering gather_stage()')
 
         log.debug('Harvest source: {s}'.format(s=harvest_job.source.url))
@@ -223,24 +224,40 @@ class OAIPMHHarvester(HarvesterBase):
         harvest_type = config.get('type', 'default')
         # Create a OAI-PMH Client
         registry = importformats.create_metadata_registry(harvest_type)
-        log.debug('Registry: {r}'.format(r=registry))
         client = oaipmh.client.Client(harvest_job.source.url, registry)
-        log.debug('Client: {c}'.format(c=client))
 
         # Choose best md_format from md_formats,
         # but let's use 'oai_dc' for now
         try:
-            md_formats = client.listMetadataFormats()
+            # md_formats = client.listMetadataFormats()
             md_format = 'oai_dc'
         except oaipmh.error.BadVerbError as e:
             log.warning('Provider does not support listMetadataFormats verb. Using oai_dc as fallback format.')
             md_format = 'oai_dc'
         log.debug('Metadata format: {mf}'.format(mf=md_format))
 
-        set_ids = config.get('set', [])
-        log.debug('Sets in config: %s' % set_ids)
+        available_sets = list(client.listSets())
 
-        log.debug('listSets(): {s}'.format(s=list(client.listSets())))
+        log.debug('available sets: %s', available_sets)
+
+        set_ids = set()
+        for set_id in config.get('set', []):
+            if '*' in set_id:
+                matcher = re.compile(fnmatch.translate(set_id))
+                found = False
+                for set_spec, _, _ in available_sets:
+                    if matcher.match(set_spec):
+                        set_ids.add(set_spec)
+                        found = True
+
+                if not found:
+                    log.warning("No sets found with given wildcard string: %s", set_id)
+            else:
+                if set_id not in available_sets:
+                    log.warning("Given set %s is not in available sets. Not removing.", set_id)
+                set_ids.add(set_id)
+
+        log.debug('Sets in config: %s', set_ids)
 
         # Check if this source has been harvested before
         previous_job = Session.query(HarvestJob) \
@@ -269,7 +286,7 @@ class OAIPMHHarvester(HarvesterBase):
                 return None
 
         # Collect package ids
-        package_ids = list(get_package_ids())
+        package_ids = list(self.get_package_ids(set_ids, config, md_format, last_time, client))
         log.debug('Identifiers: {i}'.format(i=package_ids))
 
         if not self._recreate(harvest_job):
