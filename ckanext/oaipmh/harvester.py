@@ -170,11 +170,11 @@ class OAIPMHHarvester(HarvesterBase):
         ''' Get package identifiers from given set identifiers.
         '''
         def filter_map_args(list_tuple):
-            for x, y in list_tuple:
-                if x in ['until', 'from']:
-                    if x == 'from':
-                        x = 'from_'
-                    yield (x, dp(y).replace(tzinfo=None))
+            for key, value in list_tuple:
+                if key in ['until', 'from']:
+                    if key == 'from':
+                        key = 'from_'
+                    yield (key, dp(value).replace(tzinfo=None))
 
         kwargs = dict(filter_map_args(config.items()))
         kwargs['metadataPrefix'] = md_format
@@ -218,7 +218,7 @@ class OAIPMHHarvester(HarvesterBase):
 
         log.debug('Entering gather_stage()')
 
-        log.debug('Harvest source: {s}'.format(s=harvest_job.source.url))
+        log.debug('Harvest source: %s', harvest_job.source.url)
 
         config = self._get_configuration(harvest_job)
         harvest_type = config.get('type', 'default')
@@ -268,26 +268,13 @@ class OAIPMHHarvester(HarvesterBase):
             .limit(1).first()
 
         last_time = None
-        if previous_job and not previous_job.gather_errors and not len(previous_job.objects) == 0:
-            # Request only the packages modified since last harvest job
-            last_time = previous_job.gather_finished.isoformat()
-            # url = base_search_url + '/revision?since_time=%s' % last_time
-            if False:
-                self._save_gather_error('Gather: Unable to get content for: {u}: {e}'.format(
-                    u=harvest_job.source.url, e=e), harvest_job)
+        if previous_job and model.Package.get(harvest_job.source.id).metadata_modified < previous_job.gather_started:
+            last_time = previous_job.gather_started.isoformat()
 
-            if True:
-                # for package_id in package_ids:
-                #     if not package_id in package_ids:
-                #         package_ids.append(package_id)
-                pass
-            else:
-                log.info('No packages have been updated on the provider since the last harvest job')
-                return None
-
+        print "Last time", last_time
         # Collect package ids
         package_ids = list(self.get_package_ids(set_ids, config, md_format, last_time, client))
-        log.debug('Identifiers: {i}'.format(i=package_ids))
+        log.debug('Identifiers: %s', package_ids)
 
         if not self._recreate(harvest_job):
             converted_identifiers = []
