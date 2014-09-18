@@ -92,9 +92,6 @@ class TestOAIPMHHarvester(TestCase):
         harvest_object = _FakeHarvestObject(None, "test_fetch_id", {'type': 'ida'}, url)
         self.assertRaises(Exception, self.harvester.fetch_stage, harvest_object)
 
-    def test_import_stage(self):
-        assert not self.harvester.import_stage(None)
-
     def _run_import(self, xml, ida, config=None):
         if not model.User.get('harvest'):
             model.User(name='harvest', sysadmin=True).save()
@@ -117,7 +114,7 @@ class TestOAIPMHHarvester(TestCase):
         self.assertEquals(len(list(packages)), 1)
         return packages[0]
 
-    def manual_import_stage(self):
+    def test_import_stage(self):
         """ Manual test for import stage. Currently Jenkins fails this test so we do not run this automatically. """
         for xml_path, ida in ('ida.xml', True), ('helda.xml', False):
             self._run_import(xml_path, ida)
@@ -125,7 +122,11 @@ class TestOAIPMHHarvester(TestCase):
             if ida:
                 self.assertTrue('direct_download' not in package.notes)
                 self.assertEquals(package.extras.get('availability', None), 'direct_download')
-                for key, value in (u'pids_0_id', u'urn:nbn:fi:csc-ida2014010800372v'), (u'pids_0_provider', u'ida'), (u'pids_0_type', u'version'):
+                expected = (u'pids_0_id', u'urn:nbn:fi:csc-ida2014010800372v'), (u'pids_0_provider', u'ida'), (u'pids_0_type', u'version'), \
+                    (u'contact_0_email', u'test1@example.fi'), (u'contact_0_name', u'Test Person1'), (u'contact_0_phone', u'0501231234'), \
+                    (u'contact_1_email', u'test2@example.fi'), (u'contact_1_name', u'Test Person2'), (u'contact_1_phone', u'0501231234'),
+
+                for key, value in expected:
                     self.assertEquals(package.extras.get(key), value)
 
             package.delete()
