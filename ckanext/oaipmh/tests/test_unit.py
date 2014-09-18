@@ -265,7 +265,7 @@ class TestOAIDCReaderHelda(TestCase):
                            'algorithm': '',
                            'availability': 'through_provider',
                            'checksum': '',
-                           'contact': [{'URL': '', 'phone': '', 'email': '', 'name': ''}],
+                           'contact': [],
                            'direct_download_URL': u'http://link.aip.org/link/?jcp/123/064507',
                            'discipline': '',
                            'geographic_coverage': '',
