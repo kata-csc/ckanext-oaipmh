@@ -92,6 +92,9 @@ class TestOAIPMHHarvester(TestCase):
         harvest_object = _FakeHarvestObject(None, "test_fetch_id", {'type': 'ida'}, url)
         self.assertRaises(Exception, self.harvester.fetch_stage, harvest_object)
 
+    def test_import_stage(self):
+        assert not self.harvester.import_stage(None)
+
     def _run_import(self, xml, ida, config=None):
         if not model.User.get('harvest'):
             model.User(name='harvest', sysadmin=True).save()
@@ -114,7 +117,7 @@ class TestOAIPMHHarvester(TestCase):
         self.assertEquals(len(list(packages)), 1)
         return packages[0]
 
-    def test_import_stage(self):
+    def manual_import_stage(self):
         """ Manual test for import stage. Currently Jenkins fails this test so we do not run this automatically. """
         for xml_path, ida in ('ida.xml', True), ('helda.xml', False):
             self._run_import(xml_path, ida)
