@@ -19,6 +19,7 @@ log = logging.getLogger(__name__)
 NS = {
     'dct': 'http://purl.org/dc/terms/',
     'dc': 'http://purl.org/dc/elements/1.1/',
+    'cscida': "http://etsin.avointiede.fi/cscida/",
 }
 
 # TODO: Change this file to class structure to allow harvester to set values also with OAI-PMH verb 'Identify'.
@@ -195,13 +196,16 @@ class IdaDcMetadataReader(DcMetadataReader):
 
     def _get_availability(self):
         """ Get availibility from description tags """
+        availability = first(self.dc(_filter_tag_name_namespace(name='availability', namespace=NS['cscida']), recursive=False))
+        if availability:
+            return [availability.string.strip()]
+
         return self._get_description_values('availability')
 
     def _get_version_pid(self):
         '''
         Generate results for version_PID
 
-        :param tag_tree: Metadata (dc) Tag in BeautifulSoup tree
         :type tag_tree: bs4.Tag
         '''
         return self._get_description_values('Identifier.version')
