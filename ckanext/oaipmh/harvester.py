@@ -271,12 +271,11 @@ class OAIPMHHarvester(HarvesterBase):
         if previous_job and model.Package.get(harvest_job.source.id).metadata_modified < previous_job.gather_started:
             last_time = previous_job.gather_started.isoformat()
 
-        print "Last time", last_time
         # Collect package ids
         package_ids = list(self.get_package_ids(set_ids, config, md_format, last_time, client))
         log.debug('Identifiers: %s', package_ids)
 
-        if not self._recreate(harvest_job):
+        if not self._recreate(harvest_job) and package_ids:
             converted_identifiers = []
             for identifier in [urllib.quote_plus(identifier) for identifier in package_ids]:
                 converted_identifiers.append(identifier)
