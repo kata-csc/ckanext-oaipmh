@@ -253,7 +253,7 @@ class OAIPMHHarvester(HarvesterBase):
                 if not found:
                     log.warning("No sets found with given wildcard string: %s", set_id)
             else:
-                if set_id not in available_sets:
+                if not any(set_id in sets for sets in available_sets):
                     log.warning("Given set %s is not in available sets. Not removing.", set_id)
                 set_ids.add(set_id)
 
