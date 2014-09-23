@@ -81,7 +81,7 @@ class DcMetadataReader():
         if not availability:
             availability = first(self._get_availability())
 
-        data_pids = _get_data_pids(self.dc)
+        data_pids = list(_get_data_pids(self.dc))
 
         # Create a unified internal harvester format dict
         unified = dict(
