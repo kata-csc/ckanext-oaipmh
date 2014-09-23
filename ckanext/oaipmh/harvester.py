@@ -278,16 +278,18 @@ class OAIPMHHarvester(HarvesterBase):
 
         if not self._recreate(harvest_job):
             converted_identifiers = []
-            for identifier in [urllib.quote_plus(identifier) for identifier in package_ids]:
-                converted_identifiers.append(identifier)
+            for identifier in package_ids:
+                converted_identifiers.append({'id': identifier, 'type': 'data'})
                 if identifier.endswith('m'):
-                    converted_identifiers.append("%ss" % identifier[0:-1])
+                    converted_identifiers.append({'id': "%ss" % identifier[0:-1], 'type': 'data'})
 
-            for package in model.Session.query(model.Package).filter(model.Package.name.in_(converted_identifiers)).all():
-                package_name = urllib.unquote_plus(package.name)
-                if package_name not in package_ids:
-                    package_name = "%sm" % package_name[0:-1]
-                package_ids.remove(package_name)
+            pkg_id = ckanext.kata.utils.get_package_id_by_data_pids({'pids': converted_identifiers})
+
+            if pkg_id:
+                for identifier in converted_identifiers:
+                    if identifier not in package_ids:
+                        identifier = "%sm" % identifier[0:-1]
+                    package_ids.remove(identifier)
 
         try:
             object_ids = []
