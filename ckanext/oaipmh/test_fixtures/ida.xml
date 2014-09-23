@@ -10,15 +10,25 @@
          <setSpec>ida:sa:smear:data:smear:database:HYY</setSpec>
        </header>
        <metadata>
-          <oai_dc:dc xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dct="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" xmlns:fp = "http://downlode.org/Code/RDF/File_Properties/schema#" xmlns:wn = "http://xmlns.com/wordnet/1.6/" xmlns:premis="http://www.loc.gov/standards/premis" xmlns:foaf = "http://xmlns.com/foaf/0.1/" xmlns:vcard="http://www.w3.org/2006/vcard/ns#" >
+        <oai_dc:dc xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dct="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" xmlns:fp = "http://downlode.org/Code/RDF/File_Properties/schema#" xmlns:wn = "http://xmlns.com/wordnet/1.6/" xmlns:premis="http://www.loc.gov/standards/premis" xmlns:foaf = "http://xmlns.com/foaf/0.1/" xmlns:vcard="http://www.w3.org/2006/vcard/ns#" xmlns:cscida="http://etsin.avointiede.fi/cscida/">
+        <cscida:uploader>tester</cscida:uploader>
+        <cscida:availability>direct_download</cscida:availability>
+        <cscida:projectId>asdf1234</cscida:projectId>
         <dc:identifier>urn:nbn:fi:csc-ida2014010800372s</dc:identifier>
         <dc:publisher>-</dc:publisher>
         <dct:publisher>
-         <foaf:Person rdf:about="henkilo">
-          <foaf:name>-</foaf:name>
-          <foaf:mbox rdf:resource="-"/>
-          <foaf:phone rdf:resource="-"/>
-         </foaf:Person>
+          <foaf:Person rdf:about="test1">
+            <foaf:name>Test Person1</foaf:name>
+            <foaf:mbox rdf:resource="test1@example.fi"/>
+            <foaf:phone rdf:resource="0501231234"/>
+          </foaf:Person>
+        </dct:publisher>
+        <dct:publisher>
+          <foaf:Person rdf:about="test2">
+            <foaf:name>Test Person2</foaf:name>
+            <foaf:mbox rdf:resource="test2@example.fi"/>
+            <foaf:phone rdf:resource="0501231234"/>
+          </foaf:Person>
         </dct:publisher>
         <dc:contributor>sa</dc:contributor>
         <dct:contributor>
@@ -41,7 +51,7 @@
            <fp:checksumValue>2b355deb52594aa07af8a607762f5ed2</fp:checksumValue>
           </fp:Checksum></fp:checksum>
          </fp:File></dct:hasFormat>
-          </oai_dc:dc>
+         </oai_dc:dc>
        </metadata>
     </record>
   </GetRecord>

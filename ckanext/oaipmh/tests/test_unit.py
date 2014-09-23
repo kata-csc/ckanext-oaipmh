@@ -125,7 +125,11 @@ class TestOAIPMHHarvester(TestCase):
             if ida:
                 self.assertTrue('direct_download' not in package.notes)
                 self.assertEquals(package.extras.get('availability', None), 'direct_download')
-                for key, value in (u'pids_0_id', u'urn:nbn:fi:csc-ida2014010800372v'), (u'pids_0_provider', u'ida'), (u'pids_0_type', u'version'):
+                expected = (u'pids_0_id', u'urn:nbn:fi:csc-ida2014010800372v'), (u'pids_0_provider', u'ida'), (u'pids_0_type', u'version'), \
+                    (u'contact_0_email', u'test1@example.fi'), (u'contact_0_name', u'Test Person1'), (u'contact_0_phone', u'0501231234'), \
+                    (u'contact_1_email', u'test2@example.fi'), (u'contact_1_name', u'Test Person2'), (u'contact_1_phone', u'0501231234'),
+
+                for key, value in expected:
                     self.assertEquals(package.extras.get(key), value)
 
             package.delete()
@@ -264,7 +268,7 @@ class TestOAIDCReaderHelda(TestCase):
                            'algorithm': '',
                            'availability': 'through_provider',
                            'checksum': '',
-                           'contact': [{'URL': '', 'phone': '', 'email': '', 'name': ''}],
+                           'contact': [],
                            'direct_download_URL': u'http://link.aip.org/link/?jcp/123/064507',
                            'discipline': '',
                            'geographic_coverage': '',

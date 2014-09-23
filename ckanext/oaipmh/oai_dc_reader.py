@@ -20,6 +20,7 @@ log = logging.getLogger(__name__)
 NS = {
     'dct': 'http://purl.org/dc/terms/',
     'dc': 'http://purl.org/dc/elements/1.1/',
+    'cscida': "http://etsin.avointiede.fi/cscida/",
 }
 
 # TODO: Change this file to class structure to allow harvester to set values also with OAI-PMH verb 'Identify'.
@@ -55,16 +56,13 @@ class DcMetadataReader():
                                                                  recursive=False) if not self._skip_note(a.string)])) or ''
 
     def _get_maintainer_stuff(self):
-        def ida():
-            for a in self.dc(_filter_tag_name_namespace(name='publisher', namespace=NS['dct']), recursive=False):
-                for b in a(recursive=False):
-                    n = b.find('name').string if b.find('name') else ''
-                    m = b.mbox.get('resource', '') if b.mbox else ''
-                    p = b.phone.get('resource', '') if b.phone else ''
-                    h = b.get('about', '')
-                    yield (n, m, p, h)
-
-        return zip(*ida()) if first(ida()) else None
+        for a in self.dc(_filter_tag_name_namespace(name='publisher', namespace=NS['dct']), recursive=False):
+            for b in a(recursive=False):
+                n = b.find('name').string if b.find('name') else ''
+                m = b.mbox.get('resource', '') if b.mbox else ''
+                p = b.phone.get('resource', '') if b.phone else ''
+                h = b.get('about', '')
+                yield n, m, p, h
 
     def _get_availability(self):
         """ Get fallback availability. By default does not return any data. """
@@ -79,8 +77,6 @@ class DcMetadataReader():
 
         # Todo! This needs to be improved to use also simple-dc
         # dc(filter_tag_name_namespace('publisher', ns['dc']), recursive=False)
-        maintainer, maintainer_email, contact_phone, contact_URL = self._get_maintainer_stuff() or ('', '', '', '')
-
         availability, license_id, license_url, access_application_url = _get_rights(self.dc) or ('', '', '', '')
         if not availability:
             availability = first(self._get_availability())
@@ -127,8 +123,8 @@ class DcMetadataReader():
             license_id=license_id or 'notspecified',
 
             # Todo! Using only the first entry, for now
-            contact=[dict(name=first(maintainer) or '', email=first(maintainer_email) or '',
-                          URL=first(contact_URL) or '', phone=first(contact_phone) or '')],
+            contact=[dict(name=name or "", email=email or "", URL=url or "", phone=phone or "")
+                     for name, email, phone, url in self._get_maintainer_stuff()],
 
             # Todo! IDA currently doesn't produce this, maybe in future
             # dc('hasFormat', recursive=False)
@@ -181,8 +177,8 @@ class IdaDcMetadataReader(DcMetadataReader):
 
     def _get_maintainer_stuff(self):
         """ IDA does not provide valid url for maintainer. Instead it might gives something like 'person'. This omits the URL data. """
-        maintainer, maintainer_email, contact_phone, _contact_URL = DcMetadataReader._get_maintainer_stuff(self) or ('', '', '', '')
-        return maintainer, maintainer_email, contact_phone, ''
+        for name, email, phone, _url in DcMetadataReader._get_maintainer_stuff(self):
+            yield name, email, phone, ''
 
     def _get_description_parameters(self):
         """ Get parameters from description tags. Format is 'key: value'.
@@ -201,13 +197,16 @@ class IdaDcMetadataReader(DcMetadataReader):
 
     def _get_availability(self):
         """ Get availibility from description tags """
+        availability = first(self.dc(_filter_tag_name_namespace(name='availability', namespace=NS['cscida']), recursive=False))
+        if availability:
+            return [availability.string.strip()]
+
         return self._get_description_values('availability')
 
     def _get_version_pid(self):
         '''
         Generate results for version_PID
 
-        :param tag_tree: Metadata (dc) Tag in BeautifulSoup tree
         :type tag_tree: bs4.Tag
         '''
         return self._get_description_values('Identifier.version')
