@@ -142,7 +142,7 @@ class DcMetadataReader():
                  [dict(id=pid, provider=_get_provider(self.bs), type='metadata') for pid in _get_metadata_pid(self.dc)],
 
             agent=[dict(role='author', name=orgauth.get('value', ''), id='', organisation=orgauth.get('org', ''), URL='', fundingid='') for orgauth in _get_org_auth(self.dc)] +
-                  [dict(role='funder', name=first(project_funder) or '', id=first(project_name) or '', URL=first(project_homepage) or '', fundingid=first(project_funding) or '',)] +
+                  [dict(role='funder', name=first(project_name) or '', id=first(project_name) or '', organisation=first(project_funder) or "", URL=first(project_homepage) or '', fundingid=first(project_funding) or '',)] +
                   [dict(role='owner', name=first([a.get('resource') for a in self.dc('rightsHolder', recursive=False)]) or '', id='', organisation='', URL='', fundingid='')],
 
             tag_string=','.join(sorted([a.string for a in self.dc('subject', recursive=False)])) or '',
@@ -231,10 +231,10 @@ def _get_project_stuff(tag_tree):
     def ida():
         for a in tag_tree(_filter_tag_name_namespace(name='contributor', namespace=NS['dct']), recursive=False):
             if a.Project:
-                p = a.Project.comment.string.split(u' rahoituspäätös ') if a.Project.comment else ('', '')
-                n = a.Project.find('name').string if a.Project.find('name') else ''
-                m = a.Project.get('about', '')
-                yield tuple(p) + (n,) + (m,)
+                funder_funding = a.Project.comment.string.split(u' rahoituspäätös ') if a.Project.comment else ('', '')
+                name = a.Project.find('name').string if a.Project.find('name') else ''
+                about = a.Project.get('about', '')
+                yield tuple(funder_funding) + (name,) + (about,)
 
     return zip(*ida()) if first(ida()) else None
 

@@ -135,6 +135,16 @@ class TestOAIPMHHarvester(TestCase):
             package.delete()
             model.repo.commit()
 
+    def manual_import_stage_project(self):
+        """ Manual test for import stage. Currently Jenkins fails this test so we do not run this automatically. """
+        self._run_import('ida3.xml', True)
+        package = self._get_single_package()
+
+        expected = [('agent_1_organisation', 'Paras yliopisto')]
+
+        for key, value in expected:
+            self.assertEquals(package.extras.get(key), value)
+
     def manual_import_stage_recreate(self):
         """ Manual test for recreating harvested dataset multiple times """
 
