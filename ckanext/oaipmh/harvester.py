@@ -284,9 +284,17 @@ class OAIPMHHarvester(HarvesterBase):
 
             for package in model.Session.query(model.Package).filter(model.Package.name.in_(converted_identifiers)).all():
                 package_name = urllib.unquote_plus(package.name)
+
                 if package_name not in package_ids:
                     package_name = "%sm" % package_name[0:-1]
                 package_ids.remove(package_name)
+
+        if previous_job:
+            for previous_error in [error.guid for error in Session.query(HarvestObject). \
+                                   filter(HarvestObject.harvest_job_id == previous_job.id). \
+                                   filter(HarvestObject.state == 'ERROR').all()]:
+                if previous_error not in package_ids:
+                    package_ids.append(previous_error)
 
         try:
             object_ids = []
