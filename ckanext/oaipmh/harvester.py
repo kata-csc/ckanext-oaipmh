@@ -261,9 +261,9 @@ class OAIPMHHarvester(HarvesterBase):
 
         # Check if this source has been harvested before
         previous_job = Session.query(HarvestJob) \
-            .filter(HarvestJob.source==harvest_job.source) \
-            .filter(HarvestJob.gather_finished!=None) \
-            .filter(HarvestJob.id!=harvest_job.id) \
+            .filter(HarvestJob.source == harvest_job.source) \
+            .filter(HarvestJob.gather_finished != None) \
+            .filter(HarvestJob.id != harvest_job.id) \
             .order_by(HarvestJob.gather_finished.desc()) \
             .limit(1).first()
 
