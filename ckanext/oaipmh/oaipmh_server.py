@@ -40,12 +40,24 @@ class CKANServer(ResumptionOAIPMH):
         '''Show a tuple of a header and metadata for this dataset.
         '''
         package = get_action('package_show')({}, {'id': dataset.id})
-        maintainer = package.get('maintainer', None)
+
+        coverage = ''
+        coverage_begin = package.get('temporal_coverage_begin', '')
+        coverage_end = package.get('temporal_coverage_end', '')
+
+        geographic = package.get('geographic_coverage', '')
+        if geographic:
+            coverage = geographic
+        if coverage_begin or coverage_end:
+            if coverage:
+                coverage += "; "
+            coverage += coverage_begin + " - " + coverage_end
+
         meta = {
                 'title': [package.get('title', None) or package.get('name')],
                 'creator': [author['name'] for author in helpers.get_authors(package) if 'name' in author],
                 'publisher': [agent['name'] for agent in helpers.get_distributors(package) + helpers.get_contacts(package) if 'name' in agent],
-                'contributor': [maintainer] if maintainer else None,
+                'contributor':[author['name'] for author in helpers.get_contributors(package) if 'name' in author],
                 'identifier': [
                     config.get('ckan.site_url') +
                     url_for(controller="package", action='read', id=package['id']),
@@ -57,6 +69,7 @@ class CKANServer(ResumptionOAIPMH):
                 'date': [dataset.metadata_created.strftime('%Y-%m-%d')]
                     if dataset.metadata_created else None,
                 'rights': [package['license_title']] if package.get('license_title', None) else None,
+                'coverage': [coverage] if coverage else None,
         }
 
         iters = dataset.extras.items()
