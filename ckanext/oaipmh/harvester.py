@@ -53,21 +53,6 @@ class OAIPMHHarvester(HarvesterBase):
         configuration = self._get_configuration(harvest_object)
         return configuration.get('recreate', configuration.get('type') != 'ida')
 
-    def _create_or_update_package(self, package_dict, harvest_object, schema=None, s_schema=None):
-        """ Add prevent-recreate functionality """
-
-        if not self._recreate(harvest_object):
-            try:
-                package_id = package_dict['id']
-                get_action('package_show')({'model': model, 'session': model.Session, 'user': 'harvest'}, {'id': package_id})
-                log.debug("Not re-creating package: %s", package_id)
-                return True
-            except NotFound:
-                pass
-
-        return HarvesterBase._create_or_update_package(self, package_dict, harvest_object, schema=schema, s_schema=s_schema)
-
-
     def info(self):
         '''
         Harvesting implementations must provide this method, which will return a
@@ -284,8 +269,6 @@ class OAIPMHHarvester(HarvesterBase):
                 if identifier.endswith(u'm'):
                     converted_identifiers[datapid_to_name(u"%ss" % identifier[0:-1])] = identifier
 
-            log.debug('Converted: %s', converted_identifiers)
-
             for package in model.Session.query(model.Package).filter(model.Package.name.in_(converted_identifiers.keys())).all():
                 converted_name = package.name
                 if converted_identifiers[converted_name] not in package_ids:
@@ -395,9 +378,7 @@ class OAIPMHHarvester(HarvesterBase):
                 id=harvest_object.id), harvest_object)
             return False
 
-        log.debug('Content (packed): %s' % harvest_object.content)
         content = json.loads(harvest_object.content)
-        log.debug('Content (unpacked): %s' % content)
         # import pprint; pprint.pprint(content)
 
         package_dict = content.pop('unified')
@@ -409,6 +390,14 @@ class OAIPMHHarvester(HarvesterBase):
 
         pkg = Session.query(Package).filter(Package.id == pkg_id).first() if pkg_id else None
         log.debug('Package: "{pkg}"'.format(pkg=pkg))
+
+        if pkg and not self._recreate(harvest_object):
+            try:
+                log.debug("Not re-creating package: %s", pkg_id)
+                return True
+            except NotFound:
+                pass
+
         package_dict['id'] = pkg.id if pkg else ckanext.kata.utils.generate_pid()
 
         try:
@@ -427,6 +416,7 @@ class OAIPMHHarvester(HarvesterBase):
                 schema = ckanext.kata.plugin.KataPlugin.update_package_schema_oai_dc_ida() if pkg \
                     else ckanext.kata.plugin.KataPlugin.create_package_schema_oai_dc_ida()
             # schema['xpaths'] = [ignore_missing, ckanext.kata.converters.xpath_to_extras]
+
             result = self._create_or_update_package(package_dict,
                                                     harvest_object,
                                                     schema=schema,
