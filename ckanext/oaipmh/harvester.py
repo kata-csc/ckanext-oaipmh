@@ -22,6 +22,7 @@ import ckanext.kata.plugin
 import urllib
 import fnmatch
 import re
+from ckanext.kata.utils import datapid_to_name
 
 log = logging.getLogger(__name__)
 
@@ -277,19 +278,19 @@ class OAIPMHHarvester(HarvesterBase):
         log.debug('Identifiers: %s', package_ids)
 
         if not self._recreate(harvest_job):
-            converted_identifiers = []
+            converted_identifiers = {}
             for identifier in package_ids:
-                converted_identifiers.append({'id': identifier, 'type': 'data'})
-                if identifier.endswith('m'):
-                    converted_identifiers.append({'id': "%ss" % identifier[0:-1], 'type': 'data'})
+                converted_identifiers[datapid_to_name(identifier)] = identifier
+                if identifier.endswith(u'm'):
+                    converted_identifiers[datapid_to_name(u"%ss" % identifier[0:-1])] = identifier
 
-            pkg_id = ckanext.kata.utils.get_package_id_by_data_pids({'pids': converted_identifiers})
+            log.debug('Converted: %s', converted_identifiers)
 
-            if pkg_id:
-                for identifier in converted_identifiers:
-                    if identifier not in package_ids:
-                        identifier = "%sm" % identifier[0:-1]
-                    package_ids.remove(identifier)
+            for package in model.Session.query(model.Package).filter(model.Package.name.in_(converted_identifiers.keys())).all():
+                converted_name = package.name
+                if converted_identifiers[converted_name] not in package_ids:
+                    converted_name = "%sm" % converted_name[0:-1]
+                package_ids.remove(converted_identifiers[converted_name])
 
         try:
             object_ids = []
