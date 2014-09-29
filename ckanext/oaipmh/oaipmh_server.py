@@ -41,17 +41,15 @@ class CKANServer(ResumptionOAIPMH):
         '''
         package = get_action('package_show')({}, {'id': dataset.id})
 
-        coverage = ''
-        coverage_begin = package.get('temporal_coverage_begin', '')
-        coverage_end = package.get('temporal_coverage_end', '')
+        coverage = []
+        temporal_begin = package.get('temporal_coverage_begin', '')
+        temporal_end = package.get('temporal_coverage_end', '')
 
         geographic = package.get('geographic_coverage', '')
         if geographic:
-            coverage = geographic
-        if coverage_begin or coverage_end:
-            if coverage:
-                coverage += "; "
-            coverage += coverage_begin + " - " + coverage_end
+            coverage.extend(geographic.split(','))
+        if temporal_begin or temporal_end:
+            coverage.append("%s/%s" % (temporal_begin, temporal_end))
 
         meta = {
                 'title': [package.get('title', None) or package.get('name')],
@@ -69,7 +67,7 @@ class CKANServer(ResumptionOAIPMH):
                 'date': [dataset.metadata_created.strftime('%Y-%m-%d')]
                     if dataset.metadata_created else None,
                 'rights': [package['license_title']] if package.get('license_title', None) else None,
-                'coverage': [coverage] if coverage else None,
+                'coverage': coverage if coverage else None,
         }
 
         iters = dataset.extras.items()
@@ -180,10 +178,9 @@ class CKANServer(ResumptionOAIPMH):
         '''List all sets in this repository, where sets are groups.
         '''
         data = []
-        if not cursor:
-            groups = Session.query(Group).all()
-        else:
-            groups = Session.query(Group).all()[:cursor]
+        groups = Session.query(Group).filter(Group.state == 'active')
+        if cursor:
+            groups = groups[:cursor]
         for dataset in groups:
             data.append((dataset.id, dataset.name, dataset.description))
         return data

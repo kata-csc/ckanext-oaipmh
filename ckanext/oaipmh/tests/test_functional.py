@@ -98,10 +98,41 @@ class TestOaipmhServer(WsgiAppCase, TestCase):
         harvest_model.setup()
         kata_model.setup()
 
+    @classmethod
+    def teardown(cls):
+        ckan.model.repo.rebuild_db()
+
+    def _get_results(self, xml, xpath):
+        return xml.xpath(xpath, namespaces=self._namespaces)
+
     def _get_single_result(self, xml, xpath):
-        results = xml.xpath(xpath, namespaces=self._namespaces)
+        results = self._get_results(xml, xpath)
         self.assertEquals(len(results), 1)
         return results[0]
+
+    def test_coverage(self):
+        model.User(name="test_coverage", sysadmin=True).save()
+        organization = get_action('organization_create')({'user': 'test_coverage'}, {'name': 'test-organization-coverage', 'title': "Test organization"})
+        package_1_data = deepcopy(TEST_DATADICT)
+        package_1_data['owner_org'] = organization['name']
+        package_1_data['private'] = False
+        package_1_data['name'] = 'test-package-coverage'
+
+        get_action('package_create')({'user': 'test_coverage'}, package_1_data)
+        url = url_for('/oai')
+        result = self.app.get(url, {'verb': 'GetRecord', 'identifier': 'test-package-coverage', 'metadataPrefix': 'oai_dc' })
+
+        root = lxml.etree.fromstring(result.body)
+        expected = ['Keilaniemi (populated place)', 'Espoo (city)', '2003-07-10T06:36:27Z/2010-04-15T03:24:47Z']
+
+        found = 0
+        for coverage in self._get_results(root, "//dc:coverage"):
+            self.assertTrue(coverage.text in expected)
+            found += 1
+        self.assertEquals(3, found, "Unexpected coverage results")
+
+        get_action('organization_delete')({'user': 'test_coverage'}, {'id': organization['id']})
+
 
     def test_records(self):
         """ Test record fetching via http-request to prevent accidental changes to interface """
