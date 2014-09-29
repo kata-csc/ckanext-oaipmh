@@ -67,6 +67,9 @@ class DcMetadataReader():
         """ Get fallback availability. By default does not return any data. """
         return []
 
+    def _get_uploader(self):
+        return ''
+
     def _get_version_pid(self):
         """ Get version pid. By default does not return any data. """
         return []
@@ -79,6 +82,8 @@ class DcMetadataReader():
         availability, license_id, license_url, access_application_url = _get_rights(self.dc) or ('', '', '', '')
         if not availability:
             availability = first(self._get_availability())
+
+        uploader = self._get_uploader()
 
         data_pids = _get_data_pids(self.dc)
 
@@ -154,6 +159,7 @@ class DcMetadataReader():
             through_provider_URL=first(_get_download(self.dc)) or '',
 
             type='dataset',
+            uploader=uploader,
 
             # Todo! This should be more exactly picked
             version=(self.dc.modified or self.dc.date).string if (self.dc.modified or self.dc.date) else '',
@@ -201,6 +207,17 @@ class IdaDcMetadataReader(DcMetadataReader):
             return [availability.string.strip()]
 
         return self._get_description_values('availability')
+
+    def _get_uploader(self):
+        '''
+        Get uploader from cscida tags
+        :return
+        '''
+        uploader = first(self.dc(_filter_tag_name_namespace(name='uploader', namespace=NS['cscida']), recursive=False))
+        if uploader:
+            return uploader.string.strip()
+
+        return False
 
     def _get_version_pid(self):
         '''

@@ -4,6 +4,8 @@
 import logging
 import json
 from itertools import islice
+from pylons import config as c
+from paste.deploy.converters import asbool
 
 import oaipmh.client
 import oaipmh.error
@@ -22,6 +24,9 @@ import ckanext.kata.plugin
 import urllib
 import fnmatch
 import re
+import ckanext.kata.kata_ldap as ld
+import ckan.model as model
+from ckan.logic import  NotAuthorized, NotFound, ValidationError
 
 log = logging.getLogger(__name__)
 
@@ -413,6 +418,7 @@ class OAIPMHHarvester(HarvesterBase):
         pkg = Session.query(Package).filter(Package.name == package_dict['name']).first()
         log.debug('Package: "{pkg}"'.format(pkg=pkg))
         package_dict['id'] = pkg.id if pkg else ckanext.kata.utils.generate_pid()
+        uploader = ''
 
         try:
             package_dict['title'] = ''
@@ -427,6 +433,8 @@ class OAIPMHHarvester(HarvesterBase):
             else:
                 if package_dict.get('owner_org', False):
                     package_dict['private'] = "true"
+                uploader = package_dict.get('uploader', False)
+                package_dict.pop('uploader')
                 schema = ckanext.kata.plugin.KataPlugin.update_package_schema_oai_dc_ida() if pkg \
                     else ckanext.kata.plugin.KataPlugin.create_package_schema_oai_dc_ida()
             # schema['xpaths'] = [ignore_missing, ckanext.kata.converters.xpath_to_extras]
@@ -435,6 +443,30 @@ class OAIPMHHarvester(HarvesterBase):
                                                     schema=schema,
                                                     # s_schema=ckanext.kata.plugin.KataPlugin.show_package_schema()
                                                     )
+            if uploader and asbool(c.get('kata.ldap.enabled', False)):
+                try:
+                    usr = ld.get_user_from_ldap(uploader)
+                    usrname = model.User.by_openid(usr)
+                    user = model.User.get('harvest')
+                    if usrname:
+                        editor_dict = {"name": package_dict['name'],
+                                       "role": "admin",
+                                       "username": usrname.name
+                                       }
+                        context = {'model': model, 'session': model.Session,
+                                   'user': 'harvest'}
+                        try:
+                            # if we fail the adding, no problem
+                            ckanext.kata.actions.dataset_editor_add(context, editor_dict)
+                        except ValidationError:
+                            pass
+                        except NotFound:
+                            pass
+                        except NotAuthorized:
+                            pass
+                except:
+                    pass
+
             log.debug("Exiting import_stage()")
         except Exception as e:
             self._save_object_error('Import: Could not create {id}. {e}'.format(
