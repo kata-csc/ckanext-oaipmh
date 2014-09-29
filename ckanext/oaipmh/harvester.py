@@ -27,6 +27,7 @@ import re
 import ckanext.kata.kata_ldap as ld
 import ckan.model as model
 from ckan.logic import  NotAuthorized, NotFound, ValidationError
+from ckanext.kata.utils import datapid_to_name
 
 log = logging.getLogger(__name__)
 
@@ -56,21 +57,6 @@ class OAIPMHHarvester(HarvesterBase):
         """
         configuration = self._get_configuration(harvest_object)
         return configuration.get('recreate', configuration.get('type') != 'ida')
-
-    def _create_or_update_package(self, package_dict, harvest_object, schema=None, s_schema=None):
-        """ Add prevent-recreate functionality """
-
-        if not self._recreate(harvest_object):
-            try:
-                package_id = package_dict['id']
-                get_action('package_show')({'model': model, 'session': model.Session, 'user': 'harvest'}, {'id': package_id})
-                log.debug("Not re-creating package: %s", package_id)
-                return True
-            except NotFound:
-                pass
-
-        return HarvesterBase._create_or_update_package(self, package_dict, harvest_object, schema=schema, s_schema=s_schema)
-
 
     def info(self):
         '''
@@ -281,18 +267,17 @@ class OAIPMHHarvester(HarvesterBase):
         log.debug('Identifiers: %s', package_ids)
 
         if not self._recreate(harvest_job) and package_ids:
-            converted_identifiers = []
-            for identifier in [urllib.quote_plus(identifier) for identifier in package_ids]:
-                converted_identifiers.append(identifier)
-                if identifier.endswith('m'):
-                    converted_identifiers.append("%ss" % identifier[0:-1])
+            converted_identifiers = {}
+            for identifier in package_ids:
+                converted_identifiers[datapid_to_name(identifier)] = identifier
+                if identifier.endswith(u'm'):
+                    converted_identifiers[datapid_to_name(u"%ss" % identifier[0:-1])] = identifier
 
-            for package in model.Session.query(model.Package).filter(model.Package.name.in_(converted_identifiers)).all():
-                package_name = urllib.unquote_plus(package.name)
-
-                if package_name not in package_ids:
-                    package_name = "%sm" % package_name[0:-1]
-                package_ids.remove(package_name)
+            for package in model.Session.query(model.Package).filter(model.Package.name.in_(converted_identifiers.keys())).all():
+                converted_name = package.name
+                if converted_identifiers[converted_name] not in package_ids:
+                    converted_name = "%sm" % converted_name[0:-1]
+                package_ids.remove(converted_identifiers[converted_name])
 
         if previous_job:
             for previous_error in [error.guid for error in Session.query(HarvestObject). \
@@ -404,9 +389,7 @@ class OAIPMHHarvester(HarvesterBase):
                 id=harvest_object.id), harvest_object)
             return False
 
-        log.debug('Content (packed): %s' % harvest_object.content)
         content = json.loads(harvest_object.content)
-        log.debug('Content (unpacked): %s' % content)
         # import pprint; pprint.pprint(content)
 
         package_dict = content.pop('unified')
@@ -414,9 +397,18 @@ class OAIPMHHarvester(HarvesterBase):
 
         # If package exists use old PID, otherwise create new
 
-        # TODO: Search with all dataset data pids against all data pids in database
-        pkg = Session.query(Package).filter(Package.name == package_dict['name']).first()
+        pkg_id = ckanext.kata.utils.get_package_id_by_data_pids(package_dict)
+
+        pkg = Session.query(Package).filter(Package.id == pkg_id).first() if pkg_id else None
         log.debug('Package: "{pkg}"'.format(pkg=pkg))
+
+        if pkg and not self._recreate(harvest_object):
+            try:
+                log.debug("Not re-creating package: %s", pkg_id)
+                return True
+            except NotFound:
+                pass
+
         package_dict['id'] = pkg.id if pkg else ckanext.kata.utils.generate_pid()
         uploader = ''
 

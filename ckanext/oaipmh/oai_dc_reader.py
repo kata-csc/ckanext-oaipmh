@@ -12,6 +12,7 @@ from functionally import first
 
 from oaipmh import common as oc
 from ckanext.oaipmh import importcore
+import ckanext.kata.utils
 
 xml_reader = importcore.generic_xml_metadata_reader
 log = logging.getLogger(__name__)
@@ -85,7 +86,7 @@ class DcMetadataReader():
 
         uploader = self._get_uploader()
 
-        data_pids = _get_data_pids(self.dc)
+        data_pids = list(_get_data_pids(self.dc))
 
         # Create a unified internal harvester format dict
         unified = dict(
@@ -134,7 +135,7 @@ class DcMetadataReader():
             # dc('hasFormat', recursive=False)
             mimetype=first([a.string for a in self.dc('format', text=re.compile('/'), recursive=False)]) or '',
 
-            name=urllib.quote_plus(first(data_pids)) or '',
+            name=ckanext.kata.utils.datapid_to_name(first(data_pids) or ''),
             # name=first(map(pf.partial(urllib.quote_plus, safe=':'), get_data_pids(dc))) or '',
 
             notes=self._read_notes(),
@@ -406,7 +407,7 @@ def _get_provider(tag_tree):
     provider = None
     try:
         for ident in tag_tree('identifier', recursive=True):
-            if 'helda.helsinki.fi' in str(ident.contents[0]):
+            if u'helda.helsinki.fi' in unicode(ident.contents[0]):
                 provider = u'http://helda.helsinki.fi/oai/request'
                 break
     except AttributeError as e:
@@ -415,7 +416,7 @@ def _get_provider(tag_tree):
     if not provider:
         try:
             for ident in tag_tree('identifier', recursive=True):
-                if str(ident.contents[0]).startswith(u'urn:nbn:fi:csc-ida'):
+                if unicode(ident.contents[0]).startswith(u'urn:nbn:fi:csc-ida'):
                     provider = 'ida'
                     break
 

@@ -4,8 +4,10 @@
 """
 Unit tests for OAI-PMH harvester.
 """
+import copy
 from unittest import TestCase
 
+import testfixtures
 import bs4
 from lxml import etree
 
@@ -288,9 +290,12 @@ class TestOAIDCReaderHelda(TestCase):
                            'license_URL': u'Copyright 2005 American Institute of Physics. This article may be downloaded for personal use only. Any other use requires prior permission of the author and the American Institute of Physics.',
                            'license_id': 'notspecified',
                            'mimetype': '',
-                           'name': u'http%3A%2F%2Flink.aip.org%2Flink%2F%3Fjcp%2F123%2F064507',
+                           'name': 'http---link-aip-org-link--jcp-123-064507',
                            'notes': '',
-                           'pids': [{'id': u'http://hdl.handle.net/10138/1074',
+                           'pids': [{'type': 'data',
+                                     'id': u'http://link.aip.org/link/?jcp/123/064507',
+                                     'provider': u'http://helda.helsinki.fi/oai/request'},
+                                    {'id': u'http://hdl.handle.net/10138/1074',
                                      'provider': u'http://helda.helsinki.fi/oai/request',
                                      'type': 'data'},
                                     ],
@@ -306,14 +311,21 @@ class TestOAIDCReaderHelda(TestCase):
 
         data_dict = metadata['unified']
 
-        for (key, value) in EXPECTED_FIELDS.items():
-            assert key in data_dict, "Key not found: %r" % key
+        temp = copy.copy(data_dict)
 
-            output_value = data_dict.get(key)
+        temp.pop('agent')   # TODO: Compare also agents directly
 
-            # Note. Possibility for random fail, because data order is not promised by python
-            assert unicode(output_value) == unicode(value), "Values for key %r not matching: %r versus %r" % (
-                key, value, output_value)
+        testfixtures.compare(temp, EXPECTED_FIELDS)
+
+        # for (key, value) in EXPECTED_FIELDS.items():
+        #     assert key in data_dict, "Key not found: %r" % key
+        #
+        #     output_value = data_dict.get(key)
+        #
+        #     # Note. Possibility for random fail, because data order is not promised by python
+        #     # TODO: testfixtures.compare() could be used here to prevent random failing
+        #     assert unicode(output_value) == unicode(value), "Values for key %r not matching: %r versus %r" % (
+        #         key, value, output_value)
 
         fail_agent = 1
         fail_author = 3
