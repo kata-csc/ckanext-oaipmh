@@ -304,7 +304,8 @@ class TestOAIDCReaderHelda(TestCase):
                            'temporal_coverage_end': '',
                            'through_provider_URL': u'http://link.aip.org/link/?jcp/123/064507',
                            'type': 'dataset',
-                           'version': u'2005-08-08'}
+                           'version': u'2005-08-08',
+                           'uploader': u''}
 
         metadata = dcr.dc_metadata_reader('default')(etree.fromstring(self.xml))
         assert metadata
