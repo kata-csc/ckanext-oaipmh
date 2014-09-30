@@ -13,6 +13,8 @@ from functionally import first
 from oaipmh import common as oc
 from ckanext.oaipmh import importcore
 import ckanext.kata.utils
+from ckanext.kata.utils import label_list_yso
+from urlparse import urlparse
 
 xml_reader = importcore.generic_xml_metadata_reader
 log = logging.getLogger(__name__)
@@ -75,6 +77,16 @@ class DcMetadataReader():
         """ Get version pid. By default does not return any data. """
         return []
 
+    def _resolve_tags(self, tag):
+        try:
+            if urlparse(tag).scheme in ('http', 'https'):
+                resolved = label_list_yso(tag)
+                if resolved:
+                    return resolved
+        except:
+            pass
+        return [tag]
+
     def _read(self):
         project_funder, project_funding, project_name, project_homepage = _get_project_stuff(self.dc) or ('', '', '', '')
 
@@ -87,6 +99,10 @@ class DcMetadataReader():
         uploader = self._get_uploader()
 
         data_pids = list(_get_data_pids(self.dc))
+
+        tags = []
+        for tag in sorted([a.string for a in self.dc('subject', recursive=False)]):
+            tags.extend(self._resolve_tags(tag))
 
         # Create a unified internal harvester format dict
         unified = dict(
@@ -151,7 +167,7 @@ class DcMetadataReader():
                   [dict(role='funder', name=first(project_name) or '', id=first(project_name) or '', organisation=first(project_funder) or "", URL=first(project_homepage) or '', fundingid=first(project_funding) or '',)] +
                   [dict(role='owner', name=first([a.get('resource') for a in self.dc('rightsHolder', recursive=False)]) or '', id='', organisation='', URL='', fundingid='')],
 
-            tag_string=','.join(sorted([a.string for a in self.dc('subject', recursive=False)])) or '',
+            tag_string=','.join(tags) or '',
 
             # Todo! Implement if possible
             temporal_coverage_begin='',
