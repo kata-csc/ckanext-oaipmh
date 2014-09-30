@@ -51,15 +51,15 @@ class CKANServer(ResumptionOAIPMH):
         if temporal_begin or temporal_end:
             coverage.append("%s/%s" % (temporal_begin, temporal_end))
 
+        pids = [pid.get('id') for pid in package.get('pids', {}) if pid.get('id', False)]
+        pids.append(config.get('ckan.site_url') + url_for(controller="package", action='read', id=package['id']))
+
         meta = {
                 'title': [package.get('title', None) or package.get('name')],
                 'creator': [author['name'] for author in helpers.get_authors(package) if 'name' in author],
                 'publisher': [agent['name'] for agent in helpers.get_distributors(package) + helpers.get_contacts(package) if 'name' in agent],
                 'contributor':[author['name'] for author in helpers.get_contributors(package) if 'name' in author],
-                'identifier': [
-                    config.get('ckan.site_url') +
-                    url_for(controller="package", action='read', id=package['id']),
-                    package['url'] if package.get('url', None) else package['id']],
+                'identifier': pids,
                 'type': ['dataset'],
                 'description': [package.get('notes')] if package.get('notes', None) else None,
                 'subject': [tag.get('display_name') for tag in package['tags']]
