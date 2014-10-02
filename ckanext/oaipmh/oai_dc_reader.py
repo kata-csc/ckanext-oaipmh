@@ -73,7 +73,7 @@ class DcMetadataReader():
     def _get_uploader(self):
         return ''
 
-    def _get_version_pid(self):
+    def _get_version_pids(self):
         """ Get version pid. By default does not return any data. """
         return []
 
@@ -86,6 +86,9 @@ class DcMetadataReader():
         except:
             pass
         return [tag]
+
+    def _get_mime_type(self):
+        return first([a.string for a in self.dc('format', text=re.compile('/'), recursive=False)]) or ''
 
     def _read(self):
         project_funder, project_funding, project_name, project_homepage = _get_project_stuff(self.dc) or ('', '', '', '')
@@ -149,7 +152,7 @@ class DcMetadataReader():
 
             # Todo! IDA currently doesn't produce this, maybe in future
             # dc('hasFormat', recursive=False)
-            mimetype=first([a.string for a in self.dc('format', text=re.compile('/'), recursive=False)]) or '',
+            mimetype=self._get_mime_type(),
 
             name=ckanext.kata.utils.datapid_to_name(first(data_pids) or ''),
             # name=first(map(pf.partial(urllib.quote_plus, safe=':'), get_data_pids(dc))) or '',
@@ -160,7 +163,7 @@ class DcMetadataReader():
             # owner=first([a.get('resource') for a in dc('rightsHolder', recursive=False)]) or '',
 
             pids=[dict(id=pid, provider=_get_provider(self.bs), type='data') for pid in data_pids] +
-                 [dict(id=pid, provider=_get_provider(self.bs), type='version') for pid in self._get_version_pid()] +
+                 [dict(id=pid, provider=_get_provider(self.bs), type='version') for pid in self._get_version_pids()] +
                  [dict(id=pid, provider=_get_provider(self.bs), type='metadata') for pid in _get_metadata_pid(self.dc)],
 
             agent=[dict(role='author', name=orgauth.get('value', ''), id='', organisation=orgauth.get('org', ''), URL='', fundingid='') for orgauth in _get_org_auth(self.dc)] +
@@ -217,13 +220,16 @@ class IdaDcMetadataReader(DcMetadataReader):
             if key == description_key:
                 yield value
 
+    def _get_description_value(self, key):
+        return first(self._get_description_values(key))
+
     def _get_availability(self):
         """ Get availibility from description tags """
         availability = first(self.dc(_filter_tag_name_namespace(name='availability', namespace=NS['cscida']), recursive=False))
         if availability:
             return [availability.string.strip()]
 
-        return self._get_description_values('availability')
+        return self._get_description_value('availability')
 
     def _get_uploader(self):
         '''
@@ -236,13 +242,30 @@ class IdaDcMetadataReader(DcMetadataReader):
 
         return False
 
-    def _get_version_pid(self):
+    def _get_version_pids(self):
         '''
-        Generate results for version_PID
+        Get version PID (Indetifier.version) from data.
 
-        :type tag_tree: bs4.Tag
         '''
+        versions = self.dc(_filter_tag_name_namespace(name='Identifier.version', namespace=NS['cscida']), recursive=False)
+        if versions:
+            result = []
+            for version in versions:
+                result.append(version.string.strip())
+            return result
+
         return self._get_description_values('Identifier.version')
+
+    def _get_mime_type(self):
+        '''
+        Get general.mime_type from data
+
+        '''
+        mime_type = first(self.dc(_filter_tag_name_namespace(name='general.mime_type', namespace=NS['cscida']), recursive=False))
+        if mime_type:
+            return mime_type.string.strip()
+
+        return self._get_description_value('general.mime_type')
 
 class DefaultDcMetadataReader(DcMetadataReader):
     pass

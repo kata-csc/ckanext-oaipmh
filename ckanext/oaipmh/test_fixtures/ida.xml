@@ -14,6 +14,8 @@
         <cscida:uploader>tester</cscida:uploader>
         <cscida:availability>direct_download</cscida:availability>
         <cscida:projectId>asdf1234</cscida:projectId>
+        <cscida:Identifier.version>test-version</cscida:Identifier.version>
+        <cscida:general.mime_type>application/test</cscida:general.mime_type>
         <dc:identifier>urn:nbn:fi:csc-ida2014010800372s</dc:identifier>
         <dc:publisher>-</dc:publisher>
         <dct:publisher>

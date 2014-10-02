@@ -22,6 +22,7 @@ import os
 from ckan import model
 from ckan.logic import get_action
 import json
+from ckan.lib.dictization import model_dictize
 
 
 FIXTURE_HELDA = "ckanext-oaipmh/ckanext/oaipmh/test_fixtures/helda_oai_dc.xml"
@@ -124,10 +125,16 @@ class TestOAIPMHHarvester(TestCase):
         for xml_path, ida in ('ida.xml', True), ('helda.xml', False):
             self._run_import(xml_path, ida)
             package = self._get_single_package()
+            package_dict = get_action('package_show')({'model': model, 'session': model.Session, 'user': 'harvest'}, {'id': package.id})
             if ida:
                 self.assertTrue('direct_download' not in package.notes)
                 self.assertEquals(package.extras.get('availability', None), 'direct_download')
-                expected = (u'pids_0_id', u'urn:nbn:fi:csc-ida2014010800372v'), (u'pids_0_provider', u'ida'), (u'pids_0_type', u'version'), \
+                self.assertEquals(sorted([u'urn:nbn:fi:csc-ida2014010800372s', u'test-version']),
+                                  sorted([pid.get('id') for pid in package_dict.get('pids', [])]))
+                self.assertEquals('application/test', package_dict['mimetype'])
+
+                self.assertEquals(package.extras.get('availability', None), 'direct_download')
+                expected = (u'pids_0_id', u'urn:nbn:fi:csc-ida2014010800372s'), \
                     (u'contact_0_email', u'test1@example.fi'), (u'contact_0_name', u'Test Person1'), (u'contact_0_phone', u'0501231234'), \
                     (u'contact_1_email', u'test2@example.fi'), (u'contact_1_name', u'Test Person2'), (u'contact_1_phone', u'0501231234'),
 
@@ -391,7 +398,7 @@ class TestOAIDCReaderIda(TestCase):
         for reader_class, xml, ida in tests:
             reader = reader_class(_get_record(xml))
             # Testing private method. This can be removed when manual tests start to work.
-            pid = reader._get_version_pid()  # pylint: disable=W0212
+            pid = reader._get_version_pids()  # pylint: disable=W0212
             if ida:
                 self.assertTrue(bool(pid))
             else:
