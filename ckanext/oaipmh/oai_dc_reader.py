@@ -229,7 +229,7 @@ class IdaDcMetadataReader(DcMetadataReader):
         if availability:
             return [availability.string.strip()]
 
-        return self._get_description_value('availability')
+        return self._get_description_values('availability')
 
     def _get_uploader(self):
         '''
@@ -240,7 +240,7 @@ class IdaDcMetadataReader(DcMetadataReader):
         if uploader:
             return uploader.string.strip()
 
-        return False
+        return ''
 
     def _get_version_pids(self):
         '''
