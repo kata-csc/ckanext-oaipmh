@@ -420,7 +420,7 @@ def _get_rights(tag_tree):
                 lid = 'other-open'
                 lurl = decl
             else:
-                raise ValueError('Unfamiliar rights encountered from IDA!')
+                return None
             return avail, lid, lurl, aaurl
         except AttributeError as e:
             log.info('IDA rights not detected. Probably not harvesting IDA. {e}'.format(e=e))
