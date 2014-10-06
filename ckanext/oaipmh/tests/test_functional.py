@@ -24,10 +24,14 @@ from ckan.logic import get_action
 from ckan import model
 from ckanext.kata.tests.test_fixtures.unflattened import TEST_DATADICT
 from copy import deepcopy
+import os
 
 
-FIXTURE_LISTIDENTIFIERS = "file:ckanext-oaipmh/ckanext/oaipmh/test_fixtures/listidentifiers.xml"
-FIXTURE_DATASET = "file:ckanext-oaipmh/ckanext/oaipmh/test_fixtures/oai-pmh.xml"
+FIXTURE_LISTIDENTIFIERS = "listidentifiers.xml"
+FIXTURE_DATASET = "oai-pmh.xml"
+
+def _get_fixture(filename):
+    return "file://%s" % os.path.join(os.path.dirname(__file__), "..", "test_fixtures", filename)
 
 
 class TestReadingFixtures(TestCase):
@@ -53,7 +57,7 @@ class TestReadingFixtures(TestCase):
         '''
 
         registry = importformats.create_metadata_registry()
-        client = oaipmh.client.Client(FIXTURE_LISTIDENTIFIERS, registry)
+        client = oaipmh.client.Client(_get_fixture(FIXTURE_LISTIDENTIFIERS), registry)
         identifiers = (header.identifier() for header in client.listIdentifiers(metadataPrefix='oai_dc'))
 
         assert 'oai:arXiv.org:hep-th/9801001' in identifiers
@@ -66,7 +70,7 @@ class TestReadingFixtures(TestCase):
         Parse example dataset
         '''
         registry = importformats.create_metadata_registry()
-        client = oaipmh.client.Client(FIXTURE_DATASET, registry)
+        client = oaipmh.client.Client(_get_fixture(FIXTURE_DATASET), registry)
         record = client.getRecord(identifier=self.TEST_ID, metadataPrefix='oai_dc')
 
         assert record
@@ -79,7 +83,7 @@ class TestReadingFixtures(TestCase):
             client.getRecord(identifier=self.TEST_ID, metadataPrefix='oai_dc')
 
         registry = importformats.create_metadata_registry()
-        client = oaipmh.client.Client(FIXTURE_LISTIDENTIFIERS, registry)
+        client = oaipmh.client.Client(_get_fixture(FIXTURE_LISTIDENTIFIERS), registry)
         self.assertRaises(Exception, getrecord)
 
 

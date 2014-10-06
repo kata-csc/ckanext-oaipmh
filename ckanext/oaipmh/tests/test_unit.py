@@ -22,11 +22,10 @@ import os
 from ckan import model
 from ckan.logic import get_action
 import json
-from ckan.lib.dictization import model_dictize
 
 
-FIXTURE_HELDA = "ckanext-oaipmh/ckanext/oaipmh/test_fixtures/helda_oai_dc.xml"
-FIXTURE_IDA = "ckanext-oaipmh/ckanext/oaipmh/test_fixtures/oai-pmh.xml"
+FIXTURE_HELDA = "helda_oai_dc.xml"
+FIXTURE_IDA = "oai-pmh.xml"
 
 
 def _get_fixture(filename):
@@ -218,7 +217,7 @@ class TestOAIDCReaderHelda(TestCase):
         '''
         Setup variables
         '''
-        cls.xml_file = open(FIXTURE_HELDA, 'r')
+        cls.xml_file = open(_get_fixture(FIXTURE_HELDA), 'r')
         cls.xml = cls.xml_file.read()
 
         cls.bs = bs4.BeautifulSoup(cls.xml, 'xml')
@@ -370,7 +369,7 @@ class TestOAIDCReaderIda(TestCase):
         '''
         Setup variables
         '''
-        cls.xml_file = open(FIXTURE_IDA, 'r')
+        cls.xml_file = open(_get_fixture(FIXTURE_IDA), 'r')
         cls.xml = cls.xml_file.read()
 
         cls.bs = bs4.BeautifulSoup(cls.xml, 'xml')
