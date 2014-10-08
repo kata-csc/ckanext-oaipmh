@@ -72,8 +72,7 @@ class TestOAIPMHHarvester(TestCase):
         kata_model.setup()
         cls.harvester = OAIPMHHarvester()
 
-    @classmethod
-    def teardown_class(cls):
+    def tearDown(self):
         ckan.model.repo.rebuild_db()
 
     def test_harvester_info(self):
@@ -119,8 +118,7 @@ class TestOAIPMHHarvester(TestCase):
         self.assertEquals(len(list(packages)), 1)
         return packages[0]
 
-    def manual_import_stage(self):
-        """ Manual test for import stage. Currently Jenkins fails this test so we do not run this automatically. """
+    def test_import_stage_data(self):
         for xml_path, ida in ('ida.xml', True), ('helda.xml', False):
             self._run_import(xml_path, ida)
             package = self._get_single_package()
@@ -143,14 +141,13 @@ class TestOAIPMHHarvester(TestCase):
             package.delete()
             model.repo.commit()
 
-    def manual_import_stage_tags(self):
+    def test_import_stage_tags(self):
         self._run_import('oai-pmh.xml', True)
         package = self._get_single_package()
         tags = [tag.name.encode("utf-8") for tag in package.get_tags()]
         self.assertTrue(u'televisiokasvatus' in tags)
 
-    def manual_import_stage_project(self):
-        """ Manual test for import stage. Currently Jenkins fails this test so we do not run this automatically. """
+    def test_import_stage_project(self):
         self._run_import('ida3.xml', True)
         package = self._get_single_package()
 
@@ -159,14 +156,16 @@ class TestOAIPMHHarvester(TestCase):
         for key, value in expected:
             self.assertEquals(package.extras.get(key), value)
 
-    def manual_import_stage_recreate(self):
+    def test_import_stage_recreate(self):
         """ Manual test for recreating harvested dataset multiple times """
 
         for xml, recreate in ('ida.xml', False), ('ida2.xml', False), ('ida2.xml', True):
             configuration = {'type': 'ida'}
             if recreate:
                 configuration['recreate'] = True
+
             self._run_import(xml, True, configuration)
+
             package = self._get_single_package()
             if recreate:
                 self.assertEquals(package.extras.get('availability', None), 'MODIFIED')

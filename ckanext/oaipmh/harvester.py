@@ -14,19 +14,16 @@ from dateutil.parser import parse as dp
 import importformats
 
 from ckan.model import Session, Package
-from ckan.logic import get_action, NotFound
+from ckan.logic import NotFound,  NotAuthorized, ValidationError
 from ckan import model
 
 from ckanext.harvest.model import HarvestJob, HarvestObject
 from ckanext.harvest.harvesters.base import HarvesterBase
 import ckanext.kata.utils
 import ckanext.kata.plugin
-import urllib
 import fnmatch
 import re
 import ckanext.kata.kata_ldap as ld
-import ckan.model as model
-from ckan.logic import  NotAuthorized, NotFound, ValidationError
 from ckanext.kata.utils import datapid_to_name
 
 log = logging.getLogger(__name__)
@@ -343,6 +340,8 @@ class OAIPMHHarvester(HarvesterBase):
             # Get source URL
             header, metadata, about = client.getRecord(identifier=harvest_object.guid, metadataPrefix=md_format)
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             self._save_object_error('Unable to get metadata from provider: {u}: {e}'.format(
                 u=harvest_object.source.url, e=e), harvest_object)
             return False
@@ -351,6 +350,8 @@ class OAIPMHHarvester(HarvesterBase):
         try:
             content = json.dumps(metadata.getMap())
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             self._save_object_error('Unable to get content for package: {u}: {e}'.format(
                 u=harvest_object.source.url, e=e), harvest_object)
             return False
@@ -458,6 +459,8 @@ class OAIPMHHarvester(HarvesterBase):
 
             log.debug("Exiting import_stage()")
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             self._save_object_error('Import: Could not create {id}. {e}'.format(
                 id=harvest_object.id, e=e), harvest_object)
             return False
