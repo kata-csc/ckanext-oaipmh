@@ -1,13 +1,12 @@
 # coding=utf-8
 import logging
 import re
-import urllib
 from itertools import tee, chain
 
 import bs4
 import lxml.etree
 import pointfree as pf
-from fn.uniform import zip, filter, map, filterfalse
+from fn.uniform import zip, filter, filterfalse
 from functionally import first
 
 from oaipmh import common as oc
@@ -26,6 +25,7 @@ NS = {
 }
 
 # TODO: Change this file to class structure to allow harvester to set values also with OAI-PMH verb 'Identify'.
+
 
 def dc_metadata_reader(harvest_type):
     """ Get correct reader for given harvest_type. Currently supports 'ida' or 'default'. """
@@ -195,6 +195,7 @@ class DcMetadataReader():
         #    unified['projdis'] = 'True'
         return unified
 
+
 class IdaDcMetadataReader(DcMetadataReader):
     def _skip_note(self, note):
         """ Skip directo_download descriptions """
@@ -267,6 +268,7 @@ class IdaDcMetadataReader(DcMetadataReader):
 
         return self._get_description_value('general.mime_type')
 
+
 class DefaultDcMetadataReader(DcMetadataReader):
     pass
 
@@ -318,7 +320,7 @@ def _get_metadata_pid(tag_tree):
     '''
     try:
         return tag_tree.header.identifier.contents
-    except AttributeError as e:
+    except AttributeError:
         return []
 
 
@@ -328,7 +330,7 @@ def _get_checksum(tag_tree):
     '''
     try:
         return tag_tree.hasFormat.File.checksum.Checksum.checksumValue.string
-    except Exception as e:
+    except Exception:
         log.info('Checksum missing from dataset!')
 
 
@@ -337,7 +339,7 @@ def _get_download(tag_tree):
     def ida():
         try:
             yield tag_tree.hasFormat.File.get('about')
-        except Exception as e:
+        except Exception:
             pass
 
     # @ExceptReturn(Exception, None)
@@ -383,7 +385,7 @@ def _get_algorithm(tag_tree):
     def ida():
         try:
             yield tag_tree.hasFormat.File.checksum.Checksum.generator.Algorithm.get('about').split('/')[-1]
-        except Exception as e:
+        except Exception:
             pass
 
     return ida()
@@ -449,7 +451,7 @@ def _get_provider(tag_tree):
             if u'helda.helsinki.fi' in unicode(ident.contents[0]):
                 provider = u'http://helda.helsinki.fi/oai/request'
                 break
-    except AttributeError as e:
+    except AttributeError:
         pass
 
     if not provider:
@@ -459,7 +461,7 @@ def _get_provider(tag_tree):
                     provider = 'ida'
                     break
 
-        except AttributeError as e:
+        except AttributeError:
             pass
 
     return provider if provider else 'unknown'

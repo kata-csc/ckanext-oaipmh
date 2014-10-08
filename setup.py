@@ -29,8 +29,7 @@ setup(
         'functionally',
         'fn',
     ],
-    entry_points=\
-        """
+    entry_points="""
         [ckan.plugins]
         # Add plugins here, eg
         oaipmh=ckanext.oaipmh.plugin:OAIPMHPlugin

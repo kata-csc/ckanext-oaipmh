@@ -54,21 +54,17 @@ class CKANServer(ResumptionOAIPMH):
         pids = [pid.get('id') for pid in package.get('pids', {}) if pid.get('id', False)]
         pids.append(config.get('ckan.site_url') + url_for(controller="package", action='read', id=package['id']))
 
-        meta = {
-                'title': [package.get('title', None) or package.get('name')],
+        meta = {'title': [package.get('title', None) or package.get('name')],
                 'creator': [author['name'] for author in helpers.get_authors(package) if 'name' in author],
                 'publisher': [agent['name'] for agent in helpers.get_distributors(package) + helpers.get_contacts(package) if 'name' in agent],
-                'contributor':[author['name'] for author in helpers.get_contributors(package) if 'name' in author],
+                'contributor': [author['name'] for author in helpers.get_contributors(package) if 'name' in author],
                 'identifier': pids,
                 'type': ['dataset'],
                 'description': [package.get('notes')] if package.get('notes', None) else None,
-                'subject': [tag.get('display_name') for tag in package['tags']]
-                    if package.get('tags', None) else None,
-                'date': [dataset.metadata_created.strftime('%Y-%m-%d')]
-                    if dataset.metadata_created else None,
+                'subject': [tag.get('display_name') for tag in package['tags']] if package.get('tags', None) else None,
+                'date': [dataset.metadata_created.strftime('%Y-%m-%d')] if dataset.metadata_created else None,
                 'rights': [package['license_title']] if package.get('license_title', None) else None,
-                'coverage': coverage if coverage else None,
-        }
+                'coverage': coverage if coverage else None, }
 
         iters = dataset.extras.items()
         meta = dict(meta.items() + iters)

@@ -42,9 +42,11 @@ class _FakeHarvestSource():
         self.config = json.dumps(config)
         self.url = url
 
+
 class _FakeHarvestJob():
     def __init__(self, source):
         self.source = source
+
 
 class _FakeHarvestObject():
     def __init__(self, content, identification, config, source_url=None):
@@ -60,6 +62,7 @@ class _FakeHarvestObject():
 
     def save(self):
         pass
+
 
 class TestOAIPMHHarvester(TestCase):
 
@@ -183,7 +186,6 @@ class TestOAIPMHHarvester(TestCase):
             self._run_import(xml, False, configuration)
             package = self._get_single_package()
             self.assertEquals(package.extras.get('agent_1_name', None), expected)
-
 
     def test_validate_config_valid(self):
         config = '{"from": "2014-03-03", "limit": 5}'

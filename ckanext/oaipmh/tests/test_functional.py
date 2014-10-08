@@ -8,7 +8,6 @@ Functional tests for OAI-PMH harvester.
 from unittest import TestCase
 
 import oaipmh.client
-import pointfree as pf
 import ckan
 
 from ckanext.harvest import model as harvest_model
@@ -29,6 +28,7 @@ import os
 
 FIXTURE_LISTIDENTIFIERS = "listidentifiers.xml"
 FIXTURE_DATASET = "oai-pmh.xml"
+
 
 def _get_fixture(filename):
     return "file://%s" % os.path.join(os.path.dirname(__file__), "..", "test_fixtures", filename)
@@ -124,7 +124,7 @@ class TestOaipmhServer(WsgiAppCase, TestCase):
 
         get_action('package_create')({'user': 'test_coverage'}, package_1_data)
         url = url_for('/oai')
-        result = self.app.get(url, {'verb': 'GetRecord', 'identifier': 'test-package-coverage', 'metadataPrefix': 'oai_dc' })
+        result = self.app.get(url, {'verb': 'GetRecord', 'identifier': 'test-package-coverage', 'metadataPrefix': 'oai_dc'})
 
         root = lxml.etree.fromstring(result.body)
         expected = ['Keilaniemi (populated place)', 'Espoo (city)', '2003-07-10T06:36:27Z/2010-04-15T03:24:47Z']
@@ -136,7 +136,6 @@ class TestOaipmhServer(WsgiAppCase, TestCase):
         self.assertEquals(3, found, "Unexpected coverage results")
 
         get_action('organization_delete')({'user': 'test_coverage'}, {'id': organization['id']})
-
 
     def test_records(self):
         """ Test record fetching via http-request to prevent accidental changes to interface """
@@ -166,7 +165,7 @@ class TestOaipmhServer(WsgiAppCase, TestCase):
         self.assertEquals(organization['id'], set_spec)
         self.assertEquals(organization['name'], set_name)
 
-        result = self.app.get(url, {'verb': 'ListIdentifiers', 'set': set_spec, 'metadataPrefix': 'oai_dc' })
+        result = self.app.get(url, {'verb': 'ListIdentifiers', 'set': set_spec, 'metadataPrefix': 'oai_dc'})
 
         root = lxml.etree.fromstring(result.body)
         fail = True
@@ -178,7 +177,7 @@ class TestOaipmhServer(WsgiAppCase, TestCase):
             self.assertTrue(set_spec in package_names)
             self.assertTrue(identifier in package_identifiers)
 
-            result = self.app.get(url, {'verb': 'GetRecord', 'identifier': identifier, 'metadataPrefix': 'oai_dc' })
+            result = self.app.get(url, {'verb': 'GetRecord', 'identifier': identifier, 'metadataPrefix': 'oai_dc'})
 
             root = lxml.etree.fromstring(result.body)
 
@@ -186,7 +185,7 @@ class TestOaipmhServer(WsgiAppCase, TestCase):
             for record_result in root.xpath("//o:record", namespaces=self._namespaces):
                 fail_record = False
                 header = self._get_single_result(record_result, 'o:header')
-                metadata = self._get_single_result(record_result, 'o:metadata')
+                self._get_single_result(record_result, 'o:metadata')
 
                 self.assertTrue(header.xpath("string(o:identifier)", namespaces=self._namespaces) in package_identifiers)
                 self.assertTrue(header.xpath("string(o:setSpec)", namespaces=self._namespaces) in package_names)

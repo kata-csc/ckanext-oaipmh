@@ -28,8 +28,7 @@ class OAIPMHPlugin(SingletonPlugin):
         rootdir = os.path.dirname(os.path.dirname(here))
         template_dir = os.path.join(rootdir, 'ckanext',
                                     'oaipmh', 'templates')
-        config['extra_template_paths'] = ','.join([template_dir,
-                config.get('extra_template_paths', '')])
+        config['extra_template_paths'] = ','.join([template_dir, config.get('extra_template_paths', '')])
 
     def before_map(self, map):
         '''Map the controller to be used for OAI-PMH.

@@ -183,7 +183,6 @@ class OAIPMHHarvester(HarvesterBase):
                 pass
                 # package_ids = [header.identifier() for header in client.listRecords()]
 
-
     def gather_stage(self, harvest_job):
         '''
         The gather stage will receive a HarvestJob object and will be
@@ -277,8 +276,8 @@ class OAIPMHHarvester(HarvesterBase):
                 package_ids.remove(converted_identifiers[converted_name])
 
         if previous_job:
-            for previous_error in [error.guid for error in Session.query(HarvestObject). \
-                                   filter(HarvestObject.harvest_job_id == previous_job.id). \
+            for previous_error in [error.guid for error in Session.query(HarvestObject).
+                                   filter(HarvestObject.harvest_job_id == previous_job.id).
                                    filter(HarvestObject.state == 'ERROR').all()]:
                 if previous_error not in package_ids:
                     package_ids.append(previous_error)
@@ -437,7 +436,6 @@ class OAIPMHHarvester(HarvesterBase):
                 try:
                     usr = ld.get_user_from_ldap(uploader)
                     usrname = model.User.by_openid(usr)
-                    user = model.User.get('harvest')
                     if usrname:
                         editor_dict = {"name": package_dict['name'],
                                        "role": "admin",
