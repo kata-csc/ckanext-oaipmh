@@ -255,7 +255,7 @@ class OAIPMHHarvester(HarvesterBase):
             .limit(1).first()
 
         last_time = None
-        if previous_job and model.Package.get(harvest_job.source.id).metadata_modified < previous_job.gather_started:
+        if previous_job and previous_job.finished and model.Package.get(harvest_job.source.id).metadata_modified < previous_job.gather_started:
             last_time = previous_job.gather_started.isoformat()
 
         # Collect package ids
