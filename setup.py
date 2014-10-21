@@ -31,8 +31,8 @@ setup(
     ],
     entry_points="""
         [ckan.plugins]
-        # Add plugins here, eg
         oaipmh=ckanext.oaipmh.plugin:OAIPMHPlugin
         oaipmh_harvester=ckanext.oaipmh.harvester:OAIPMHHarvester
+        cmdi_harvester=ckanext.oaipmh.cmdi:CMDIHarvester
         """,
 )

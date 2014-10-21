@@ -33,6 +33,7 @@ class OAIPMHHarvester(HarvesterBase):
     '''
     OAI-PMH Harvester
     '''
+    md_format = "oai_dc"
 
     def _get_configuration(self, harvest_job):
         """ Parse configuration from given harvest object """
@@ -154,7 +155,7 @@ class OAIPMHHarvester(HarvesterBase):
     #     :returns: A string with the URL to the original document
     #     '''
 
-    def get_package_ids(self, set_ids, config, md_format, last_time, client):
+    def get_package_ids(self, set_ids, config, last_time, client):
         ''' Get package identifiers from given set identifiers.
         '''
         def filter_map_args(list_tuple):
@@ -165,7 +166,7 @@ class OAIPMHHarvester(HarvesterBase):
                     yield (key, dp(value).replace(tzinfo=None))
 
         kwargs = dict(filter_map_args(config.items()))
-        kwargs['metadataPrefix'] = md_format
+        kwargs['metadataPrefix'] = self.md_format
         if last_time and 'from_' not in kwargs:
             kwargs['from_'] = dp(last_time).replace(tzinfo=None)
         if set_ids:
@@ -213,16 +214,6 @@ class OAIPMHHarvester(HarvesterBase):
         registry = importformats.create_metadata_registry(harvest_type)
         client = oaipmh.client.Client(harvest_job.source.url, registry)
 
-        # Choose best md_format from md_formats,
-        # but let's use 'oai_dc' for now
-        try:
-            # md_formats = client.listMetadataFormats()
-            md_format = 'oai_dc'
-        except oaipmh.error.BadVerbError as e:
-            log.warning('Provider does not support listMetadataFormats verb. Using oai_dc as fallback format.')
-            md_format = 'oai_dc'
-        log.debug('Metadata format: {mf}'.format(mf=md_format))
-
         available_sets = list(client.listSets())
 
         log.debug('available sets: %s', available_sets)
@@ -245,6 +236,9 @@ class OAIPMHHarvester(HarvesterBase):
                 set_ids.add(set_id)
 
         log.debug('Sets in config: %s', set_ids)
+        return self.populate_harvest_job(harvest_job, set_ids, config, client)
+
+    def populate_harvest_job(self, harvest_job, set_ids, config, client):
 
         # Check if this source has been harvested before
         previous_job = Session.query(HarvestJob) \
@@ -259,7 +253,7 @@ class OAIPMHHarvester(HarvesterBase):
             last_time = previous_job.gather_started.isoformat()
 
         # Collect package ids
-        package_ids = list(self.get_package_ids(set_ids, config, md_format, last_time, client))
+        package_ids = list(self.get_package_ids(set_ids, config, last_time, client))
         log.debug('Identifiers: %s', package_ids)
 
         if not self._recreate(harvest_job) and package_ids:
@@ -333,11 +327,9 @@ class OAIPMHHarvester(HarvesterBase):
             harvest_type = config.get('type', 'default')
             registry = importformats.create_metadata_registry(harvest_type)
             client = oaipmh.client.Client(harvest_object.job.source.url, registry)
-            # Choose best md_format from md_formats, but let's use 'oai_dc' for now
-            md_format = 'oai_dc'
 
             # Get source URL
-            header, metadata, about = client.getRecord(identifier=harvest_object.guid, metadataPrefix=md_format)
+            header, metadata, about = client.getRecord(identifier=harvest_object.guid, metadataPrefix=self.md_format)
         except Exception as e:
             import traceback
             traceback.print_exc()

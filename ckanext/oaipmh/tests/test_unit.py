@@ -12,10 +12,14 @@ import bs4
 from lxml import etree
 
 import ckan
+from ckanext.harvest.commands import harvester
+from ckanext.harvest.model import HarvestJob, HarvestSource, HarvestObject
+from ckanext.oaipmh.cmdi import CMDIHarvester
 from ckanext.oaipmh.harvester import OAIPMHHarvester
 import ckanext.harvest.model as harvest_model
 import ckanext.kata.model as kata_model
 from ckanext.oaipmh.importformats import create_metadata_registry
+from ckanext.oaipmh.cmdi_reader import cmdi_reader
 import ckanext.oaipmh.oai_dc_reader as dcr
 from ckanext.oaipmh.oai_dc_reader import dc_metadata_reader
 import os
@@ -35,6 +39,12 @@ def _get_fixture(filename):
 def _get_record(filename):
     tree = etree.parse(_get_fixture(filename))
     return tree.xpath('/oai:OAI-PMH/*/oai:record', namespaces={'oai': 'http://www.openarchives.org/OAI/2.0/'})[0]
+
+
+def _get_single_package():
+    packages = model.Session.query(model.Package).filter_by(state=model.State.ACTIVE)
+    assert len(list(packages)) == 1
+    return packages[0]
 
 
 class _FakeHarvestSource():
@@ -63,6 +73,18 @@ class _FakeHarvestObject():
     def save(self):
         pass
 
+
+class _FakeIdentifier():
+    def __init__(self, identifier):
+        self._identifier = identifier
+
+    def identifier(self):
+        return self._identifier
+
+
+class _FakeClient():
+    def listIdentifiers(self, metadataPrefix):
+        return [_FakeIdentifier('oai:kielipankki.fi:sha3a880')]
 
 class TestOAIPMHHarvester(TestCase):
 
@@ -116,15 +138,10 @@ class TestOAIPMHHarvester(TestCase):
 
         self.harvester.import_stage(harvest_object)
 
-    def _get_single_package(self):
-        packages = model.Session.query(model.Package).filter_by(state=model.State.ACTIVE)
-        self.assertEquals(len(list(packages)), 1)
-        return packages[0]
-
     def test_import_stage_data(self):
         for xml_path, ida in ('ida.xml', True), ('helda.xml', False):
             self._run_import(xml_path, ida)
-            package = self._get_single_package()
+            package = _get_single_package()
             package_dict = get_action('package_show')({'model': model, 'session': model.Session, 'user': 'harvest'}, {'id': package.id})
             if ida:
                 self.assertTrue('direct_download' not in package.notes)
@@ -146,13 +163,13 @@ class TestOAIPMHHarvester(TestCase):
 
     def test_import_stage_tags(self):
         self._run_import('oai-pmh.xml', True)
-        package = self._get_single_package()
+        package = _get_single_package()
         tags = [tag.name.encode("utf-8") for tag in package.get_tags()]
         self.assertTrue(u'televisiokasvatus' in tags)
 
     def test_import_stage_project(self):
         self._run_import('ida3.xml', True)
-        package = self._get_single_package()
+        package = _get_single_package()
 
         expected = [('agent_1_organisation', 'Paras yliopisto')]
 
@@ -169,7 +186,7 @@ class TestOAIPMHHarvester(TestCase):
 
             self._run_import(xml, True, configuration)
 
-            package = self._get_single_package()
+            package = _get_single_package()
             if recreate:
                 self.assertEquals(package.extras.get('availability', None), 'MODIFIED')
             else:
@@ -184,7 +201,7 @@ class TestOAIPMHHarvester(TestCase):
                 configuration['recreate'] = False
 
             self._run_import(xml, False, configuration)
-            package = self._get_single_package()
+            package = _get_single_package()
             self.assertEquals(package.extras.get('agent_1_name', None), expected)
 
     def test_validate_config_valid(self):
@@ -202,11 +219,90 @@ class TestOAIPMHHarvester(TestCase):
         self.assertRaises(TypeError, self.harvester.validate_config, (config))
 
 
-# class TestImportCore(TestCase):
-#
-#     def test_harvester_info(self):
-#         parse_xml = generic_xml_metadata_reader
-#         assert isinstance(info, dict)
+class TestCMDIHarvester(TestCase):
+    @classmethod
+    def setup_class(cls):
+        ''' Setup database and variables '''
+        harvest_model.setup()
+        kata_model.setup()
+        cls.harvester = CMDIHarvester()
+
+    def tearDown(self):
+        """ rebuild database """
+        ckan.model.repo.rebuild_db()
+
+    def _run_import(self, xml, job):
+        if not model.User.get('harvest'):
+            model.User(name='harvest', sysadmin=True).save()
+        if not model.Group.get('test'):
+            get_action('organization_create')({'user': 'harvest'}, {'name': 'test'})
+
+        record = _get_record(xml)
+
+        metadata = cmdi_reader(record)
+        metadata['unified']['owner_org'] = "test"
+
+        harvest_object = HarvestObject()
+        harvest_object.content = json.dumps(metadata.getMap())
+        harvest_object.id = "test-cmdi"
+        harvest_object.guid = "test-cmdi"
+        harvest_object.source = job.source
+        harvest_object.harvest_source_id = None
+        harvest_object.job = job
+        harvest_object.save()
+
+        self.harvester.import_stage(harvest_object)
+        return harvest_object
+
+    def test_reader(self):
+        record = _get_record("cmdi_1.xml")
+        metadata = cmdi_reader(record)
+        content= metadata.getMap()
+        package = content['unified']
+        self.assertEquals(package.get('name', None), 'urn-nbn-fi-lb-20140730180')
+        self.assertEquals(package.get('notes', None), 'Test description')
+        self.assertEquals(package.get('version', None), '2014-10-20')
+        self.assertEquals(package.get('langtitle', [])[0]['value'], 'Longi Corpus')
+        self.assertEquals(package.get('langtitle', [])[0]['lang'], 'en')
+
+    def test_gather(self):
+        source = HarvestSource(url="http://localhost/test_cmdi", type="cmdi")
+        source.save()
+        job = HarvestJob(source=source)
+        job.save()
+        self.harvester.client = _FakeClient()
+        self.harvester.gather_stage(job)
+
+    def test_import(self):
+        source = HarvestSource(url="http://localhost/test_cmdi", type="cmdi")
+        source.save()
+        job = HarvestJob(source=source)
+        job.save()
+
+        harvest_object = self._run_import("cmdi_1.xml", job)
+
+        self.assertEquals(len(harvest_object.errors), 0, u"\n".join(unicode(error.message) for error in (harvest_object.errors or [])))
+
+        package = get_action('package_show')({'user': 'harvest'}, {'id': 'urn-nbn-fi-lb-20140730180'})
+
+        self.assertEquals(package.get('name', None), 'urn-nbn-fi-lb-20140730180')
+        self.assertEquals(package.get('notes', None), 'Test description')
+        self.assertEquals(package.get('version', None), '2014-10-20')
+        self.assertEquals(package.get('langtitle', [])[0]['value'], 'Longi Corpus')
+        self.assertEquals(package.get('langtitle', [])[0]['lang'], 'eng')
+        expected_pids = [{u'id': u'http://urn.fi/urn:nbn:fi:lb-20140730180',
+                          u'primary': u'true',
+                          u'provider': u'http://metalb.csc.fi/cgi-bin/que',
+                          u'type': u'data'},
+                         {u'id': u'http://islrn.org/resources/248-895-085-557-0',
+                          u'provider': u'http://metalb.csc.fi/cgi-bin/que',
+                          u'type': u'data'},
+                         {u'id': u'oai:kielipankki.fi:sha3a880',
+                          u'provider': u'http://metalb.csc.fi/cgi-bin/que',
+                          u'type': u'metadata'}]
+        self.assertEquals(sorted(expected_pids, key=lambda item: item['id']),
+                          sorted(package.get('pids'), key=lambda item: item['id']))
+
 
 class TestOAIDCReaderHelda(TestCase):
     '''

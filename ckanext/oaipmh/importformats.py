@@ -7,6 +7,7 @@ import oaipmh.common as oc
 import oaipmh.metadata as om
 import lxml.etree
 from fn.uniform import range
+from ckanext.oaipmh.cmdi_reader import cmdi_reader
 from ckanext.oaipmh.oai_dc_reader import dc_metadata_reader
 
 import importcore
@@ -158,18 +159,20 @@ def nrd_metadata_reader(xml):
         return oc.Metadata(result)
 
 
+
 def create_metadata_registry(harvest_type=None):
-        '''Return new metadata registry with all common metadata readers
+    '''Return new metadata registry with all common metadata readers
 
-        The readers currently implemented are for metadataPrefixes
-        oai_dc, nrd, rdf and xml.
+    The readers currently implemented are for metadataPrefixes
+    oai_dc, nrd, rdf and xml.
 
-        :returns: metadata registry instance
-        :rtype: oaipmh.metadata.MetadataRegistry
-        '''
-        registry = om.MetadataRegistry()
-        registry.registerReader('oai_dc', dc_metadata_reader(harvest_type or 'default'))
-        registry.registerReader('nrd', nrd_metadata_reader)
-        registry.registerReader('rdf', rdf_reader)
-        registry.registerReader('xml', xml_reader)
-        return registry
+    :returns: metadata registry instance
+    :rtype: oaipmh.metadata.MetadataRegistry
+    '''
+    registry = om.MetadataRegistry()
+    registry.registerReader('oai_dc', dc_metadata_reader(harvest_type or 'default'))
+    registry.registerReader('cmdi0571', cmdi_reader)
+    registry.registerReader('nrd', nrd_metadata_reader)
+    registry.registerReader('rdf', rdf_reader)
+    registry.registerReader('xml', xml_reader)
+    return registry
