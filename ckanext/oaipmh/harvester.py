@@ -10,6 +10,7 @@ from paste.deploy.converters import asbool
 import oaipmh.client
 import oaipmh.error
 from dateutil.parser import parse as dp
+from ckan.controllers.api import get_action
 
 import importformats
 
@@ -56,6 +57,13 @@ class OAIPMHHarvester(HarvesterBase):
         configuration = self._get_configuration(harvest_object)
         return configuration.get('recreate', configuration.get('type') != 'ida')
 
+    def on_deleted(self, harvest_object, header):
+        """ Called when metadata is deleted from server.
+            Return False if dataset is ignored.
+        """
+        log.info("Metadata is deleted for %s. Ignoring.", harvest_object.guid)
+        return False
+
     def info(self):
         '''
         Harvesting implementations must provide this method, which will return a
@@ -81,9 +89,6 @@ class OAIPMHHarvester(HarvesterBase):
 
         :returns: A dictionary with the harvester descriptors
         '''
-
-        log.debug("Entering info()")
-        log.debug("Exiting info()")
         return {
             'name': 'oai-pmh',
             'title': 'OAI-PMH',
@@ -203,9 +208,6 @@ class OAIPMHHarvester(HarvesterBase):
         :returns: A list of HarvestObject ids
         :type harvest_job: HarvestJob
         '''
-
-        log.debug('Entering gather_stage()')
-
         log.debug('Harvest source: %s', harvest_job.source.url)
 
         config = self._get_configuration(harvest_job)
@@ -239,7 +241,6 @@ class OAIPMHHarvester(HarvesterBase):
         return self.populate_harvest_job(harvest_job, set_ids, config, client)
 
     def populate_harvest_job(self, harvest_job, set_ids, config, client):
-
         # Check if this source has been harvested before
         previous_job = Session.query(HarvestJob) \
             .filter(HarvestJob.source == harvest_job.source) \
@@ -293,8 +294,6 @@ class OAIPMHHarvester(HarvesterBase):
         except Exception as e:
             self._save_gather_error('Gather: {e}'.format(e=e), harvest_job)
             raise
-        finally:
-            log.debug("Exiting gather_stage()")
 
     def fetch_stage(self, harvest_object):
         '''
@@ -310,15 +309,7 @@ class OAIPMHHarvester(HarvesterBase):
         :param harvest_object: HarvestObject object
         :returns: True if everything went right, False if errors were found
         '''
-
-        log.debug("Entering fetch_stage()")
-        log.debug("Exiting fetch_stage()")
-
-        log.debug('Harvest object: %s' % harvest_object)
-        log.debug('Harvest job: %s' % harvest_object.job)
-        log.debug('Object id: %s' % harvest_object.guid)
-        log.debug('Harvest job: %s' % dir(harvest_object))
-
+        log.debug("fetch: %s", harvest_object.guid)
         # Get metadata content from provider
         try:
             # Todo! This should not be duplicated here. Should be some class' attributes
@@ -329,13 +320,16 @@ class OAIPMHHarvester(HarvesterBase):
             client = oaipmh.client.Client(harvest_object.job.source.url, registry)
 
             # Get source URL
-            header, metadata, about = client.getRecord(identifier=harvest_object.guid, metadataPrefix=self.md_format)
+            header, metadata, _about = client.getRecord(identifier=harvest_object.guid, metadataPrefix=self.md_format)
         except Exception as e:
             import traceback
             traceback.print_exc()
             self._save_object_error('Unable to get metadata from provider: {u}: {e}'.format(
                 u=harvest_object.source.url, e=e), harvest_object)
             return False
+
+        if header and header.isDeleted():
+            return self.on_deleted(harvest_object, header)
 
         # Get contents
         try:
@@ -369,16 +363,20 @@ class OAIPMHHarvester(HarvesterBase):
         :param harvest_object: HarvestObject object
         :returns: True if everything went right, False if errors were found
         '''
-
-        log.debug("Entering import_stage()")
-
         if not harvest_object:
             log.error('No harvest object received')
             return False
 
-        if harvest_object.content is None:
+        if harvest_object.report_status == "deleted":
+            if harvest_object.package_id:
+                get_action('package_delete')({'model': model, 'session': model.Session, 'user': 'harvest'}, {'id': harvest_object.package_id})
+                return True
+            return True
+
+        if not harvest_object.content:
             self._save_object_error('Import: Empty content for object {id}'.format(
                 id=harvest_object.id), harvest_object)
+
             return False
 
         content = json.loads(harvest_object.content)
@@ -446,8 +444,6 @@ class OAIPMHHarvester(HarvesterBase):
                             pass
                 except:
                     pass
-
-            log.debug("Exiting import_stage()")
         except Exception as e:
             import traceback
             traceback.print_exc()

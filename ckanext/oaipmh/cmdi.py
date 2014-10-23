@@ -1,5 +1,6 @@
 import json
 import oaipmh
+from ckanext.kata.utils import get_package_id_by_pid
 from ckanext.oaipmh import importformats
 from ckanext.oaipmh.harvester import OAIPMHHarvester
 
@@ -16,6 +17,15 @@ class CMDIHarvester(OAIPMHHarvester):
             'title': 'CMDI',
             'description': 'Harvests CMDI dataset'
         }
+
+    def on_deleted(self, harvest_object, header):
+        package_id = get_package_id_by_pid(header.identifier(), 'metadata')
+        if package_id:
+            harvest_object.package_id = package_id
+        harvest_object.content = None
+        harvest_object.report_status = "deleted"
+        harvest_object.save()
+        return True
 
     def gather_stage(self, harvest_job):
         config = self._get_configuration(harvest_job)

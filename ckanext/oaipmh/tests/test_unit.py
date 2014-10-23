@@ -244,8 +244,8 @@ class TestCMDIHarvester(TestCase):
 
         harvest_object = HarvestObject()
         harvest_object.content = json.dumps(metadata.getMap())
-        harvest_object.id = "test-cmdi"
-        harvest_object.guid = "test-cmdi"
+        harvest_object.id = xml
+        harvest_object.guid = xml
         harvest_object.source = job.source
         harvest_object.harvest_source_id = None
         harvest_object.job = job
@@ -303,6 +303,26 @@ class TestCMDIHarvester(TestCase):
         self.assertEquals(sorted(expected_pids, key=lambda item: item['id']),
                           sorted(package.get('pids'), key=lambda item: item['id']))
 
+        model.Session.flush()
+
+        harvest_object = self._run_import("cmdi_2.xml", job)
+
+        # Delete package
+        harvest_object = HarvestObject()
+        harvest_object.content = None
+        harvest_object.id = "test-cmdi-delete"
+        harvest_object.guid = "test-cmdi-delete"
+        harvest_object.source = job.source
+        harvest_object.harvest_source_id = None
+        harvest_object.job = job
+        harvest_object.package_id = package.get('id')
+        harvest_object.report_status = "deleted"
+        harvest_object.save()
+
+        self.harvester.import_stage(harvest_object)
+
+        package = get_action('package_show')({'user': 'harvest'}, {'id': 'urn-nbn-fi-lb-20140730180'})
+        self.assertEquals(package['state'], 'deleted')
 
 class TestOAIDCReaderHelda(TestCase):
     '''
