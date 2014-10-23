@@ -66,6 +66,7 @@ class _FakeHarvestObject():
         self.source = _FakeHarvestSource(config, source_url)
         self.harvest_source_id = None
         self.job = _FakeHarvestJob(self.source)
+        self.report_status = None
 
     def add(self):
         pass
@@ -146,14 +147,14 @@ class TestOAIPMHHarvester(TestCase):
             if ida:
                 self.assertTrue('direct_download' not in package.notes)
                 self.assertEquals(package.extras.get('availability', None), 'direct_download')
-                self.assertEquals(sorted([u'urn:nbn:fi:csc-ida2014010800372s', u'test-version']),
-                                  sorted([pid.get('id') for pid in package_dict.get('pids', [])]))
+                pid_ids = [pid.get('id') for pid in package_dict.get('pids', [])]
+                self.assertTrue(u'test-version' in pid_ids)
+                self.assertTrue(u'urn:nbn:fi:csc-ida2014010800372s' in pid_ids)
                 self.assertEquals('application/test', package_dict['mimetype'])
 
                 self.assertEquals(package.extras.get('availability', None), 'direct_download')
-                expected = (u'pids_0_id', u'urn:nbn:fi:csc-ida2014010800372s'), \
-                    (u'contact_0_email', u'test1@example.fi'), (u'contact_0_name', u'Test Person1'), (u'contact_0_phone', u'0501231234'), \
-                    (u'contact_1_email', u'test2@example.fi'), (u'contact_1_name', u'Test Person2'), (u'contact_1_phone', u'0501231234'),
+                expected = (u'contact_0_email', u'test1@example.fi'), (u'contact_0_name', u'Test Person1'), (u'contact_0_phone', u'0501231234'), \
+                           (u'contact_1_email', u'test2@example.fi'), (u'contact_1_name', u'Test Person2'), (u'contact_1_phone', u'0501231234'),
 
                 for key, value in expected:
                     self.assertEquals(package.extras.get(key), value)
