@@ -46,10 +46,12 @@ The corpus will be made available at http://korp.csc.fi/.</description>
               <distributionInfo>
                 <availability>available-restrictedUse</availability>
                 <licenceInfo>
+
                   <licence>other</licence>
                   <restrictionsOfUse>other</restrictionsOfUse>
                   <restrictionsOfUse>shareAlike</restrictionsOfUse>
-                  <distributionAccessMedium>other</distributionAccessMedium>
+                  <distributionAccessMedium>downloadable</distributionAccessMedium>
+                  <downloadLocation>https://example.com/download_location</downloadLocation>
                   <attributionText xml:lang="fi">Aineistoon viitataan yleisten käytäntöjen mukaisesti. Viitteessä tulee mainita Kotimaisten kielten keskus.</attributionText>
                   <attributionText xml:lang="en">When making a bibliographical reference the corpus should be referred to according to the general practice. The reference should include the name of the Institute for the Languages ​​of Finland.</attributionText>
                   <licensorOrganization>

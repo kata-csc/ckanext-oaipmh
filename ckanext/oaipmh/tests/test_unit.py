@@ -308,6 +308,8 @@ class TestCMDIHarvester(TestCase):
 
         harvest_object = self._run_import("cmdi_2.xml", job)
 
+        self.assertEquals(len(harvest_object.errors), 0, u"\n".join(unicode(error.message) for error in (harvest_object.errors or [])))
+
         # Delete package
         harvest_object = HarvestObject()
         harvest_object.content = None

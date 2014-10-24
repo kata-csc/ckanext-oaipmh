@@ -19,6 +19,9 @@ class CMDIHarvester(OAIPMHHarvester):
         }
 
     def on_deleted(self, harvest_object, header):
+        """ See :meth:`OAIPMHHarvester.on_deleted`
+            Mark package for deletion.
+        """
         package_id = get_package_id_by_pid(header.identifier(), 'metadata')
         if package_id:
             harvest_object.package_id = package_id
@@ -28,6 +31,7 @@ class CMDIHarvester(OAIPMHHarvester):
         return True
 
     def gather_stage(self, harvest_job):
+        """ See :meth:`OAIPMHHarvester.gather_stage`  """
         config = self._get_configuration(harvest_job)
         if not config.get('type'):
             config['type'] = 'cmdi'

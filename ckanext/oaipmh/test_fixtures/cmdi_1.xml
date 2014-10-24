@@ -43,6 +43,10 @@
                             <distributionInfo>
                                 <availability>underNegotiation</availability>
                                 <licenceInfo>
+                                    <distributionAccessMedium>accessibleThroughInterface</distributionAccessMedium>
+                                    <distributionAccessMedium>downloadable</distributionAccessMedium>
+                                    <downloadLocation>https://example.com/download_location</downloadLocation>
+                                    <executionLocation>https://example.com/execution_location</executionLocation>
                                     <licence>underNegotiation</licence>
                                     <licensorPerson>
                                         <role>licensor</role>
