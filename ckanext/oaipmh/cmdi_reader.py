@@ -139,10 +139,13 @@ def cmdi_reader(xml):
     if cmd is None:
         raise CmdiReaderException("Unexpected XML format: No CMD -element found")
 
+    resource_info = cmd.xpath("//cmd:Components/cmd:resourceInfo", namespaces=namespaces)[0]
+    if resource_info is None:
+        raise CmdiReaderException("Unexpected XML format: No resourceInfo -element found")
+
     languages = _text_xpath(cmd, "//cmd:corpusInfo/cmd:corpusMediaType/cmd:corpusTextInfo/cmd:languageInfo/cmd:languageId/text()")
 
     data_identifiers = _text_xpath(cmd, "//cmd:identificationInfo/cmd:identifier/text()")
-    version = first(_text_xpath(cmd, "//cmd:Header/cmd:MdCreationDate/text()")) or ""
     description = first(_text_xpath(cmd, "//cmd:identificationInfo/cmd:description/text()"))
 
     titles = [{'lang': title.get('{http://www.w3.org/XML/1998/namespace}lang', ''), 'value': title.text.strip()} for title in xml.xpath('//cmd:identificationInfo/cmd:resourceName', namespaces=namespaces)]
@@ -156,9 +159,7 @@ def cmdi_reader(xml):
 
     pids += [dict(id=pid, provider=provider, type='metadata') for pid in metadata_identifiers]
 
-    resource_info = cmd.xpath("//cmd:Components/cmd:resourceInfo", namespaces=namespaces)[0]
-    if resource_info is None:
-        raise CmdiReaderException("Unexpected XML format: No resourceInfo -element found")
+    version = first(_text_xpath(resource_info, "//cmd:metadataInfo/cmd:metadataLastDateUpdated/text()")) or ""
 
     # TODO: Check agent mapping.
     #print "###", _get_persons(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:licensorPerson")
