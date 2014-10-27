@@ -262,7 +262,7 @@ class TestCMDIHarvester(TestCase):
         package = content['unified']
         self.assertEquals(package.get('name', None), 'urn-nbn-fi-lb-20140730180')
         self.assertEquals(package.get('notes', None), 'Test description')
-        self.assertEquals(package.get('version', None), '2014-10-20')
+        self.assertEquals(package.get('version', None), '2012-09-07')
         self.assertEquals(package.get('langtitle', [])[0]['value'], 'Longi Corpus')
         self.assertEquals(package.get('langtitle', [])[0]['lang'], 'en')
 
@@ -288,7 +288,7 @@ class TestCMDIHarvester(TestCase):
 
         self.assertEquals(package.get('name', None), 'urn-nbn-fi-lb-20140730180')
         self.assertEquals(package.get('notes', None), 'Test description')
-        self.assertEquals(package.get('version', None), '2014-10-20')
+        self.assertEquals(package.get('version', None), '2012-09-07')
         self.assertEquals(package.get('langtitle', [])[0]['value'], 'Longi Corpus')
         self.assertEquals(package.get('langtitle', [])[0]['lang'], 'eng')
         expected_pids = [{u'id': u'http://urn.fi/urn:nbn:fi:lb-20140730180',
