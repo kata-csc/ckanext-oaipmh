@@ -10,16 +10,17 @@ from unittest import TestCase
 import testfixtures
 import bs4
 from lxml import etree
+from pylons import config
 
 import ckan
 from ckanext.harvest.commands import harvester
 from ckanext.harvest.model import HarvestJob, HarvestSource, HarvestObject
 from ckanext.oaipmh.cmdi import CMDIHarvester
+from ckanext.oaipmh.cmdi_reader import CmdiReader
 from ckanext.oaipmh.harvester import OAIPMHHarvester
 import ckanext.harvest.model as harvest_model
 import ckanext.kata.model as kata_model
 from ckanext.oaipmh.importformats import create_metadata_registry
-from ckanext.oaipmh.cmdi_reader import cmdi_reader
 import ckanext.oaipmh.oai_dc_reader as dcr
 from ckanext.oaipmh.oai_dc_reader import dc_metadata_reader
 import os
@@ -240,7 +241,7 @@ class TestCMDIHarvester(TestCase):
 
         record = _get_record(xml)
 
-        metadata = cmdi_reader(record)
+        metadata = CmdiReader()(record)
         metadata['unified']['owner_org'] = "test"
 
         harvest_object = HarvestObject()
@@ -257,7 +258,7 @@ class TestCMDIHarvester(TestCase):
 
     def test_reader(self):
         record = _get_record("cmdi_1.xml")
-        metadata = cmdi_reader(record)
+        metadata = CmdiReader("http://localhost/test")(record)
         content= metadata.getMap()
         package = content['unified']
         self.assertEquals(package.get('name', None), 'urn-nbn-fi-lb-20140730180')
@@ -291,15 +292,16 @@ class TestCMDIHarvester(TestCase):
         self.assertEquals(package.get('version', None), '2012-09-07')
         self.assertEquals(package.get('langtitle', [])[0]['value'], 'Longi Corpus')
         self.assertEquals(package.get('langtitle', [])[0]['lang'], 'eng')
+        provider = config['ckan.site_url']
         expected_pids = [{u'id': u'http://urn.fi/urn:nbn:fi:lb-20140730180',
                           u'primary': u'true',
-                          u'provider': u'http://metalb.csc.fi/cgi-bin/que',
+                          u'provider': provider,
                           u'type': u'data'},
                          {u'id': u'http://islrn.org/resources/248-895-085-557-0',
-                          u'provider': u'http://metalb.csc.fi/cgi-bin/que',
+                          u'provider': provider,
                           u'type': u'data'},
                          {u'id': u'oai:kielipankki.fi:sha3a880',
-                          u'provider': u'http://metalb.csc.fi/cgi-bin/que',
+                          u'provider': provider,
                           u'type': u'metadata'}]
         self.assertEquals(sorted(expected_pids, key=lambda item: item['id']),
                           sorted(package.get('pids'), key=lambda item: item['id']))
