@@ -1,9 +1,12 @@
 # coding: utf-8
 # vi:et:ts=8:
+import httplib
 
 import logging
 import json
 from itertools import islice
+from lxml import etree
+import urllib2
 from pylons import config as c
 from paste.deploy.converters import asbool
 
@@ -11,11 +14,12 @@ import oaipmh.client
 import oaipmh.error
 from dateutil.parser import parse as dp
 from ckan.controllers.api import get_action
+from ckanext.oaipmh.oai_dc_reader import dc_metadata_reader
 
 import importformats
 
 from ckan.model import Session, Package
-from ckan.logic import NotFound,  NotAuthorized, ValidationError
+from ckan.logic import NotFound, NotAuthorized, ValidationError
 from ckan import model
 
 from ckanext.harvest.model import HarvestJob, HarvestObject
@@ -63,6 +67,10 @@ class OAIPMHHarvester(HarvesterBase):
         """
         log.info("Metadata is deleted for %s. Ignoring.", harvest_object.guid)
         return False
+
+    def metadata_registry(self, config, harvest_job):
+        harvest_type = config.get('type', 'default')
+        return importformats.create_metadata_registry(harvest_type, harvest_job.source.url)
 
     def info(self):
         '''
@@ -211,9 +219,9 @@ class OAIPMHHarvester(HarvesterBase):
         log.debug('Harvest source: %s', harvest_job.source.url)
 
         config = self._get_configuration(harvest_job)
-        harvest_type = config.get('type', 'default')
+
         # Create a OAI-PMH Client
-        registry = importformats.create_metadata_registry(harvest_type)
+        registry = self.metadata_registry(config, harvest_job)
         client = oaipmh.client.Client(harvest_job.source.url, registry)
 
         available_sets = list(client.listSets())
@@ -315,8 +323,8 @@ class OAIPMHHarvester(HarvesterBase):
             # Todo! This should not be duplicated here. Should be some class' attributes
             # Create a OAI-PMH Client
             config = self._get_configuration(harvest_object)
-            harvest_type = config.get('type', 'default')
-            registry = importformats.create_metadata_registry(harvest_type)
+
+            registry = self.metadata_registry(config, harvest_object)
             client = oaipmh.client.Client(harvest_object.job.source.url, registry)
 
             # Get source URL
@@ -452,3 +460,25 @@ class OAIPMHHarvester(HarvesterBase):
             return False
 
         return result
+
+    def parse_xml(self, f, context, orig_url=None, strict=True):
+        metadata =  dc_metadata_reader('default')(etree.fromstring(f))
+        return metadata['unified']
+
+    def fetch_xml(self, url, context):
+        '''Get xml for import. Shortened from :meth:`fetch_stage`
+
+        :param url: the url for metadata file
+        :param type: string
+
+        :return: a xml file
+        :rtype: string
+        '''
+        try:
+            log.debug('Requesting url {ur}'.format(ur=url))
+            f = urllib2.urlopen(url).read()
+            return self.parse_xml(f, context, url)
+        except (urllib2.URLError, urllib2.HTTPError,):
+            log.debug('fetch_xml: Could not fetch from url {ur}!'.format(ur=url))
+        except httplib.BadStatusLine:
+            log.debug('Bad HTTP response status line.')

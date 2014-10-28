@@ -1,8 +1,15 @@
+import httplib
 import json
+import logging
+import urllib2
+from lxml import etree
 import oaipmh
 from ckanext.kata.utils import get_package_id_by_pid
 from ckanext.oaipmh import importformats
+from ckanext.oaipmh.cmdi_reader import CmdiReader
 from ckanext.oaipmh.harvester import OAIPMHHarvester
+
+log = logging.getLogger(__name__)
 
 
 class CMDIHarvester(OAIPMHHarvester):
@@ -37,6 +44,9 @@ class CMDIHarvester(OAIPMHHarvester):
             config['type'] = 'cmdi'
             harvest_job.source.config = json.dumps(config)
             harvest_job.source.save()
-        registry = importformats.create_metadata_registry(config['type'])
+        registry = self.metadata_registry(config, harvest_job)
         client = self.client or oaipmh.client.Client(harvest_job.source.url, registry)
         return self.populate_harvest_job(harvest_job, None, config, client)
+
+    def parse_xml(self, f, context, orig_url=None, strict=True):
+        return CmdiReader().read_data(etree.fromstring(f))
