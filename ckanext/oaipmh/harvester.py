@@ -462,7 +462,7 @@ class OAIPMHHarvester(HarvesterBase):
         return result
 
     def parse_xml(self, f, context, orig_url=None, strict=True):
-        metadata =  dc_metadata_reader('default')(etree.fromstring(f))
+        metadata = dc_metadata_reader('default')(etree.fromstring(f))
         return metadata['unified']
 
     def fetch_xml(self, url, context):

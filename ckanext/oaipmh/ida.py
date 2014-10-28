@@ -1,5 +1,7 @@
 import json
+from lxml import etree
 from ckanext.oaipmh.harvester import OAIPMHHarvester
+from ckanext.oaipmh.oai_dc_reader import dc_metadata_reader
 
 
 class IdaHarvester(OAIPMHHarvester):
@@ -20,6 +22,11 @@ class IdaHarvester(OAIPMHHarvester):
         """ See :meth:`OAIPMHHarvester.gather_stage`  """
         config = self._get_configuration(harvest_job)
         if not config.get('type'):
-            config['type'] = 'cmdi'
+            config['type'] = 'ida'
             harvest_job.source.config = json.dumps(config)
             harvest_job.source.save()
+        return super(IdaHarvester, self).gather_stage(harvest_job)
+
+    def parse_xml(self, f, context, orig_url=None, strict=True):
+        metadata = dc_metadata_reader('ida')(etree.fromstring(f))
+        return metadata['unified']
