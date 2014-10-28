@@ -33,6 +33,7 @@ setup(
         [ckan.plugins]
         oaipmh=ckanext.oaipmh.plugin:OAIPMHPlugin
         oaipmh_harvester=ckanext.oaipmh.harvester:OAIPMHHarvester
+        ida_harvester=ckanext.oaipmh.ida:IdaHarvester
         cmdi_harvester=ckanext.oaipmh.cmdi:CMDIHarvester
         """,
 )
