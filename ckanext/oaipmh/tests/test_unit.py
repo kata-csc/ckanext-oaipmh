@@ -224,7 +224,6 @@ class TestOAIPMHHarvester(TestCase):
     def test_fetch_xml(self):
         package = self.harvester.fetch_xml("file://%s" % _get_fixture('helda.xml'), {})
         self.assertEquals(package.get('name', None), u'http---hdl-handle-net-10138-8487')
-        print "####", package['name']
 
     def test_parse_xml(self):
         with open(_get_fixture('helda.xml'), 'r') as source:
