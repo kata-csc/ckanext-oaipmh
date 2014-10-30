@@ -462,6 +462,14 @@ class OAIPMHHarvester(HarvesterBase):
         return result
 
     def parse_xml(self, f, context, orig_url=None, strict=True):
+        """ Parse XML and return package data dictionary.
+
+        :param f: data as string
+        :param context: CKAN context
+        :param orig_url: orgininal URL
+        :param strict: No used here, required by caller
+        :return: package dictionary (used for package creation)
+        """
         metadata = dc_metadata_reader('default')(etree.fromstring(f))
         return metadata['unified']
 

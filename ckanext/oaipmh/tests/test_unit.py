@@ -20,6 +20,7 @@ from ckanext.oaipmh.cmdi_reader import CmdiReader
 from ckanext.oaipmh.harvester import OAIPMHHarvester
 import ckanext.harvest.model as harvest_model
 import ckanext.kata.model as kata_model
+from ckanext.oaipmh.ida import IdaHarvester
 from ckanext.oaipmh.importformats import create_metadata_registry
 import ckanext.oaipmh.oai_dc_reader as dcr
 from ckanext.oaipmh.oai_dc_reader import dc_metadata_reader
@@ -166,8 +167,8 @@ class TestOAIPMHHarvester(TestCase):
     def test_import_stage_tags(self):
         self._run_import('oai-pmh.xml', True)
         package = _get_single_package()
-        tags = [tag.name.encode("utf-8") for tag in package.get_tags()]
-        self.assertTrue(u'televisiokasvatus' in tags)
+        tags = [tag.name for tag in package.get_tags()]
+        self.assertTrue('televisiokasvatus' in tags)
 
     def test_import_stage_project(self):
         self._run_import('ida3.xml', True)
@@ -219,6 +220,38 @@ class TestOAIPMHHarvester(TestCase):
 
         # 'from' is not a string so should throw an error
         self.assertRaises(TypeError, self.harvester.validate_config, (config))
+
+    def test_fetch_xml(self):
+        package = self.harvester.fetch_xml("file://%s" % _get_fixture('helda.xml'), {})
+        self.assertEquals(package.get('name', None), u'http---hdl-handle-net-10138-8487')
+        print "####", package['name']
+
+    def test_parse_xml(self):
+        with open(_get_fixture('helda.xml'), 'r') as source:
+            package = self.harvester.parse_xml(source.read(), {})
+            self.assertEquals(package.get('name', None), u'http---hdl-handle-net-10138-8487')
+
+
+class TestIdaHarvester(TestCase):
+    @classmethod
+    def setup_class(cls):
+        ''' Setup database and variables '''
+        harvest_model.setup()
+        kata_model.setup()
+        cls.harvester = IdaHarvester()
+
+    def tearDown(self):
+        """ rebuild database """
+        ckan.model.repo.rebuild_db()
+
+    def test_fetch_xml(self):
+        package = self.harvester.fetch_xml("file://%s" % _get_fixture('ida.xml'), {})
+        self.assertEquals(package.get('name', None), u'urn-nbn-fi-csc-ida2014010800372s')
+
+    def test_parse_xml(self):
+        with open(_get_fixture('ida.xml'), 'r') as source:
+            package = self.harvester.parse_xml(source.read(), {})
+            self.assertEquals(package.get('name', None), u'urn-nbn-fi-csc-ida2014010800372s')
 
 
 class TestCMDIHarvester(TestCase):
@@ -328,6 +361,18 @@ class TestCMDIHarvester(TestCase):
 
         package = get_action('package_show')({'user': 'harvest'}, {'id': 'urn-nbn-fi-lb-20140730180'})
         self.assertEquals(package['state'], 'deleted')
+
+    def test_fetch_xml(self):
+        package = self.harvester.fetch_xml("file://%s" % _get_fixture('cmdi_1.xml'), {})
+        self.assertEquals(package.get('notes', None), 'Test description')
+        self.assertEquals(package.get('version', None), '2012-09-07')
+
+    def test_parse_xml(self):
+        with open(_get_fixture('cmdi_1.xml'), 'r') as source:
+            package = self.harvester.parse_xml(source.read(), {})
+            self.assertEquals(package.get('notes', None), 'Test description')
+            self.assertEquals(package.get('version', None), '2012-09-07')
+
 
 class TestOAIDCReaderHelda(TestCase):
     '''
