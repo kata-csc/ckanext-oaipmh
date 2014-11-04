@@ -1,0 +1,325 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>ckanext.oaipmh.cmdi_reader &mdash; Kata metadata catalogue documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/agogo.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="Kata metadata catalogue documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="header-wrapper">
+      <div class="header">
+        <div class="headertitle"><a
+          href="../../../index.html">Kata</a></div>
+        <div class="rel">
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a>
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="document">
+            
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for ckanext.oaipmh.cmdi_reader</h1><div class="highlight"><pre>
+<span class="kn">from</span> <span class="nn">lxml</span> <span class="kn">import</span> <span class="n">etree</span>
+<span class="kn">from</span> <span class="nn">urlparse</span> <span class="kn">import</span> <span class="n">urlparse</span>
+<span class="kn">from</span> <span class="nn">ckanext.kata.utils</span> <span class="kn">import</span> <span class="n">datapid_to_name</span>
+<span class="kn">from</span> <span class="nn">ckanext.oaipmh.importcore</span> <span class="kn">import</span> <span class="n">generic_xml_metadata_reader</span>
+<span class="kn">import</span> <span class="nn">oaipmh.common</span>
+<span class="kn">from</span> <span class="nn">functionally</span> <span class="kn">import</span> <span class="n">first</span>
+<span class="kn">from</span> <span class="nn">pylons</span> <span class="kn">import</span> <span class="n">config</span>
+
+
+<div class="viewcode-block" id="CmdiReaderException"><a class="viewcode-back" href="../../../ckanext.oaipmh.html#ckanext.oaipmh.cmdi_reader.CmdiReaderException">[docs]</a><span class="k">class</span> <span class="nc">CmdiReaderException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Reader exception is thrown on unexpected data or error. &quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+
+</div>
+<div class="viewcode-block" id="CmdiReader"><a class="viewcode-back" href="../../../ckanext.oaipmh.html#ckanext.oaipmh.cmdi_reader.CmdiReader">[docs]</a><span class="k">class</span> <span class="nc">CmdiReader</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Reader for CMDI XML data &quot;&quot;&quot;</span>
+
+    <span class="n">namespaces</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;oai&#39;</span><span class="p">:</span> <span class="s">&quot;http://www.openarchives.org/OAI/2.0/&quot;</span><span class="p">,</span> <span class="s">&#39;cmd&#39;</span><span class="p">:</span> <span class="s">&quot;http://www.clarin.eu/cmd/&quot;</span><span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">provider</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Generate new reader instance.</span>
+<span class="sd">        :param provider: URL used for pids.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">CmdiReader</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">provider</span> <span class="o">=</span> <span class="n">provider</span> <span class="ow">or</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;ckan.site_url&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">xml</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Call :meth:`CmdiReader.read`. &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">xml</span><span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">_text_xpath</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">root</span><span class="p">,</span> <span class="n">query</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Select list of texts and strip results. Use text() suffix in Xpath `query`.</span>
+
+<span class="sd">        :param root: parent element (lxml) where selection is made.</span>
+<span class="sd">        :param query: Xpath query used to get data</span>
+<span class="sd">        :return: list of strings</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[</span><span class="nb">unicode</span><span class="p">(</span><span class="n">text</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">text</span> <span class="ow">in</span> <span class="n">root</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">namespaces</span><span class="o">=</span><span class="n">cls</span><span class="o">.</span><span class="n">namespaces</span><span class="p">)]</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_to_name</span><span class="p">(</span><span class="n">identifier</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Convert identifier to CKAN package name.</span>
+
+<span class="sd">        :param identifier: identifier string</span>
+<span class="sd">        :return: CKAN package name</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">parsed</span> <span class="o">=</span> <span class="n">urlparse</span><span class="p">(</span><span class="n">identifier</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">parsed</span><span class="o">.</span><span class="n">scheme</span> <span class="ow">and</span> <span class="n">parsed</span><span class="o">.</span><span class="n">netloc</span><span class="p">:</span>
+            <span class="n">identifier</span> <span class="o">=</span> <span class="n">parsed</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">datapid_to_name</span><span class="p">(</span><span class="n">identifier</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_strip_first</span><span class="p">(</span><span class="n">elements</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Strip and return first element.</span>
+
+<span class="sd">        :param elements: list of xml elements</span>
+<span class="sd">        :return: first element or none</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">first</span><span class="p">(</span><span class="n">elements</span><span class="p">)</span> <span class="ow">or</span> <span class="s">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">_get_organizations</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">root</span><span class="p">,</span> <span class="n">xpath</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Extract organization dictionaries from XML using given Xpath.</span>
+
+<span class="sd">        :param root: parent element (lxml) where selection is done.</span>
+<span class="sd">        :param xpath: xpath selector used to get data</span>
+<span class="sd">        :return: list of organization dictionaries</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[{</span><span class="s">&#39;role&#39;</span><span class="p">:</span> <span class="n">cls</span><span class="o">.</span><span class="n">_strip_first</span><span class="p">(</span><span class="n">organization</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">&quot;cmd:role/text()&quot;</span><span class="p">,</span> <span class="n">namespaces</span><span class="o">=</span><span class="n">cls</span><span class="o">.</span><span class="n">namespaces</span><span class="p">)),</span>
+                 <span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="n">cls</span><span class="o">.</span><span class="n">_strip_first</span><span class="p">(</span><span class="n">organization</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">&quot;cmd:organizationInfo/cmd:organizationName/text()&quot;</span><span class="p">,</span> <span class="n">namespaces</span><span class="o">=</span><span class="n">cls</span><span class="o">.</span><span class="n">namespaces</span><span class="p">)),</span>
+                 <span class="s">&#39;short_name&#39;</span><span class="p">:</span> <span class="n">cls</span><span class="o">.</span><span class="n">_strip_first</span><span class="p">(</span><span class="n">organization</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">&quot;cmd:organizationInfo/cmd:organizationShortName/text()&quot;</span><span class="p">,</span> <span class="n">namespaces</span><span class="o">=</span><span class="n">cls</span><span class="o">.</span><span class="n">namespaces</span><span class="p">)),</span>
+                 <span class="s">&#39;email&#39;</span><span class="p">:</span> <span class="n">cls</span><span class="o">.</span><span class="n">_strip_first</span><span class="p">(</span><span class="n">organization</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">&quot;cmd:organizationInfo/cmd:communicationInfo/cmd:email/text()&quot;</span><span class="p">,</span> <span class="n">namespaces</span><span class="o">=</span><span class="n">cls</span><span class="o">.</span><span class="n">namespaces</span><span class="p">)),</span>
+                 <span class="s">&#39;url&#39;</span><span class="p">:</span> <span class="n">cls</span><span class="o">.</span><span class="n">_strip_first</span><span class="p">(</span><span class="n">organization</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">&quot;cmd:organizationInfo/cmd:communicationInfo/cmd:email/text()&quot;</span><span class="p">,</span> <span class="n">namespaces</span><span class="o">=</span><span class="n">cls</span><span class="o">.</span><span class="n">namespaces</span><span class="p">))}</span>
+
+                <span class="k">for</span> <span class="n">organization</span> <span class="ow">in</span> <span class="n">root</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="n">xpath</span><span class="p">,</span> <span class="n">namespaces</span><span class="o">=</span><span class="n">cls</span><span class="o">.</span><span class="n">namespaces</span><span class="p">)]</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">_get_persons</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">root</span><span class="p">,</span> <span class="n">xpath</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Extract person dictionary from XML using given Xpath.</span>
+
+<span class="sd">        :param root: parent element (lxml) where selection is done</span>
+<span class="sd">        :param xpath: xpath selector used to get data</span>
+<span class="sd">        :return: list of person dictionaries</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[{</span><span class="s">&#39;role&#39;</span><span class="p">:</span> <span class="n">cls</span><span class="o">.</span><span class="n">_strip_first</span><span class="p">(</span><span class="n">person</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">&quot;cmd:role/text()&quot;</span><span class="p">,</span> <span class="n">namespaces</span><span class="o">=</span><span class="n">cls</span><span class="o">.</span><span class="n">namespaces</span><span class="p">)),</span>
+                 <span class="s">&#39;surname&#39;</span><span class="p">:</span> <span class="n">cls</span><span class="o">.</span><span class="n">_strip_first</span><span class="p">(</span><span class="n">person</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">&quot;cmd:personInfo/cmd:surname/text()&quot;</span><span class="p">,</span> <span class="n">namespaces</span><span class="o">=</span><span class="n">cls</span><span class="o">.</span><span class="n">namespaces</span><span class="p">)),</span>
+                 <span class="s">&#39;given_name&#39;</span><span class="p">:</span> <span class="n">cls</span><span class="o">.</span><span class="n">_strip_first</span><span class="p">(</span><span class="n">person</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">&quot;cmd:personInfo/cmd:givenName/text()&quot;</span><span class="p">,</span> <span class="n">namespaces</span><span class="o">=</span><span class="n">cls</span><span class="o">.</span><span class="n">namespaces</span><span class="p">)),</span>
+                 <span class="s">&#39;email&#39;</span><span class="p">:</span> <span class="n">cls</span><span class="o">.</span><span class="n">_strip_first</span><span class="p">(</span><span class="n">person</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">&quot;cmd:personInfo/cmd:communicationInfo/cmd:email/text()&quot;</span><span class="p">,</span> <span class="n">namespaces</span><span class="o">=</span><span class="n">cls</span><span class="o">.</span><span class="n">namespaces</span><span class="p">)),</span>
+                 <span class="s">&#39;organization&#39;</span><span class="p">:</span> <span class="n">first</span><span class="p">(</span><span class="n">cls</span><span class="o">.</span><span class="n">_get_organizations</span><span class="p">(</span><span class="n">person</span><span class="p">,</span> <span class="s">&quot;cmd:personInfo/cmd:affiliation&quot;</span><span class="p">))}</span>
+                <span class="k">for</span> <span class="n">person</span> <span class="ow">in</span> <span class="n">root</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="n">xpath</span><span class="p">,</span> <span class="n">namespaces</span><span class="o">=</span><span class="n">cls</span><span class="o">.</span><span class="n">namespaces</span><span class="p">)]</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_get_person_name</span><span class="p">(</span><span class="n">person</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Generate name from person dictionary.</span>
+
+<span class="sd">        :param person: person dictionary</span>
+<span class="sd">        :return: name of the person</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="s">u&quot;</span><span class="si">%s</span><span class="s"> </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">person</span><span class="p">[</span><span class="s">&#39;given_name&#39;</span><span class="p">],</span> <span class="n">person</span><span class="p">[</span><span class="s">&#39;surname&#39;</span><span class="p">])</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">_persons_as_contact</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">persons</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Convert person dictionaries to contact dictionaries.</span>
+
+<span class="sd">        :param persons: list of person dictionaries</span>
+<span class="sd">        :return: list of contact dictionaries</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[{</span><span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="n">cls</span><span class="o">.</span><span class="n">_get_person_name</span><span class="p">(</span><span class="n">person</span><span class="p">),</span>
+                 <span class="s">&#39;url&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">person</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;organization&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;url&#39;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">),</span>
+                 <span class="s">&#39;email&#39;</span><span class="p">:</span> <span class="n">person</span><span class="p">[</span><span class="s">&#39;email&#39;</span><span class="p">],</span>
+                 <span class="s">&#39;phone&#39;</span><span class="p">:</span> <span class="s">&quot;&quot;</span><span class="p">}</span>
+                <span class="k">for</span> <span class="n">person</span> <span class="ow">in</span> <span class="n">persons</span><span class="p">]</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_organization_as_agent</span><span class="p">(</span><span class="n">organizations</span><span class="p">,</span> <span class="n">agent_role</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Convert organization dictionaries to agent dictionaries.</span>
+
+<span class="sd">        :param organizations: list of organization dictionaries</span>
+<span class="sd">        :param agent_role: name of the role</span>
+<span class="sd">        :return: list of agent dictionaries</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[{</span><span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="s">&quot;&quot;</span><span class="p">,</span>
+                 <span class="s">&#39;organisation&#39;</span><span class="p">:</span> <span class="n">organization</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">),</span>
+                 <span class="s">&#39;role&#39;</span><span class="p">:</span> <span class="n">agent_role</span><span class="p">}</span>
+                <span class="k">for</span> <span class="n">organization</span> <span class="ow">in</span> <span class="n">organizations</span><span class="p">]</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">_persons_as_agent</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">persons</span><span class="p">,</span> <span class="n">agent_role</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Convert person dictionaries to agent dictionaries.</span>
+
+<span class="sd">        :param persons: list of person dictionaries</span>
+<span class="sd">        :param agent_role: name of the role</span>
+<span class="sd">        :return: list of agent dictionaries</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[{</span><span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="n">cls</span><span class="o">.</span><span class="n">_get_person_name</span><span class="p">(</span><span class="n">person</span><span class="p">),</span>
+                 <span class="s">&#39;organisation&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">person</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;organization&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">),</span>
+                 <span class="s">&#39;role&#39;</span><span class="p">:</span> <span class="n">agent_role</span><span class="p">}</span>
+                <span class="k">for</span> <span class="n">person</span> <span class="ow">in</span> <span class="n">persons</span><span class="p">]</span>
+
+<div class="viewcode-block" id="CmdiReader.read"><a class="viewcode-back" href="../../../ckanext.oaipmh.html#ckanext.oaipmh.cmdi_reader.CmdiReader.read">[docs]</a>    <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">xml</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Extract package data from given XML.</span>
+<span class="sd">        :param xml: xml element (lxml)</span>
+<span class="sd">        :return: oaipmh.common.Metadata object generated from xml</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">generic_xml_metadata_reader</span><span class="p">(</span><span class="n">xml</span><span class="p">)</span><span class="o">.</span><span class="n">getMap</span><span class="p">()</span>
+        <span class="n">result</span><span class="p">[</span><span class="s">&#39;unified&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_data</span><span class="p">(</span><span class="n">xml</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">oaipmh</span><span class="o">.</span><span class="n">common</span><span class="o">.</span><span class="n">Metadata</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="CmdiReader.read_data"><a class="viewcode-back" href="../../../ckanext.oaipmh.html#ckanext.oaipmh.cmdi_reader.CmdiReader.read_data">[docs]</a>    <span class="k">def</span> <span class="nf">read_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">xml</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Extract package data from given XML.</span>
+<span class="sd">        :param xml: xml element (lxml)</span>
+<span class="sd">        :return: dictionary</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">metadata_identifiers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_text_xpath</span><span class="p">(</span><span class="n">xml</span><span class="p">,</span> <span class="s">&#39;//oai:record/oai:header/oai:identifier/text()&#39;</span><span class="p">)</span>
+        <span class="n">cmd</span> <span class="o">=</span> <span class="n">first</span><span class="p">(</span><span class="n">xml</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">&#39;//oai:record/oai:metadata/cmd:CMD&#39;</span><span class="p">,</span> <span class="n">namespaces</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">namespaces</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">cmd</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">CmdiReaderException</span><span class="p">(</span><span class="s">&quot;Unexpected XML format: No CMD -element found&quot;</span><span class="p">)</span>
+
+        <span class="n">resource_info</span> <span class="o">=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">&quot;//cmd:Components/cmd:resourceInfo&quot;</span><span class="p">,</span> <span class="n">namespaces</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">namespaces</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">resource_info</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">CmdiReaderException</span><span class="p">(</span><span class="s">&quot;Unexpected XML format: No resourceInfo -element found&quot;</span><span class="p">)</span>
+
+        <span class="n">languages</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_text_xpath</span><span class="p">(</span><span class="n">cmd</span><span class="p">,</span> <span class="s">&quot;//cmd:corpusInfo/cmd:corpusMediaType/cmd:corpusTextInfo/cmd:languageInfo/cmd:languageId/text()&quot;</span><span class="p">)</span>
+
+        <span class="n">data_identifiers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_text_xpath</span><span class="p">(</span><span class="n">cmd</span><span class="p">,</span> <span class="s">&quot;//cmd:identificationInfo/cmd:identifier/text()&quot;</span><span class="p">)</span>
+        <span class="n">description</span> <span class="o">=</span> <span class="n">first</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_text_xpath</span><span class="p">(</span><span class="n">cmd</span><span class="p">,</span> <span class="s">&quot;//cmd:identificationInfo/cmd:description/text()&quot;</span><span class="p">))</span>
+
+        <span class="n">titles</span> <span class="o">=</span> <span class="p">[{</span><span class="s">&#39;lang&#39;</span><span class="p">:</span> <span class="n">title</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;{http://www.w3.org/XML/1998/namespace}lang&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">),</span> <span class="s">&#39;value&#39;</span><span class="p">:</span> <span class="n">title</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()}</span> <span class="k">for</span> <span class="n">title</span> <span class="ow">in</span> <span class="n">xml</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">&#39;//cmd:identificationInfo/cmd:resourceName&#39;</span><span class="p">,</span> <span class="n">namespaces</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">namespaces</span><span class="p">)]</span>
+        <span class="n">primary_pid</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="n">provider</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">provider</span>
+
+        <span class="n">pids</span> <span class="o">=</span> <span class="p">[</span><span class="nb">dict</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">pid</span><span class="p">,</span> <span class="n">provider</span><span class="o">=</span><span class="n">provider</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s">&#39;data&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">pid</span> <span class="ow">in</span> <span class="n">data_identifiers</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">pid</span> <span class="ow">in</span> <span class="n">pids</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s">&#39;urn&#39;</span> <span class="ow">in</span> <span class="n">pid</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;id&#39;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">):</span>
+                <span class="n">pid</span><span class="p">[</span><span class="s">&#39;primary&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s">&quot;true&quot;</span>
+                <span class="n">primary_pid</span> <span class="o">=</span> <span class="n">pid</span><span class="p">[</span><span class="s">&#39;id&#39;</span><span class="p">]</span>
+
+        <span class="n">pids</span> <span class="o">+=</span> <span class="p">[</span><span class="nb">dict</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">pid</span><span class="p">,</span> <span class="n">provider</span><span class="o">=</span><span class="n">provider</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s">&#39;metadata&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">pid</span> <span class="ow">in</span> <span class="n">metadata_identifiers</span><span class="p">]</span>
+
+        <span class="n">version</span> <span class="o">=</span> <span class="n">first</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_text_xpath</span><span class="p">(</span><span class="n">resource_info</span><span class="p">,</span> <span class="s">&quot;//cmd:metadataInfo/cmd:metadataLastDateUpdated/text()&quot;</span><span class="p">))</span> <span class="ow">or</span> <span class="s">&quot;&quot;</span>
+
+        <span class="c"># TODO: Check agent mapping.</span>
+        <span class="c">#print &quot;###&quot;, _get_persons(resource_info, &quot;//cmd:distributionInfo/cmd:licenceInfo/cmd:licensorPerson&quot;)</span>
+        <span class="c">#print &quot;###&quot;, _get_persons(resource_info, &quot;//cmd:distributionInfo/cmd:licenceInfo/cmd:distributionRightsHolderPerson&quot;)</span>
+        <span class="c">#print &quot;###&quot;, _get_persons(resource_info, &quot;//cmd:distributionInfo/cmd:iprHolderPerson&quot;)</span>
+        <span class="c">#print &quot;###&quot;, _get_persons(resource_info, &quot;//cmd:contactPerson&quot;)</span>
+        <span class="c">#print &quot;###&quot;, _get_persons(resource_info, &quot;//cmd:metadataInfo/cmd:metadataCreator&quot;)</span>
+
+        <span class="c">#print &quot;###&quot;, _get_organizations(resource_info, &quot;//cmd:distributionInfo/cmd:licenceInfo/cmd:licensorOrganization&quot;)</span>
+        <span class="c">#print &quot;###&quot;, _get_organizations(resource_info, &quot;//cmd:distributionInfo/cmd:licenceInfo/cmd:distributionRightsHolderOrganization&quot;)</span>
+        <span class="c">#print &quot;###&quot;, _get_organizations(resource_info, &quot;//cmd:distributionInfo/cmd:iprHolderOrganization&quot;)</span>
+
+        <span class="n">contacts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_persons_as_contact</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_persons</span><span class="p">(</span><span class="n">resource_info</span><span class="p">,</span> <span class="s">&quot;//cmd:contactPerson&quot;</span><span class="p">))</span>
+
+        <span class="n">agents</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">agents</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_persons_as_agent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_persons</span><span class="p">(</span><span class="n">resource_info</span><span class="p">,</span> <span class="s">&quot;//cmd:distributionInfo/cmd:iprHolderPerson&quot;</span><span class="p">),</span> <span class="s">&#39;author&#39;</span><span class="p">))</span>
+        <span class="n">agents</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_persons_as_agent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_persons</span><span class="p">(</span><span class="n">resource_info</span><span class="p">,</span> <span class="s">&quot;//cmd:distributionInfo/cmd:licenceInfo/cmd:distributionRightsHolderPerson&quot;</span><span class="p">),</span> <span class="s">&#39;owner&#39;</span><span class="p">))</span>
+
+        <span class="n">agents</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_organization_as_agent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_organizations</span><span class="p">(</span><span class="n">resource_info</span><span class="p">,</span> <span class="s">&quot;//cmd:distributionInfo/cmd:iprHolderOrganization&quot;</span><span class="p">),</span> <span class="s">&#39;author&#39;</span><span class="p">))</span>
+        <span class="n">agents</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_organization_as_agent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_organizations</span><span class="p">(</span><span class="n">resource_info</span><span class="p">,</span> <span class="s">&quot;//cmd:distributionInfo/cmd:licenceInfo/cmd:distributionRightsHolderOrganization&quot;</span><span class="p">),</span> <span class="s">&#39;owner&#39;</span><span class="p">))</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_to_name</span><span class="p">(</span><span class="n">primary_pid</span> <span class="ow">or</span> <span class="n">first</span><span class="p">(</span><span class="n">data_identifiers</span><span class="p">)),</span>
+                             <span class="s">&#39;language&#39;</span><span class="p">:</span> <span class="s">&quot;,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">languages</span><span class="p">),</span>
+                             <span class="s">&#39;pids&#39;</span><span class="p">:</span> <span class="n">pids</span><span class="p">,</span>
+                             <span class="s">&#39;version&#39;</span><span class="p">:</span> <span class="n">version</span><span class="p">,</span>
+                             <span class="s">&#39;tag_string&#39;</span><span class="p">:</span> <span class="s">&#39;cmdi&#39;</span><span class="p">,</span> <span class="c"># TODO: Ask about value!</span>
+                             <span class="s">&#39;notes&#39;</span><span class="p">:</span> <span class="n">description</span><span class="p">,</span>
+                             <span class="s">&#39;langtitle&#39;</span><span class="p">:</span> <span class="n">titles</span><span class="p">,</span>
+                             <span class="s">&#39;type&#39;</span><span class="p">:</span> <span class="s">&#39;dataset&#39;</span><span class="p">,</span>
+                             <span class="s">&#39;contact&#39;</span><span class="p">:</span> <span class="n">contacts</span><span class="p">,</span>
+                             <span class="s">&#39;agent&#39;</span><span class="p">:</span> <span class="n">agents</span><span class="p">,</span>
+                             <span class="s">&#39;availability&#39;</span><span class="p">:</span> <span class="s">&#39;contact_owner&#39;</span><span class="p">}</span>
+
+        <span class="c"># TODO: Ask about distributionAccessMedium</span>
+        <span class="c"># _strip_first(_text_xpath(resource_info, &quot;//cmd:distributionInfo/availability/text()&quot;))</span>
+        <span class="c"># url = _strip_first(_text_xpath(resource_info, &quot;//cmd:identificationInfo/cmd:url/text()&quot;))</span>
+        <span class="n">download_location</span> <span class="o">=</span> <span class="n">first</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_text_xpath</span><span class="p">(</span><span class="n">resource_info</span><span class="p">,</span> <span class="s">&quot;//cmd:distributionInfo/cmd:licenceInfo/cmd:downloadLocation/text()&quot;</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">download_location</span><span class="p">:</span>
+            <span class="n">result</span><span class="p">[</span><span class="s">&#39;through_provider_URL&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">download_location</span>
+            <span class="n">result</span><span class="p">[</span><span class="s">&#39;availability&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s">&#39;through_provider&#39;</span>
+
+        <span class="k">return</span> <span class="n">result</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+        </div>
+        <div class="sidebar">
+          <h3>Table Of Contents</h3>
+          <ul class="simple">
+</ul>
+
+          <h3 style="margin-top: 1.5em;">Search</h3>
+          <form class="search" action="../../../search.html" method="get">
+            <input type="text" name="q" />
+            <input type="submit" value="Go" />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+          </form>
+          <p class="searchtip" style="font-size: 90%">
+            Enter search terms or a module, class or function name.
+          </p>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer-wrapper">
+      <div class="footer">
+        <div class="left">
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |
+          <a href="../../../genindex.html" title="General Index"
+             >index</a>
+        </div>
+
+        <div class="right">
+          
+    <div class="footer">
+        &copy; Copyright 2014, CSC.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+  </body>
+</html>

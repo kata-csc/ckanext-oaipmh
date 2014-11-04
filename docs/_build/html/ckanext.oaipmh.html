@@ -1,0 +1,810 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>ckanext.oaipmh package &mdash; Kata metadata catalogue documentation</title>
+    
+    <link rel="stylesheet" href="_static/agogo.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="Kata metadata catalogue documentation" href="index.html" /> 
+  </head>
+  <body>
+    <div class="header-wrapper">
+      <div class="header">
+        <div class="headertitle"><a
+          href="index.html">Kata</a></div>
+        <div class="rel">
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a>
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="document">
+            
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="ckanext-oaipmh-package">
+<h1>ckanext.oaipmh package<a class="headerlink" href="#ckanext-oaipmh-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-ckanext.oaipmh.cmdi">
+<span id="ckanext-oaipmh-cmdi-module"></span><h2>ckanext.oaipmh.cmdi module<a class="headerlink" href="#module-ckanext.oaipmh.cmdi" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="ckanext.oaipmh.cmdi.CMDIHarvester">
+<em class="property">class </em><tt class="descclassname">ckanext.oaipmh.cmdi.</tt><tt class="descname">CMDIHarvester</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/cmdi.html#CMDIHarvester"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.cmdi.CMDIHarvester" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#ckanext.oaipmh.harvester.OAIPMHHarvester" title="ckanext.oaipmh.harvester.OAIPMHHarvester"><tt class="xref py py-class docutils literal"><span class="pre">ckanext.oaipmh.harvester.OAIPMHHarvester</span></tt></a></p>
+<dl class="attribute">
+<dt id="ckanext.oaipmh.cmdi.CMDIHarvester.client">
+<tt class="descname">client</tt><em class="property"> = None</em><a class="headerlink" href="#ckanext.oaipmh.cmdi.CMDIHarvester.client" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ckanext.oaipmh.cmdi.CMDIHarvester.gather_stage">
+<tt class="descname">gather_stage</tt><big>(</big><em>harvest_job</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/cmdi.html#CMDIHarvester.gather_stage"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.cmdi.CMDIHarvester.gather_stage" title="Permalink to this definition">¶</a></dt>
+<dd><p>See <tt class="xref py py-meth docutils literal"><span class="pre">OAIPMHHarvester.gather_stage()</span></tt></p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ckanext.oaipmh.cmdi.CMDIHarvester.info">
+<tt class="descname">info</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/cmdi.html#CMDIHarvester.info"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.cmdi.CMDIHarvester.info" title="Permalink to this definition">¶</a></dt>
+<dd><p>See ;meth:<cite>ckanext.harvest.harvesters.base.HarvesterBase.info</cite>.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ckanext.oaipmh.cmdi.CMDIHarvester.md_format">
+<tt class="descname">md_format</tt><em class="property"> = 'cmdi0571'</em><a class="headerlink" href="#ckanext.oaipmh.cmdi.CMDIHarvester.md_format" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ckanext.oaipmh.cmdi.CMDIHarvester.on_deleted">
+<tt class="descname">on_deleted</tt><big>(</big><em>harvest_object</em>, <em>header</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/cmdi.html#CMDIHarvester.on_deleted"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.cmdi.CMDIHarvester.on_deleted" title="Permalink to this definition">¶</a></dt>
+<dd><p>See <tt class="xref py py-meth docutils literal"><span class="pre">OAIPMHHarvester.on_deleted()</span></tt>
+Mark package for deletion.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ckanext.oaipmh.cmdi.CMDIHarvester.parse_xml">
+<tt class="descname">parse_xml</tt><big>(</big><em>f</em>, <em>context</em>, <em>orig_url=None</em>, <em>strict=True</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/cmdi.html#CMDIHarvester.parse_xml"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.cmdi.CMDIHarvester.parse_xml" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-ckanext.oaipmh.cmdi_reader">
+<span id="ckanext-oaipmh-cmdi-reader-module"></span><h2>ckanext.oaipmh.cmdi_reader module<a class="headerlink" href="#module-ckanext.oaipmh.cmdi_reader" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="ckanext.oaipmh.cmdi_reader.CmdiReader">
+<em class="property">class </em><tt class="descclassname">ckanext.oaipmh.cmdi_reader.</tt><tt class="descname">CmdiReader</tt><big>(</big><em>provider=None</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/cmdi_reader.html#CmdiReader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.cmdi_reader.CmdiReader" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>Reader for CMDI XML data</p>
+<dl class="attribute">
+<dt id="ckanext.oaipmh.cmdi_reader.CmdiReader.namespaces">
+<tt class="descname">namespaces</tt><em class="property"> = {'cmd': 'http://www.clarin.eu/cmd/', 'oai': 'http://www.openarchives.org/OAI/2.0/'}</em><a class="headerlink" href="#ckanext.oaipmh.cmdi_reader.CmdiReader.namespaces" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ckanext.oaipmh.cmdi_reader.CmdiReader.read">
+<tt class="descname">read</tt><big>(</big><em>xml</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/cmdi_reader.html#CmdiReader.read"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.cmdi_reader.CmdiReader.read" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extract package data from given XML.
+:param xml: xml element (lxml)
+:return: oaipmh.common.Metadata object generated from xml</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ckanext.oaipmh.cmdi_reader.CmdiReader.read_data">
+<tt class="descname">read_data</tt><big>(</big><em>xml</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/cmdi_reader.html#CmdiReader.read_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.cmdi_reader.CmdiReader.read_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extract package data from given XML.
+:param xml: xml element (lxml)
+:return: dictionary</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="exception">
+<dt id="ckanext.oaipmh.cmdi_reader.CmdiReaderException">
+<em class="property">exception </em><tt class="descclassname">ckanext.oaipmh.cmdi_reader.</tt><tt class="descname">CmdiReaderException</tt><a class="reference internal" href="_modules/ckanext/oaipmh/cmdi_reader.html#CmdiReaderException"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.cmdi_reader.CmdiReaderException" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">exceptions.Exception</span></tt></p>
+<p>Reader exception is thrown on unexpected data or error.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-ckanext.oaipmh.controller">
+<span id="ckanext-oaipmh-controller-module"></span><h2>ckanext.oaipmh.controller module<a class="headerlink" href="#module-ckanext.oaipmh.controller" title="Permalink to this headline">¶</a></h2>
+<p>Serving controller interface for OAI-PMH</p>
+<dl class="class">
+<dt id="ckanext.oaipmh.controller.OAIPMHController">
+<em class="property">class </em><tt class="descclassname">ckanext.oaipmh.controller.</tt><tt class="descname">OAIPMHController</tt><a class="reference internal" href="_modules/ckanext/oaipmh/controller.html#OAIPMHController"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.controller.OAIPMHController" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">ckan.lib.base.BaseController</span></tt></p>
+<p>Controller for OAI-PMH server implementation. Returns only the index
+page if no verb is specified.</p>
+<dl class="method">
+<dt id="ckanext.oaipmh.controller.OAIPMHController.index">
+<tt class="descname">index</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/controller.html#OAIPMHController.index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.controller.OAIPMHController.index" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the result of the handled request of a batching OAI-PMH
+server implementation.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-ckanext.oaipmh.harvester">
+<span id="ckanext-oaipmh-harvester-module"></span><h2>ckanext.oaipmh.harvester module<a class="headerlink" href="#module-ckanext.oaipmh.harvester" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="ckanext.oaipmh.harvester.OAIPMHHarvester">
+<em class="property">class </em><tt class="descclassname">ckanext.oaipmh.harvester.</tt><tt class="descname">OAIPMHHarvester</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/harvester.html#OAIPMHHarvester"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.harvester.OAIPMHHarvester" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">ckanext.harvest.harvesters.base.HarvesterBase</span></tt></p>
+<p>OAI-PMH Harvester</p>
+<dl class="method">
+<dt id="ckanext.oaipmh.harvester.OAIPMHHarvester.fetch_stage">
+<tt class="descname">fetch_stage</tt><big>(</big><em>harvest_object</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/harvester.html#OAIPMHHarvester.fetch_stage"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.harvester.OAIPMHHarvester.fetch_stage" title="Permalink to this definition">¶</a></dt>
+<dd><p>The fetch stage will receive a HarvestObject object and will be
+responsible for:
+- getting the contents of the remote object (e.g. for a CSW server, perform a GetRecordById request).
+- saving the content in the provided HarvestObject.
+- creating and storing any suitable HarvestObjectErrors that may occur.
+- returning True if everything went as expected, False otherwise.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>harvest_object</strong> &#8211; HarvestObject object</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">True if everything went right, False if errors were found</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ckanext.oaipmh.harvester.OAIPMHHarvester.fetch_xml">
+<tt class="descname">fetch_xml</tt><big>(</big><em>url</em>, <em>context</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/harvester.html#OAIPMHHarvester.fetch_xml"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.harvester.OAIPMHHarvester.fetch_xml" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get xml for import. Shortened from <a class="reference internal" href="#ckanext.oaipmh.harvester.OAIPMHHarvester.fetch_stage" title="ckanext.oaipmh.harvester.OAIPMHHarvester.fetch_stage"><tt class="xref py py-meth docutils literal"><span class="pre">fetch_stage()</span></tt></a></p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>url</strong> &#8211; the url for metadata file</li>
+<li><strong>type</strong> &#8211; string</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">a xml file</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">string</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ckanext.oaipmh.harvester.OAIPMHHarvester.gather_stage">
+<tt class="descname">gather_stage</tt><big>(</big><em>harvest_job</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/harvester.html#OAIPMHHarvester.gather_stage"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.harvester.OAIPMHHarvester.gather_stage" title="Permalink to this definition">¶</a></dt>
+<dd><p>The gather stage will receive a HarvestJob object and will be
+responsible for:
+- gathering all the necessary objects to fetch on a later.
+stage (e.g. for a CSW server, perform a GetRecords request)
+- creating the necessary HarvestObjects in the database, specifying
+the guid and a reference to its job. The HarvestObjects need a
+reference date with the last modified date for the resource, this
+may need to be set in a different stage depending on the type of
+source.
+- creating and storing any suitable HarvestGatherErrors that may
+occur.
+- returning a list with all the ids of the created HarvestObjects.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>harvest_job</strong> (<em>HarvestJob</em>) &#8211; HarvestJob object</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">A list of HarvestObject ids</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ckanext.oaipmh.harvester.OAIPMHHarvester.get_package_ids">
+<tt class="descname">get_package_ids</tt><big>(</big><em>set_ids</em>, <em>config</em>, <em>last_time</em>, <em>client</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/harvester.html#OAIPMHHarvester.get_package_ids"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.harvester.OAIPMHHarvester.get_package_ids" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get package identifiers from given set identifiers.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ckanext.oaipmh.harvester.OAIPMHHarvester.import_stage">
+<tt class="descname">import_stage</tt><big>(</big><em>harvest_object</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/harvester.html#OAIPMHHarvester.import_stage"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.harvester.OAIPMHHarvester.import_stage" title="Permalink to this definition">¶</a></dt>
+<dd><p>The import stage will receive a HarvestObject object and will be
+responsible for:
+- performing any necessary action with the fetched object (e.g create a CKAN package).
+Note: if this stage creates or updates a package, a reference
+to the package should be added to the HarvestObject.
+- creating the HarvestObject
+- Package relation (if necessary)
+- creating and storing any suitable HarvestObjectErrors that may occur.
+- returning True if everything went as expected, False otherwise.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>harvest_object</strong> &#8211; HarvestObject object</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">True if everything went right, False if errors were found</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ckanext.oaipmh.harvester.OAIPMHHarvester.info">
+<tt class="descname">info</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/harvester.html#OAIPMHHarvester.info"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.harvester.OAIPMHHarvester.info" title="Permalink to this definition">¶</a></dt>
+<dd><p>Harvesting implementations must provide this method, which will return a
+dictionary containing different descriptors of the harvester. The
+returned dictionary should contain:</p>
+<ul class="simple">
+<li>name: machine-readable name. This will be the value stored in the
+database, and the one used by ckanext-harvest to call the appropiate
+harvester.</li>
+<li>title: human-readable name. This will appear in the form&#8217;s select box
+in the WUI.</li>
+<li>description: a small description of what the harvester does. This will
+appear on the form as a guidance to the user.</li>
+</ul>
+<p>A complete example may be:</p>
+<div class="highlight-python"><div class="highlight"><pre>{
+    &#39;name&#39;: &#39;csw&#39;,
+    &#39;title&#39;: &#39;CSW Server&#39;,
+    &#39;description&#39;: &#39;A server that implements OGC&#39;s Catalog Service
+                    for the Web (CSW) standard&#39;
+}
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A dictionary with the harvester descriptors</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ckanext.oaipmh.harvester.OAIPMHHarvester.md_format">
+<tt class="descname">md_format</tt><em class="property"> = 'oai_dc'</em><a class="headerlink" href="#ckanext.oaipmh.harvester.OAIPMHHarvester.md_format" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ckanext.oaipmh.harvester.OAIPMHHarvester.metadata_registry">
+<tt class="descname">metadata_registry</tt><big>(</big><em>config</em>, <em>harvest_job</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/harvester.html#OAIPMHHarvester.metadata_registry"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.harvester.OAIPMHHarvester.metadata_registry" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ckanext.oaipmh.harvester.OAIPMHHarvester.on_deleted">
+<tt class="descname">on_deleted</tt><big>(</big><em>harvest_object</em>, <em>header</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/harvester.html#OAIPMHHarvester.on_deleted"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.harvester.OAIPMHHarvester.on_deleted" title="Permalink to this definition">¶</a></dt>
+<dd><p>Called when metadata is deleted from server.
+Return False if dataset is ignored.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ckanext.oaipmh.harvester.OAIPMHHarvester.parse_xml">
+<tt class="descname">parse_xml</tt><big>(</big><em>f</em>, <em>context</em>, <em>orig_url=None</em>, <em>strict=True</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/harvester.html#OAIPMHHarvester.parse_xml"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.harvester.OAIPMHHarvester.parse_xml" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parse XML and return package data dictionary.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>f</strong> &#8211; data as string</li>
+<li><strong>context</strong> &#8211; CKAN context</li>
+<li><strong>orig_url</strong> &#8211; orgininal URL</li>
+<li><strong>strict</strong> &#8211; No used here, required by caller</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">package dictionary (used for package creation)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ckanext.oaipmh.harvester.OAIPMHHarvester.populate_harvest_job">
+<tt class="descname">populate_harvest_job</tt><big>(</big><em>harvest_job</em>, <em>set_ids</em>, <em>config</em>, <em>client</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/harvester.html#OAIPMHHarvester.populate_harvest_job"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.harvester.OAIPMHHarvester.populate_harvest_job" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ckanext.oaipmh.harvester.OAIPMHHarvester.validate_config">
+<tt class="descname">validate_config</tt><big>(</big><em>config</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/harvester.html#OAIPMHHarvester.validate_config"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.harvester.OAIPMHHarvester.validate_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>[optional]</p>
+<p>Harvesters can provide this method to validate the configuration entered in the
+form. It should return a single string, which will be stored in the database.
+Exceptions raised will be shown in the form&#8217;s error messages.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>harvest_object_id</strong> &#8211; Config string coming from the form</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">A string with the validated configuration options</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-ckanext.oaipmh.ida">
+<span id="ckanext-oaipmh-ida-module"></span><h2>ckanext.oaipmh.ida module<a class="headerlink" href="#module-ckanext.oaipmh.ida" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="ckanext.oaipmh.ida.IdaHarvester">
+<em class="property">class </em><tt class="descclassname">ckanext.oaipmh.ida.</tt><tt class="descname">IdaHarvester</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/ida.html#IdaHarvester"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.ida.IdaHarvester" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#ckanext.oaipmh.harvester.OAIPMHHarvester" title="ckanext.oaipmh.harvester.OAIPMHHarvester"><tt class="xref py py-class docutils literal"><span class="pre">ckanext.oaipmh.harvester.OAIPMHHarvester</span></tt></a></p>
+<p>OAI-PMH Harvester</p>
+<dl class="method">
+<dt id="ckanext.oaipmh.ida.IdaHarvester.gather_stage">
+<tt class="descname">gather_stage</tt><big>(</big><em>harvest_job</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/ida.html#IdaHarvester.gather_stage"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.ida.IdaHarvester.gather_stage" title="Permalink to this definition">¶</a></dt>
+<dd><p>See <tt class="xref py py-meth docutils literal"><span class="pre">OAIPMHHarvester.gather_stage()</span></tt></p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ckanext.oaipmh.ida.IdaHarvester.info">
+<tt class="descname">info</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/ida.html#IdaHarvester.info"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.ida.IdaHarvester.info" title="Permalink to this definition">¶</a></dt>
+<dd><p>See <tt class="xref py py-meth docutils literal"><span class="pre">ckanext.harvest.harvesters.base.HarvesterBase.info()</span></tt>.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ckanext.oaipmh.ida.IdaHarvester.md_format">
+<tt class="descname">md_format</tt><em class="property"> = 'oai_dc'</em><a class="headerlink" href="#ckanext.oaipmh.ida.IdaHarvester.md_format" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="ckanext.oaipmh.ida.IdaHarvester.parse_xml">
+<tt class="descname">parse_xml</tt><big>(</big><em>f</em>, <em>context</em>, <em>orig_url=None</em>, <em>strict=True</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/ida.html#IdaHarvester.parse_xml"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.ida.IdaHarvester.parse_xml" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-ckanext.oaipmh.importcore">
+<span id="ckanext-oaipmh-importcore-module"></span><h2>ckanext.oaipmh.importcore module<a class="headerlink" href="#module-ckanext.oaipmh.importcore" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="ckanext.oaipmh.importcore.dummy_metadata_reader">
+<tt class="descclassname">ckanext.oaipmh.importcore.</tt><tt class="descname">dummy_metadata_reader</tt><big>(</big><em>xml_element</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/importcore.html#dummy_metadata_reader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.importcore.dummy_metadata_reader" title="Permalink to this definition">¶</a></dt>
+<dd><p>A test metadata reader that always returns the same metadata</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>xml_element</strong> (<em>any</em>) &#8211; XML input</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">metadata dictionary</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">oaipmh.common.Metadata instance</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ckanext.oaipmh.importcore.generic_rdf_metadata_reader">
+<tt class="descclassname">ckanext.oaipmh.importcore.</tt><tt class="descname">generic_rdf_metadata_reader</tt><big>(</big><em>xml_element</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/importcore.html#generic_rdf_metadata_reader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.importcore.generic_rdf_metadata_reader" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transform RDF/XML documents into metadata dictionaries</p>
+<p>This function takes an RDF document in XML format, transforms it
+into an RDF graph, and traverses that graph to find all nodes in
+the graph and give them namepaths.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>xml_element</strong> (<em>lxml.etree.Element instance</em>) &#8211; RDF/XML document</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">metadata dictionary</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">oaipmh.common.Metadata instance</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ckanext.oaipmh.importcore.generic_xml_metadata_reader">
+<tt class="descclassname">ckanext.oaipmh.importcore.</tt><tt class="descname">generic_xml_metadata_reader</tt><big>(</big><em>xml_element</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/importcore.html#generic_xml_metadata_reader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.importcore.generic_xml_metadata_reader" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transform XML documents into metadata dictionaries</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>xml_element</strong> (<em>lxml.etree.Element</em>) &#8211; XML document</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">metadata dictionary with all the content of xml_element</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">oaipmh.common.Metadata</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ckanext.oaipmh.importcore.is_reverse_relation">
+<tt class="descclassname">ckanext.oaipmh.importcore.</tt><tt class="descname">is_reverse_relation</tt><big>(</big><em>rel1</em>, <em>rel2</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/importcore.html#is_reverse_relation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.importcore.is_reverse_relation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Tells whether two elements are mutual reverses</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>rel1</strong> (<em>string</em>) &#8211; name of relation</li>
+<li><strong>rel2</strong> (<em>string</em>) &#8211; name of relation</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">whether rel1 and rel2 are reverse relations</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">boolean</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ckanext.oaipmh.importcore.namepath_for_element">
+<tt class="descclassname">ckanext.oaipmh.importcore.</tt><tt class="descname">namepath_for_element</tt><big>(</big><em>prefix</em>, <em>name</em>, <em>indices</em>, <em>md</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/importcore.html#namepath_for_element"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.importcore.namepath_for_element" title="Permalink to this definition">¶</a></dt>
+<dd><p>Helper function to form name paths</p>
+<p>This function takes a prefix and name and concatenates them into
+a &#8220;name path&#8221;.  As a side effect, it also counts the elements with
+a same name path and gives them unique indices, and marks the
+count of such elements in the metadata dictionary.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>prefix</strong> (<em>string</em>) &#8211; the namepath of the parent element</li>
+<li><strong>name</strong> (<em>string</em>) &#8211; the name of the current element</li>
+<li><strong>indices</strong> (<em>a hash from strings to integers (inout)</em>) &#8211; a hash to keep counts</li>
+<li><strong>md</strong> (<em>a hash from strings to any type (inout)</em>) &#8211; a dictionary of metadata keys (namepaths) and values</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">a new namepath with name appended to prefix</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">string</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ckanext.oaipmh.importcore.namespaced_name">
+<tt class="descclassname">ckanext.oaipmh.importcore.</tt><tt class="descname">namespaced_name</tt><big>(</big><em>name</em>, <em>namespaces</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/importcore.html#namespaced_name"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.importcore.namespaced_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Substitutes a namespace prefix in a URL with its short form.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> (<em>string</em>) &#8211; the URL</li>
+<li><strong>namespaces</strong> (<em>list of (string, string)</em>) &#8211; a list of (short prefix, long prefix) pairs</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">the URL, with a short prefix</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">string</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-ckanext.oaipmh.importformats">
+<span id="ckanext-oaipmh-importformats-module"></span><h2>ckanext.oaipmh.importformats module<a class="headerlink" href="#module-ckanext.oaipmh.importformats" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="ckanext.oaipmh.importformats.ExceptReturn">
+<tt class="descclassname">ckanext.oaipmh.importformats.</tt><tt class="descname">ExceptReturn</tt><big>(</big><em>exception</em>, <em>returns</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/importformats.html#ExceptReturn"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.importformats.ExceptReturn" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="ckanext.oaipmh.importformats.copy_element">
+<tt class="descclassname">ckanext.oaipmh.importformats.</tt><tt class="descname">copy_element</tt><big>(</big><em>source</em>, <em>dest</em>, <em>md</em>, <em>callback=None</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/importformats.html#copy_element"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.importformats.copy_element" title="Permalink to this definition">¶</a></dt>
+<dd><p>Copy element in metadata dictionary from one key to another</p>
+<p>This function changes the metadata dictionary, md, by copying the
+value corresponding to key source to the value corresponding to
+the key dest.  It also copies all elements if it is an indexed
+element, and language information that pertains to the copied
+element.  The parameter callback, if given, is called with any
+element names formed (indexed or no).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>source</strong> (<em>string</em>) &#8211; key to be copied</li>
+<li><strong>dest</strong> (<em>string</em>) &#8211; key to copy to</li>
+<li><strong>md</strong> (<em>hash from string to any value (inout)</em>) &#8211; a metadata dictionary to update</li>
+<li><strong>callback</strong> (<em>function of (string, string) -&gt; None</em>) &#8211; optional callback function, called with source,
+dest and their indexed versions</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ckanext.oaipmh.importformats.create_metadata_registry">
+<tt class="descclassname">ckanext.oaipmh.importformats.</tt><tt class="descname">create_metadata_registry</tt><big>(</big><em>harvest_type=None</em>, <em>service_url=None</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/importformats.html#create_metadata_registry"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.importformats.create_metadata_registry" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return new metadata registry with all common metadata readers</p>
+<p>The readers currently implemented are for metadataPrefixes
+oai_dc, nrd, rdf and xml.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">metadata registry instance</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">oaipmh.metadata.MetadataRegistry</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ckanext.oaipmh.importformats.nrd_metadata_reader">
+<tt class="descclassname">ckanext.oaipmh.importformats.</tt><tt class="descname">nrd_metadata_reader</tt><big>(</big><em>xml</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/importformats.html#nrd_metadata_reader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.importformats.nrd_metadata_reader" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read metadata in NRD schema</p>
+<p>This function takes NRD metadata as an lxml.etree.Element object,
+and returns the same metadata as a dictionary, with central TTA
+elements picked to format-independent keys.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>xml</strong> (<em>lxml.etree.Element instance</em>) &#8211; RDF metadata as XML-encoded NRD</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">a metadata dictionary</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">a hash from string to any value</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="ckanext.oaipmh.importformats.person_attrs">
+<tt class="descclassname">ckanext.oaipmh.importformats.</tt><tt class="descname">person_attrs</tt><big>(</big><em>source</em>, <em>dest</em>, <em>result</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/importformats.html#person_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.importformats.person_attrs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Callback for copying person attributes</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-ckanext.oaipmh.oai_dc_reader">
+<span id="ckanext-oaipmh-oai-dc-reader-module"></span><h2>ckanext.oaipmh.oai_dc_reader module<a class="headerlink" href="#module-ckanext.oaipmh.oai_dc_reader" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="ckanext.oaipmh.oai_dc_reader.DcMetadataReader">
+<em class="property">class </em><tt class="descclassname">ckanext.oaipmh.oai_dc_reader.</tt><tt class="descname">DcMetadataReader</tt><big>(</big><em>xml</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/oai_dc_reader.html#DcMetadataReader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.oai_dc_reader.DcMetadataReader" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="method">
+<dt id="ckanext.oaipmh.oai_dc_reader.DcMetadataReader.read">
+<tt class="descname">read</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/oai_dc_reader.html#DcMetadataReader.read"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.oai_dc_reader.DcMetadataReader.read" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parse metadata and return metadata (oaipmh.common.Metadata) with unified dictionty.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="ckanext.oaipmh.oai_dc_reader.DefaultDcMetadataReader">
+<em class="property">class </em><tt class="descclassname">ckanext.oaipmh.oai_dc_reader.</tt><tt class="descname">DefaultDcMetadataReader</tt><big>(</big><em>xml</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/oai_dc_reader.html#DefaultDcMetadataReader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.oai_dc_reader.DefaultDcMetadataReader" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#ckanext.oaipmh.oai_dc_reader.DcMetadataReader" title="ckanext.oaipmh.oai_dc_reader.DcMetadataReader"><tt class="xref py py-class docutils literal"><span class="pre">ckanext.oaipmh.oai_dc_reader.DcMetadataReader</span></tt></a></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="ckanext.oaipmh.oai_dc_reader.IdaDcMetadataReader">
+<em class="property">class </em><tt class="descclassname">ckanext.oaipmh.oai_dc_reader.</tt><tt class="descname">IdaDcMetadataReader</tt><big>(</big><em>xml</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/oai_dc_reader.html#IdaDcMetadataReader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.oai_dc_reader.IdaDcMetadataReader" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#ckanext.oaipmh.oai_dc_reader.DcMetadataReader" title="ckanext.oaipmh.oai_dc_reader.DcMetadataReader"><tt class="xref py py-class docutils literal"><span class="pre">ckanext.oaipmh.oai_dc_reader.DcMetadataReader</span></tt></a></p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ckanext.oaipmh.oai_dc_reader.dc_metadata_reader">
+<tt class="descclassname">ckanext.oaipmh.oai_dc_reader.</tt><tt class="descname">dc_metadata_reader</tt><big>(</big><em>harvest_type</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/oai_dc_reader.html#dc_metadata_reader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.oai_dc_reader.dc_metadata_reader" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get correct reader for given harvest_type. Currently supports &#8216;ida&#8217; or &#8216;default&#8217;.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-ckanext.oaipmh.oaipmh_server">
+<span id="ckanext-oaipmh-oaipmh-server-module"></span><h2>ckanext.oaipmh.oaipmh_server module<a class="headerlink" href="#module-ckanext.oaipmh.oaipmh_server" title="Permalink to this headline">¶</a></h2>
+<p>OAI-PMH implementation for CKAN datasets and groups.</p>
+<dl class="class">
+<dt id="ckanext.oaipmh.oaipmh_server.CKANServer">
+<em class="property">class </em><tt class="descclassname">ckanext.oaipmh.oaipmh_server.</tt><tt class="descname">CKANServer</tt><a class="reference internal" href="_modules/ckanext/oaipmh/oaipmh_server.html#CKANServer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.oaipmh_server.CKANServer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">oaipmh.common.ResumptionOAIPMH</span></tt></p>
+<p>A OAI-PMH implementation class for CKAN.</p>
+<dl class="method">
+<dt id="ckanext.oaipmh.oaipmh_server.CKANServer.getRecord">
+<tt class="descname">getRecord</tt><big>(</big><em>metadataPrefix</em>, <em>identifier</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/oaipmh_server.html#CKANServer.getRecord"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.oaipmh_server.CKANServer.getRecord" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simple getRecord for a dataset.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ckanext.oaipmh.oaipmh_server.CKANServer.identify">
+<tt class="descname">identify</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/oaipmh_server.html#CKANServer.identify"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.oaipmh_server.CKANServer.identify" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return identification information for this server.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ckanext.oaipmh.oaipmh_server.CKANServer.listIdentifiers">
+<tt class="descname">listIdentifiers</tt><big>(</big><em>metadataPrefix</em>, <em>set=None</em>, <em>cursor=None</em>, <em>from_=None</em>, <em>until=None</em>, <em>batch_size=None</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/oaipmh_server.html#CKANServer.listIdentifiers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.oaipmh_server.CKANServer.listIdentifiers" title="Permalink to this definition">¶</a></dt>
+<dd><p>List all identifiers for this repository.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ckanext.oaipmh.oaipmh_server.CKANServer.listMetadataFormats">
+<tt class="descname">listMetadataFormats</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/oaipmh_server.html#CKANServer.listMetadataFormats"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.oaipmh_server.CKANServer.listMetadataFormats" title="Permalink to this definition">¶</a></dt>
+<dd><p>List available metadata formats.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ckanext.oaipmh.oaipmh_server.CKANServer.listRecords">
+<tt class="descname">listRecords</tt><big>(</big><em>metadataPrefix</em>, <em>set=None</em>, <em>cursor=None</em>, <em>from_=None</em>, <em>until=None</em>, <em>batch_size=None</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/oaipmh_server.html#CKANServer.listRecords"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.oaipmh_server.CKANServer.listRecords" title="Permalink to this definition">¶</a></dt>
+<dd><p>Show a selection of records, basically lists all datasets.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ckanext.oaipmh.oaipmh_server.CKANServer.listSets">
+<tt class="descname">listSets</tt><big>(</big><em>cursor=None</em>, <em>batch_size=None</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/oaipmh_server.html#CKANServer.listSets"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.oaipmh_server.CKANServer.listSets" title="Permalink to this definition">¶</a></dt>
+<dd><p>List all sets in this repository, where sets are groups.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-ckanext.oaipmh.plugin">
+<span id="ckanext-oaipmh-plugin-module"></span><h2>ckanext.oaipmh.plugin module<a class="headerlink" href="#module-ckanext.oaipmh.plugin" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="ckanext.oaipmh.plugin.OAIPMHPlugin">
+<em class="property">class </em><tt class="descclassname">ckanext.oaipmh.plugin.</tt><tt class="descname">OAIPMHPlugin</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/plugin.html#OAIPMHPlugin"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.plugin.OAIPMHPlugin" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">ckan.plugins.core.SingletonPlugin</span></tt>, <tt class="xref py py-class docutils literal"><span class="pre">ckan.plugins.interfaces.IRoutes</span></tt></p>
+<p>OAI-PMH plugin, maps the controller and uses the template configuration
+stanza to have the template render in case there is no parameters to the
+interface.</p>
+<dl class="method">
+<dt id="ckanext.oaipmh.plugin.OAIPMHPlugin.before_map">
+<tt class="descname">before_map</tt><big>(</big><em>map</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/plugin.html#OAIPMHPlugin.before_map"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.plugin.OAIPMHPlugin.before_map" title="Permalink to this definition">¶</a></dt>
+<dd><p>Map the controller to be used for OAI-PMH.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ckanext.oaipmh.plugin.OAIPMHPlugin.update_config">
+<tt class="descname">update_config</tt><big>(</big><em>config</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/plugin.html#OAIPMHPlugin.update_config"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.plugin.OAIPMHPlugin.update_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>This IConfigurer implementation causes CKAN to look in the
+<tt class="docutils literal"><span class="pre">`public`</span></tt> and <tt class="docutils literal"><span class="pre">`templates`</span></tt> directories present in this
+package for any customisations.</p>
+<p>It also shows how to set the site title here (rather than in
+the main site .ini file), and causes CKAN to use the
+customised package form defined in <tt class="docutils literal"><span class="pre">package_form.py</span></tt> in this
+directory.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-ckanext.oaipmh.rdftools">
+<span id="ckanext-oaipmh-rdftools-module"></span><h2>ckanext.oaipmh.rdftools module<a class="headerlink" href="#module-ckanext.oaipmh.rdftools" title="Permalink to this headline">¶</a></h2>
+<p>RDF reader and writer for OAI-PMH harvester and server interface</p>
+<dl class="function">
+<dt id="ckanext.oaipmh.rdftools.nsow">
+<tt class="descclassname">ckanext.oaipmh.rdftools.</tt><tt class="descname">nsow</tt><big>(</big><em>name</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/rdftools.html#nsow"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.rdftools.nsow" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="ckanext.oaipmh.rdftools.nsrdf">
+<tt class="descclassname">ckanext.oaipmh.rdftools.</tt><tt class="descname">nsrdf</tt><big>(</big><em>name</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/rdftools.html#nsrdf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.rdftools.nsrdf" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="ckanext.oaipmh.rdftools.rdf_writer">
+<tt class="descclassname">ckanext.oaipmh.rdftools.</tt><tt class="descname">rdf_writer</tt><big>(</big><em>element</em>, <em>metadata</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/rdftools.html#rdf_writer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.rdftools.rdf_writer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-ckanext.oaipmh.run_import">
+<span id="ckanext-oaipmh-run-import-module"></span><h2>ckanext.oaipmh.run_import module<a class="headerlink" href="#module-ckanext.oaipmh.run_import" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="ckanext.oaipmh.run_import.test_fetch">
+<tt class="descclassname">ckanext.oaipmh.run_import.</tt><tt class="descname">test_fetch</tt><big>(</big><em>url</em>, <em>record_id</em>, <em>fmt</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/run_import.html#test_fetch"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.run_import.test_fetch" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="ckanext.oaipmh.run_import.test_list">
+<tt class="descclassname">ckanext.oaipmh.run_import.</tt><tt class="descname">test_list</tt><big>(</big><em>url</em><big>)</big><a class="reference internal" href="_modules/ckanext/oaipmh/run_import.html#test_list"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ckanext.oaipmh.run_import.test_list" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-ckanext.oaipmh">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-ckanext.oaipmh" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+        </div>
+        <div class="sidebar">
+          <h3>Table Of Contents</h3>
+          <ul class="simple">
+</ul>
+
+          <h3 style="margin-top: 1.5em;">Search</h3>
+          <form class="search" action="search.html" method="get">
+            <input type="text" name="q" />
+            <input type="submit" value="Go" />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+          </form>
+          <p class="searchtip" style="font-size: 90%">
+            Enter search terms or a module, class or function name.
+          </p>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer-wrapper">
+      <div class="footer">
+        <div class="left">
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |
+          <a href="genindex.html" title="General Index"
+             >index</a>
+            <br/>
+            <a href="_sources/ckanext.oaipmh.txt"
+               rel="nofollow">Show Source</a>
+        </div>
+
+        <div class="right">
+          
+    <div class="footer">
+        &copy; Copyright 2014, CSC.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+  </body>
+</html>
