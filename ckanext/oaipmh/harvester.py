@@ -201,16 +201,16 @@ class OAIPMHHarvester(HarvesterBase):
         '''
         The gather stage will receive a HarvestJob object and will be
         responsible for:
-            - gathering all the necessary objects to fetch on a later.
-              stage (e.g. for a CSW server, perform a GetRecords request)
-            - creating the necessary HarvestObjects in the database, specifying
-              the guid and a reference to its job. The HarvestObjects need a
-              reference date with the last modified date for the resource, this
-              may need to be set in a different stage depending on the type of
-              source.
-            - creating and storing any suitable HarvestGatherErrors that may
-              occur.
-            - returning a list with all the ids of the created HarvestObjects.
+        - gathering all the necessary objects to fetch on a later.
+        stage (e.g. for a CSW server, perform a GetRecords request)
+        - creating the necessary HarvestObjects in the database, specifying
+        the guid and a reference to its job. The HarvestObjects need a
+        reference date with the last modified date for the resource, this
+        may need to be set in a different stage depending on the type of
+        source.
+        - creating and storing any suitable HarvestGatherErrors that may
+        occur.
+        - returning a list with all the ids of the created HarvestObjects.
 
         :param harvest_job: HarvestJob object
         :returns: A list of HarvestObject ids
@@ -307,12 +307,10 @@ class OAIPMHHarvester(HarvesterBase):
         '''
         The fetch stage will receive a HarvestObject object and will be
         responsible for:
-            - getting the contents of the remote object (e.g. for a CSW server,
-              perform a GetRecordById request).
-            - saving the content in the provided HarvestObject.
-            - creating and storing any suitable HarvestObjectErrors that may
-              occur.
-            - returning True if everything went as expected, False otherwise.
+        - getting the contents of the remote object (e.g. for a CSW server, perform a GetRecordById request).
+        - saving the content in the provided HarvestObject.
+        - creating and storing any suitable HarvestObjectErrors that may occur.
+        - returning True if everything went as expected, False otherwise.
 
         :param harvest_object: HarvestObject object
         :returns: True if everything went right, False if errors were found
@@ -359,14 +357,13 @@ class OAIPMHHarvester(HarvesterBase):
         '''
         The import stage will receive a HarvestObject object and will be
         responsible for:
-            - performing any necessary action with the fetched object (e.g
-              create a CKAN package).
-              Note: if this stage creates or updates a package, a reference
-              to the package should be added to the HarvestObject.
-            - creating the HarvestObject - Package relation (if necessary)
-            - creating and storing any suitable HarvestObjectErrors that may
-              occur.
-            - returning True if everything went as expected, False otherwise.
+        - performing any necessary action with the fetched object (e.g create a CKAN package).
+        Note: if this stage creates or updates a package, a reference
+        to the package should be added to the HarvestObject.
+        - creating the HarvestObject
+        - Package relation (if necessary)
+        - creating and storing any suitable HarvestObjectErrors that may occur.
+        - returning True if everything went as expected, False otherwise.
 
         :param harvest_object: HarvestObject object
         :returns: True if everything went right, False if errors were found
