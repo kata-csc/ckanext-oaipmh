@@ -169,14 +169,17 @@ class CmdiReader(object):
         if resource_info is None:
             raise CmdiReaderException("Unexpected XML format: No resourceInfo -element found")
 
-        languages = self._text_xpath(cmd, "//cmd:corpusInfo/cmd:corpusMediaType/cmd:corpusTextInfo/cmd:languageInfo/cmd:languageId/text()")
-
         metadata_identifiers = self._text_xpath(cmd, "//cmd:identificationInfo/cmd:identifier/text()")
+        data_identifiers = self._text_xpath(cmd, "//cmd:identificationInfo/cmd:url/text()")
+
+        languages = self._text_xpath(cmd, "//cmd:corpusInfo/cmd:corpusMediaType/cmd:corpusTextInfo/cmd:languageInfo/cmd:languageId/text()")
         description = "\n\n".join(self._text_xpath(cmd, "//cmd:identificationInfo/cmd:description/text()"))
-
         titles = [{'lang': title.get('{http://www.w3.org/XML/1998/namespace}lang', ''), 'value': title.text.strip()} for title in xml.xpath('//cmd:identificationInfo/cmd:resourceName', namespaces=self.namespaces)]
-        primary_pid = None
+        version = first(self._text_xpath(resource_info, "//cmd:metadataInfo/cmd:metadataLastDateUpdated/text()")) or ""
+        coverage = first(self._text_xpath(resource_info, "//cmd:corpusInfo/cmd:corpusMediaType/cmd:corpusTextInfo/cmd:timeCoverageInfo/cmd:timeCoverage/text()")) or ""
+        license_identifier = first(self._text_xpath(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:licence/text()")) or 'notspecified'
 
+        primary_pid = None
         provider = self.provider
 
         pids = []
@@ -186,8 +189,7 @@ class CmdiReader(object):
             else:
                 pids.append(pid)
 
-        version = first(self._text_xpath(resource_info, "//cmd:metadataInfo/cmd:metadataLastDateUpdated/text()")) or ""
-        coverage = first(self._text_xpath(resource_info, "//cmd:corpusInfo/cmd:corpusMediaType/cmd:corpusTextInfo/cmd:timeCoverageInfo/cmd:timeCoverage/text()")) or ""
+        pids += [dict(id=pid, provider=provider, type='data') for pid in data_identifiers]
 
         temporal_coverage_begin = ""
         temporal_coverage_end = ""
@@ -217,8 +219,6 @@ class CmdiReader(object):
 
         agents.extend(self._organization_as_agent(self._get_organizations(resource_info, "//cmd:distributionInfo/cmd:iprHolderOrganization"), 'author'))
         agents.extend(self._organization_as_agent(self._get_organizations(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:distributionRightsHolderOrganization"), 'owner'))
-
-        license_identifier = first(self._text_xpath(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:licence/text()")) or 'notspecified'
 
         result = {'name': self._to_name(primary_pid or first(metadata_identifiers)),
                   'language': ",".join(languages),
