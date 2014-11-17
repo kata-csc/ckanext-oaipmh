@@ -159,7 +159,6 @@ def nrd_metadata_reader(xml):
         return oc.Metadata(result)
 
 
-
 def create_metadata_registry(harvest_type=None, service_url=None):
     '''Return new metadata registry with all common metadata readers
 

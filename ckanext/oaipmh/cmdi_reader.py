@@ -39,8 +39,8 @@ class CmdiReader(object):
         return [unicode(text).strip() for text in root.xpath(query, namespaces=cls.namespaces)]
 
     @staticmethod
-    def _to_name(identifier):
-        """ Convert identifier to CKAN package name.
+    def _to_identifier(identifier):
+        """ Convert url identifier to identifier.
 
         :param identifier: identifier string
         :return: CKAN package name
@@ -48,7 +48,16 @@ class CmdiReader(object):
         parsed = urlparse(identifier)
         if parsed.scheme and parsed.netloc:
             identifier = parsed.path.strip('/')
-        return datapid_to_name(identifier)
+        return identifier
+
+    @classmethod
+    def _to_name(cls, identifier):
+        """ Convert identifier to CKAN package name.
+
+        :param identifier: identifier string
+        :return: CKAN package name
+        """
+        return datapid_to_name(cls._to_identifier(identifier))
 
     @staticmethod
     def _strip_first(elements):
@@ -152,8 +161,6 @@ class CmdiReader(object):
         :param xml: xml element (lxml)
         :return: dictionary
         """
-
-        metadata_identifiers = self._text_xpath(xml, '//oai:record/oai:header/oai:identifier/text()')
         cmd = first(xml.xpath('//oai:record/oai:metadata/cmd:CMD', namespaces=self.namespaces))
         if cmd is None:
             raise CmdiReaderException("Unexpected XML format: No CMD -element found")
@@ -164,23 +171,32 @@ class CmdiReader(object):
 
         languages = self._text_xpath(cmd, "//cmd:corpusInfo/cmd:corpusMediaType/cmd:corpusTextInfo/cmd:languageInfo/cmd:languageId/text()")
 
-        data_identifiers = self._text_xpath(cmd, "//cmd:identificationInfo/cmd:identifier/text()")
-        description = first(self._text_xpath(cmd, "//cmd:identificationInfo/cmd:description/text()"))
+        metadata_identifiers = self._text_xpath(cmd, "//cmd:identificationInfo/cmd:identifier/text()")
+        description = "\n\n".join(self._text_xpath(cmd, "//cmd:identificationInfo/cmd:description/text()"))
 
         titles = [{'lang': title.get('{http://www.w3.org/XML/1998/namespace}lang', ''), 'value': title.text.strip()} for title in xml.xpath('//cmd:identificationInfo/cmd:resourceName', namespaces=self.namespaces)]
         primary_pid = None
 
         provider = self.provider
 
-        pids = [dict(id=pid, provider=provider, type='data') for pid in data_identifiers]
-        for pid in pids:
+        pids = []
+        for pid in [dict(id=pid, provider=provider, type='metadata') for pid in metadata_identifiers]:
             if 'urn' in pid.get('id', ""):
-                pid['primary'] = "true"
                 primary_pid = pid['id']
-
-        pids += [dict(id=pid, provider=provider, type='metadata') for pid in metadata_identifiers]
+            else:
+                pids.append(pid)
 
         version = first(self._text_xpath(resource_info, "//cmd:metadataInfo/cmd:metadataLastDateUpdated/text()")) or ""
+        coverage = first(self._text_xpath(resource_info, "//cmd:corpusInfo/cmd:corpusMediaType/cmd:corpusTextInfo/cmd:timeCoverageInfo/cmd:timeCoverage/text()")) or ""
+
+        temporal_coverage_begin = ""
+        temporal_coverage_end = ""
+
+        if coverage:
+            split = [item.strip() for item in coverage.split("-")]
+            if len(split) == 2:
+                temporal_coverage_begin = split[0]
+                temporal_coverage_end = split[1]
 
         # TODO: Check agent mapping.
         #print "###", _get_persons(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:licensorPerson")
@@ -202,17 +218,22 @@ class CmdiReader(object):
         agents.extend(self._organization_as_agent(self._get_organizations(resource_info, "//cmd:distributionInfo/cmd:iprHolderOrganization"), 'author'))
         agents.extend(self._organization_as_agent(self._get_organizations(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:distributionRightsHolderOrganization"), 'owner'))
 
-        result = {'name': self._to_name(primary_pid or first(data_identifiers)),
-                             'language': ",".join(languages),
-                             'pids': pids,
-                             'version': version,
-                             'tag_string': 'cmdi', # TODO: Ask about value!
-                             'notes': description,
-                             'langtitle': titles,
-                             'type': 'dataset',
-                             'contact': contacts,
-                             'agent': agents,
-                             'availability': 'contact_owner'}
+        result = {'name': self._to_name(primary_pid or first(metadata_identifiers)),
+                  'language': ",".join(languages),
+                  'pids': pids,
+                  'version': version,
+                  'tag_string': 'cmdi', # TODO: Ask about value!
+                  'notes': description,
+                  'langtitle': titles,
+                  'type': 'dataset',
+                  'contact': contacts,
+                  'agent': agents,
+                  'availability': 'contact_owner',
+                  'temporal_coverage_begin': temporal_coverage_begin,
+                  'temporal_coverage_end': temporal_coverage_end}
+
+        if primary_pid:
+            result['id'] = primary_pid
 
         # TODO: Ask about distributionAccessMedium
         # _strip_first(_text_xpath(resource_info, "//cmd:distributionInfo/availability/text()"))

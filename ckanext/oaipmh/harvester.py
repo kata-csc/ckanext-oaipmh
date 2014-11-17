@@ -400,8 +400,9 @@ class OAIPMHHarvester(HarvesterBase):
         if pkg and not self._recreate(harvest_object):
             log.debug("Not re-creating package: %s", pkg_id)
             return True
+        if not package_dict.get('id', None):
+            package_dict['id'] = pkg.id if pkg else ckanext.kata.utils.generate_pid()
 
-        package_dict['id'] = pkg.id if pkg else ckanext.kata.utils.generate_pid()
         uploader = ''
 
         try:

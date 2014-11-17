@@ -319,30 +319,28 @@ class TestCMDIHarvester(TestCase):
 
         package = get_action('package_show')({'user': 'harvest'}, {'id': 'urn-nbn-fi-lb-20140730180'})
 
+        self.assertEquals(package.get('id', None), 'http://urn.fi/urn:nbn:fi:lb-20140730180')
         self.assertEquals(package.get('name', None), 'urn-nbn-fi-lb-20140730180')
         self.assertEquals(package.get('notes', None), 'Test description')
         self.assertEquals(package.get('version', None), '2012-09-07')
         self.assertEquals(package.get('langtitle', [])[0]['value'], 'Longi Corpus')
         self.assertEquals(package.get('langtitle', [])[0]['lang'], 'eng')
         provider = config['ckan.site_url']
-        expected_pids = [{u'id': u'http://urn.fi/urn:nbn:fi:lb-20140730180',
-                          u'primary': u'true',
-                          u'provider': provider,
-                          u'type': u'data'},
-                         {u'id': u'http://islrn.org/resources/248-895-085-557-0',
-                          u'provider': provider,
-                          u'type': u'data'},
-                         {u'id': u'oai:kielipankki.fi:sha3a880',
-                          u'provider': provider,
-                          u'type': u'metadata'}]
-        self.assertEquals(sorted(expected_pids, key=lambda item: item['id']),
-                          sorted(package.get('pids'), key=lambda item: item['id']))
+        expected_pid = {u'id': u'http://islrn.org/resources/248-895-085-557-0',
+                        u'provider': provider,
+                        u'type': u'metadata'}
+
+        self.assertTrue(expected_pid in package.get('pids'))
 
         model.Session.flush()
 
         harvest_object = self._run_import("cmdi_2.xml", job)
 
         self.assertEquals(len(harvest_object.errors), 0, u"\n".join(unicode(error.message) for error in (harvest_object.errors or [])))
+
+        package = get_action('package_show')({'user': 'harvest'}, {'id': 'urn-nbn-fi-lb-20140730186'})
+        self.assertEquals(package['temporal_coverage_begin'], '1880')
+        self.assertEquals(package['temporal_coverage_end'], '1939')
 
         # Delete package
         harvest_object = HarvestObject()
@@ -358,8 +356,8 @@ class TestCMDIHarvester(TestCase):
 
         self.harvester.import_stage(harvest_object)
 
-        package = get_action('package_show')({'user': 'harvest'}, {'id': 'urn-nbn-fi-lb-20140730180'})
-        self.assertEquals(package['state'], 'deleted')
+        model.Session.flush()
+        self.assertEquals(model.Package.get(package['id']).state, 'deleted')
 
     def test_fetch_xml(self):
         package = self.harvester.fetch_xml("file://%s" % _get_fixture('cmdi_1.xml'), {})
