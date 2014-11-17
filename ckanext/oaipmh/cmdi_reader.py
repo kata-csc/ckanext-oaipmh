@@ -77,7 +77,7 @@ class CmdiReader(object):
         :return: list of organization dictionaries
         """
         return [{'role': cls._strip_first(organization.xpath("cmd:role/text()", namespaces=cls.namespaces)),
-                 'name': cls._strip_first(organization.xpath("cmd:organizationInfo/cmd:organizationName/text()", namespaces=cls.namespaces)),
+                 'name': ", ".join(cls._text_xpath(organization, "cmd:organizationInfo/cmd:organizationName/text()")),
                  'short_name': cls._strip_first(organization.xpath("cmd:organizationInfo/cmd:organizationShortName/text()", namespaces=cls.namespaces)),
                  'email': cls._strip_first(organization.xpath("cmd:organizationInfo/cmd:communicationInfo/cmd:email/text()", namespaces=cls.namespaces)),
                  'url': cls._strip_first(organization.xpath("cmd:organizationInfo/cmd:communicationInfo/cmd:email/text()", namespaces=cls.namespaces))}
@@ -234,6 +234,9 @@ class CmdiReader(object):
                   'temporal_coverage_begin': temporal_coverage_begin,
                   'temporal_coverage_end': temporal_coverage_end,
                   'license_id': license_identifier}
+
+        if not languages:
+            result['langdis'] = u'True'
 
         if primary_pid:
             result['id'] = primary_pid
