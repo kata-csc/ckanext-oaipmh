@@ -325,6 +325,8 @@ class TestCMDIHarvester(TestCase):
         self.assertEquals(package.get('version', None), '2012-09-07')
         self.assertEquals(package.get('langtitle', [])[0]['value'], 'Longi Corpus')
         self.assertEquals(package.get('langtitle', [])[0]['lang'], 'eng')
+        self.assertEquals(package.get('license_id', None), 'underNegotiation')
+
         provider = config['ckan.site_url']
         expected_pid = {u'id': u'http://islrn.org/resources/248-895-085-557-0',
                         u'provider': provider,
@@ -339,9 +341,10 @@ class TestCMDIHarvester(TestCase):
         self.assertEquals(len(harvest_object.errors), 0, u"\n".join(unicode(error.message) for error in (harvest_object.errors or [])))
 
         package = get_action('package_show')({'user': 'harvest'}, {'id': 'urn-nbn-fi-lb-20140730186'})
+
         self.assertEquals(package['temporal_coverage_begin'], '1880')
         self.assertEquals(package['temporal_coverage_end'], '1939')
-
+        self.assertEquals(package.get('license_id', None), 'other')
         # Delete package
         harvest_object = HarvestObject()
         harvest_object.content = None

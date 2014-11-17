@@ -218,6 +218,8 @@ class CmdiReader(object):
         agents.extend(self._organization_as_agent(self._get_organizations(resource_info, "//cmd:distributionInfo/cmd:iprHolderOrganization"), 'author'))
         agents.extend(self._organization_as_agent(self._get_organizations(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:distributionRightsHolderOrganization"), 'owner'))
 
+        license_identifier = first(self._text_xpath(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:licence/text()")) or 'notspecified'
+
         result = {'name': self._to_name(primary_pid or first(metadata_identifiers)),
                   'language': ",".join(languages),
                   'pids': pids,
@@ -230,7 +232,8 @@ class CmdiReader(object):
                   'agent': agents,
                   'availability': 'contact_owner',
                   'temporal_coverage_begin': temporal_coverage_begin,
-                  'temporal_coverage_end': temporal_coverage_end}
+                  'temporal_coverage_end': temporal_coverage_end,
+                  'license_id': license_identifier}
 
         if primary_pid:
             result['id'] = primary_pid
