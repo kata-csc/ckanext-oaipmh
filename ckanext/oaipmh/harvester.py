@@ -318,7 +318,6 @@ class OAIPMHHarvester(HarvesterBase):
         log.debug("fetch: %s", harvest_object.guid)
         # Get metadata content from provider
         try:
-            # Todo! This should not be duplicated here. Should be some class' attributes
             # Create a OAI-PMH Client
             config = self._get_configuration(harvest_object)
 
@@ -352,6 +351,14 @@ class OAIPMHHarvester(HarvesterBase):
         harvest_object.save()
 
         return True
+
+    def get_schema(self, config, pkg):
+        if config.get('type', 'default') != 'ida':
+            return ckanext.kata.plugin.KataPlugin.update_package_schema_oai_dc() if pkg \
+                else ckanext.kata.plugin.KataPlugin.create_package_schema_oai_dc()
+        else:
+            return ckanext.kata.plugin.KataPlugin.update_package_schema_oai_dc_ida() if pkg \
+                else ckanext.kata.plugin.KataPlugin.create_package_schema_oai_dc_ida()
 
     def import_stage(self, harvest_object):
         '''
@@ -412,16 +419,12 @@ class OAIPMHHarvester(HarvesterBase):
                 package_dict['owner_org'] = package.owner_org
 
             config = self._get_configuration(harvest_object)
-            if config.get('type', 'default') != 'ida':
-                schema = ckanext.kata.plugin.KataPlugin.update_package_schema_oai_dc() if pkg \
-                    else ckanext.kata.plugin.KataPlugin.create_package_schema_oai_dc()
-            else:
+            if config.get('type', 'default') == 'ida':
                 if package_dict.get('owner_org', False):
                     package_dict['private'] = "true"
                 uploader = package_dict.get('uploader', False)
                 package_dict.pop('uploader')
-                schema = ckanext.kata.plugin.KataPlugin.update_package_schema_oai_dc_ida() if pkg \
-                    else ckanext.kata.plugin.KataPlugin.create_package_schema_oai_dc_ida()
+            schema = self.get_schema(config, pkg)
             # schema['xpaths'] = [ignore_missing, ckanext.kata.converters.xpath_to_extras]
             result = self._create_or_update_package(package_dict,
                                                     harvest_object,

@@ -224,7 +224,6 @@ class CmdiReader(object):
                   'language': ",".join(languages),
                   'pids': pids,
                   'version': version,
-                  'tag_string': 'cmdi', # TODO: Ask about value!
                   'notes': description,
                   'langtitle': titles,
                   'type': 'dataset',

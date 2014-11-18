@@ -25,6 +25,10 @@ class CMDIHarvester(OAIPMHHarvester):
             'description': 'Harvests CMDI dataset'
         }
 
+    def get_schema(self, config, pkg):
+        from ckanext.kata.plugin import KataPlugin
+        return KataPlugin.create_package_schema_oai_cmdi()
+
     def on_deleted(self, harvest_object, header):
         """ See :meth:`OAIPMHHarvester.on_deleted`
             Mark package for deletion.
