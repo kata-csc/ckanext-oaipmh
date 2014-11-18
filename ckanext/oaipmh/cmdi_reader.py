@@ -189,7 +189,7 @@ class CmdiReader(object):
             else:
                 pids.append(pid)
 
-        pids += [dict(id=pid, provider=provider, type='data') for pid in data_identifiers]
+        pids += [dict(id=pid, provider=provider, type='data', primary=data_identifiers.index(pid) == 0) for pid in data_identifiers]
 
         temporal_coverage_begin = ""
         temporal_coverage_end = ""
