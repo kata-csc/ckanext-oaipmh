@@ -434,7 +434,9 @@ class OAIPMHHarvester(HarvesterBase):
             if uploader and asbool(c.get('kata.ldap.enabled', False)):
                 try:
                     usr = ld.get_user_from_ldap(uploader)
-                    usrname = model.User.by_openid(usr)
+                    if usr:
+                        # by_openid leaves session hanging if usr is not set
+                        usrname = model.User.by_openid(usr)
                     if usrname:
                         editor_dict = {"name": package_dict['name'],
                                        "role": "admin",
