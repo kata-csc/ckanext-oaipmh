@@ -419,11 +419,13 @@ class OAIPMHHarvester(HarvesterBase):
                 package_dict['owner_org'] = package.owner_org
 
             config = self._get_configuration(harvest_object)
-            if config.get('type', 'default') == 'ida':
+            if config.get('type') == 'ida':
                 if package_dict.get('owner_org', False):
                     package_dict['private'] = "true"
                 uploader = package_dict.get('uploader', False)
                 package_dict.pop('uploader')
+            if config.get('type') == 'ida':
+                package_dict['persist_schema'] = u'True'
             schema = self.get_schema(config, pkg)
             # schema['xpaths'] = [ignore_missing, ckanext.kata.converters.xpath_to_extras]
             result = self._create_or_update_package(package_dict,
