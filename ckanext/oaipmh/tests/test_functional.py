@@ -127,7 +127,7 @@ class TestOaipmhServer(WsgiAppCase, TestCase):
         result = self.app.get(url, {'verb': 'GetRecord', 'identifier': 'test-package-coverage', 'metadataPrefix': 'oai_dc'})
 
         root = lxml.etree.fromstring(result.body)
-        expected = ['Keilaniemi (populated place)', 'Espoo (city)', '2003-07-10T06:36:27Z/2010-04-15T03:24:47Z']
+        expected = ['Keilaniemi (populated place)', 'Espoo (city)', '2003-07-10T06:36:27-12:00/2010-04-15T03:24:47+12:45']
 
         found = 0
         for coverage in self._get_results(root, "//dc:coverage"):
