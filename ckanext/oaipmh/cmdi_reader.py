@@ -15,7 +15,7 @@ class CmdiReaderException(Exception):
 class CmdiReader(object):
     """ Reader for CMDI XML data """
 
-    namespaces = {'oai': "http://www.openarchives.org/OAI/2.0/", 'cmd': "http://www.clarin.eu/cmd/"}
+    namespaces = {'oai': "http://www.openarchives.org/OAI/2.0/", 'cmd': "http://www.clarin.eu/cmd/"}#, 'xml': "http://www.w3.org/XML/1998/namespace/"}
 
     def __init__(self, provider=None):
         """ Generate new reader instance.
@@ -173,7 +173,9 @@ class CmdiReader(object):
         data_identifiers = self._text_xpath(cmd, "//cmd:identificationInfo/cmd:url/text()")
 
         languages = self._text_xpath(cmd, "//cmd:corpusInfo/cmd:corpusMediaType/cmd:corpusTextInfo/cmd:languageInfo/cmd:languageId/text()")
-        description = "\n\n".join(self._text_xpath(cmd, "//cmd:identificationInfo/cmd:description/text()"))
+        description = [dict(dada='dada', lang=node.get('{http://www.w3.org/XML/1998/namespace}lang', ''), text=node.text) for node in
+                       cmd.xpath("//cmd:identificationInfo/cmd:description[@xml:lang]", namespaces=self.namespaces)]
+        notes = "\n\n".join(self._text_xpath(cmd, "//cmd:identificationInfo/cmd:description[not(@xml:lang)]/text()"))
         titles = [{'lang': title.get('{http://www.w3.org/XML/1998/namespace}lang', ''), 'value': title.text.strip()} for title in xml.xpath('//cmd:identificationInfo/cmd:resourceName', namespaces=self.namespaces)]
         version = first(self._text_xpath(resource_info, "//cmd:metadataInfo/cmd:metadataLastDateUpdated/text()")) or ""
         coverage = first(self._text_xpath(resource_info, "//cmd:corpusInfo/cmd:corpusMediaType/cmd:corpusTextInfo/cmd:timeCoverageInfo/cmd:timeCoverage/text()")) or ""
@@ -224,7 +226,8 @@ class CmdiReader(object):
                   'language': ",".join(languages),
                   'pids': pids,
                   'version': version,
-                  'notes': description,
+                  'description': description,
+                  'notes': notes,
                   'langtitle': titles,
                   'type': 'dataset',
                   'contact': contacts,

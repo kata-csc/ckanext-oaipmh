@@ -294,7 +294,8 @@ class TestCMDIHarvester(TestCase):
         content= metadata.getMap()
         package = content['unified']
         self.assertEquals(package.get('name', None), 'urn-nbn-fi-lb-20140730180')
-        self.assertEquals(package.get('notes', None), 'Test description')
+        self.assertFalse(package.get('notes'))
+        self.assertEquals(package.get('description', [{}])[0].get('text', ''), 'Test description')
         self.assertEquals(package.get('version', None), '2012-09-07')
         self.assertEquals(package.get('langtitle', [])[0]['value'], 'Longi Corpus')
         self.assertEquals(package.get('langtitle', [])[0]['lang'], 'en')
@@ -321,7 +322,9 @@ class TestCMDIHarvester(TestCase):
 
         self.assertEquals(package.get('id', None), 'http://urn.fi/urn:nbn:fi:lb-20140730180')
         self.assertEquals(package.get('name', None), 'urn-nbn-fi-lb-20140730180')
-        self.assertEquals(package.get('notes', None), 'Test description')
+        self.assertFalse(package.get('notes'))
+        self.assertEquals(package.get('description', [{}])[0].get('text', ''), 'Test description')
+        self.assertEquals(package.get('description', [{}])[0].get('lang', ''), 'eng')
         self.assertEquals(package.get('version', None), '2012-09-07')
         self.assertEquals(package.get('langtitle', [])[0]['value'], 'Longi Corpus')
         self.assertEquals(package.get('langtitle', [])[0]['lang'], 'eng')
@@ -364,13 +367,17 @@ class TestCMDIHarvester(TestCase):
 
     def test_fetch_xml(self):
         package = self.harvester.fetch_xml("file://%s" % _get_fixture('cmdi_1.xml'), {})
-        self.assertEquals(package.get('notes', None), 'Test description')
+        self.assertEquals(package.get('description', [{}])[0].get('text', ''), 'Test description')
+        self.assertEquals(package.get('description', [{}])[0].get('lang', ''), 'en', msg=package.get('description'))
+        self.assertFalse(package.get('notes'))
         self.assertEquals(package.get('version', None), '2012-09-07')
 
     def test_parse_xml(self):
         with open(_get_fixture('cmdi_1.xml'), 'r') as source:
             package = self.harvester.parse_xml(source.read(), {})
-            self.assertEquals(package.get('notes', None), 'Test description')
+            self.assertEquals(package.get('description', [{}])[0].get('text', ''), 'Test description')
+            self.assertEquals(package.get('description', [{}])[0].get('lang', ''), 'en', msg=package.get('description'))
+            self.assertFalse(package.get('notes'))
             self.assertEquals(package.get('version', None), '2012-09-07')
 
 
@@ -460,6 +467,7 @@ class TestOAIDCReaderHelda(TestCase):
                            'availability': 'through_provider',
                            'checksum': '',
                            'contact': [],
+                           'description': [],
                            'direct_download_URL': u'http://link.aip.org/link/?jcp/123/064507',
                            'discipline': '',
                            'geographic_coverage': '',

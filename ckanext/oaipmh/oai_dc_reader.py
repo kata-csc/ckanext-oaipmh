@@ -51,11 +51,24 @@ class DcMetadataReader():
         return oc.Metadata(result)
 
     def _skip_note(self, note):
-        return False
+        '''Skip notes with language as they are taken into descriptions field'''
+        log.critical("_skip_note, NOTE: %s" % note)
+        log.critical("_skip_note, NOTE LANG: %s" % note.get('{http://www.w3.org/XML/1998/namespace}lang'))
+        return bool(note.get('{http://www.w3.org/XML/1998/namespace}lang'))
 
     def _read_notes(self):
+        log.critical("NOTES: %s" % sorted([a.string for a in self.dc(_filter_tag_name_namespace('description', NS['dc']),
+                                                                 recursive=False) if not self._skip_note(a)]))
         return '\r\n\r\n'.join(sorted([a.string for a in self.dc(_filter_tag_name_namespace('description', NS['dc']),
-                                                                 recursive=False) if not self._skip_note(a.string)])) or ''
+                                                                 recursive=False) if not self._skip_note(a)])) or ''
+
+    def _get_descriptions(self):
+        log.critical("DESCRIPTIONS: %s" % [a for a in self.dc(_filter_tag_name_namespace('description', NS['dc']),
+                                        recursive=False) if self._skip_note(a)])
+        for node in [a for a in self.dc(_filter_tag_name_namespace('description', NS['dc']),
+                                        recursive=False) if self._skip_note(a)]:
+            log.critical("TEXT: %s, LANG: %s" % (node.string, node.get('{http://www.w3.org/XML/1998/namespace}lang')))
+            yield node.string, node.get('{http://www.w3.org/XML/1998/namespace}lang')
 
     def _get_maintainer_stuff(self):
         for a in self.dc(_filter_tag_name_namespace(name='publisher', namespace=NS['dct']), recursive=False):
@@ -124,6 +137,8 @@ class DcMetadataReader():
             availability=availability or 'through_provider' if first(_get_download(self.dc)) else '',
 
             checksum=_get_checksum(self.dc) or '',
+
+            description=[dict(lang=lang, text=text) for (text, lang) in self._get_descriptions()],
 
             direct_download_URL=first(_get_download(self.dc)) or '',
 
