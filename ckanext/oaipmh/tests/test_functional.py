@@ -193,3 +193,36 @@ class TestOaipmhServer(WsgiAppCase, TestCase):
             self.assertFalse(fail_record, "No records received")
 
         self.assertFalse(fail, "No headers (packages) received")
+
+    def test_private_record(self):
+        '''
+        Test that private packages are not listed but public packages are
+
+        '''
+        package_1_data = deepcopy(TEST_DATADICT)
+        model.User(name="privateuser", sysadmin=True).save()
+        organization = get_action('organization_create')({'user': 'privateuser'}, {'name': 'private-organization', 'title': "Private organization"})
+        package_1_data['private'] = True
+        package_1_data['owner_org'] = organization['name']
+        package_1_data['name'] = 'private-package'
+        package1 = get_action('package_create')({'user': 'privateuser'}, package_1_data)
+        package_2_data = deepcopy(TEST_DATADICT)
+        package_2_data['private'] = False
+        package_2_data['owner_org'] = organization['name']
+        package_2_data['name'] = 'public-package'
+
+        url = url_for('/oai')
+        result = self.app.get(url, {'verb': 'ListIdentifiers', 'set': 'private-organization', 'metadataPrefix': 'oai_dc'})
+
+        root = lxml.etree.fromstring(result.body)
+        print root
+        self.assertFalse(root.xpath("//o:header", namespaces=self._namespaces))
+        package2 = get_action('package_create')({'user': 'privateuser'}, package_2_data)
+        result = self.app.get(url, {'verb': 'ListIdentifiers', 'set': 'private-organization', 'metadataPrefix': 'oai_dc'})
+        root = lxml.etree.fromstring(result.body)
+        for header in root.xpath("//o:header", namespaces=self._namespaces):
+            identifier = header.xpath("string(o:identifier)", namespaces=self._namespaces)
+            print identifier
+            self.assertTrue(identifier == package2['id'])
+
+        get_action('organization_delete')({'user': 'privateuser'}, {'id': organization['id']})

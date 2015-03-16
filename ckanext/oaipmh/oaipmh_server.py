@@ -96,29 +96,37 @@ class CKANServer(ResumptionOAIPMH):
         packages = []
         if not set:
             if not from_ and not until:
-                packages = Session.query(Package).all()
+                packages = Session.query(Package).filter(Package.type=='dataset').filter(Package.private!=True).all()
             else:
-                if from_:
-                    packages = Session.query(Package).filter(PackageRevision.revision_timestamp > from_).all()
-                if until:
-                    packages = Session.query(Package).filter(PackageRevision.revision_timestamp < until).all()
+                if from_ and not until:
+                    packages = Session.query(Package).filter(Package.type=='dataset').filter(Package.private!=True).\
+                        filter(PackageRevision.revision_timestamp > from_).\
+                        filter(Package.name==PackageRevision.name).all()
+                if until and not from_:
+                    packages = Session.query(Package).filter(Package.type=='dataset').filter(Package.private!=True).\
+                        filter(PackageRevision.revision_timestamp < until).\
+                        filter(Package.name==PackageRevision.name).all()
                 if from_ and until:
-                    packages = Session.query(Package).filter(between(PackageRevision.revision_timestamp, from_, until)).all()
+                    packages = Session.query(Package).filter(Package.type=='dataset').filter(Package.private!=True).\
+                        filter(between(PackageRevision.revision_timestamp, from_, until)).\
+                        filter(Package.name==PackageRevision.name).all()
         else:
             group = Group.get(set)
             if group:
-                packages = group.packages(return_query=True)
+                packages = group.packages(return_query=True).filter(Package.type=='dataset').\
+                    filter(Package.private!=True)
                 if from_ and not until:
                     packages = packages.\
-                        filter(PackageRevision.revision_timestamp > from_)
+                        filter(PackageRevision.revision_timestamp > from_).filter(Package.name==PackageRevision.name)
                 if until and not from_:
                     packages = packages.\
-                        filter(PackageRevision.revision_timestamp < until)
+                        filter(PackageRevision.revision_timestamp < until).filter(Package.name==PackageRevision.name)
                 if from_ and until:
-                    packages = packages.filter(between(PackageRevision.revision_timestamp, from_, until))
+                    packages = packages.filter(between(PackageRevision.revision_timestamp, from_, until)).\
+                        filter(Package.name==PackageRevision.name)
                 packages = packages.all()
         if cursor:
-            packages = packages[:cursor]
+            packages = packages[cursor:]
         for package in packages:
             data.append(common.Header(package.id, package.metadata_created, [package.name], False))
 
@@ -142,30 +150,35 @@ class CKANServer(ResumptionOAIPMH):
         packages = []
         if not set:
             if not from_ and not until:
-                packages = Session.query(Package).all()
-            if from_:
-                packages = Session.query(Package).\
-                    filter(PackageRevision.revision_timestamp > from_).all()
-            if until:
-                packages = Session.query(Package).\
-                    filter(PackageRevision.revision_timestamp < until).all()
+                packages = Session.query(Package).filter(Package.type=='dataset').filter(Package.private!=True).all()
+            if from_ and not until:
+                packages = Session.query(Package).filter(Package.type=='dataset').filter(Package.private!=True).\
+                    filter(PackageRevision.revision_timestamp > from_).filter(Package.name==PackageRevision.name).all()
+            if until and not from_:
+                packages = Session.query(Package).filter(Package.type=='dataset').filter(Package.private!=True).\
+                    filter(PackageRevision.revision_timestamp < until).filter(Package.name==PackageRevision.name).all()
             if from_ and until:
-                packages = Session.query(Package).filter(
-                    between(PackageRevision.revision_timestamp, from_, until)).all()
+                packages = Session.query(Package).filter(Package.type=='dataset').filter(Package.private!=True).filter(
+                    between(PackageRevision.revision_timestamp, from_, until)).\
+                    filter(Package.name==PackageRevision.name).all()
         else:
             group = Group.get(set)
             if group:
                 packages = group.packages(return_query=True)
                 if from_ and not until:
                     packages = packages.\
-                        filter(PackageRevision.revision_timestamp > from_).all()
+                        filter(PackageRevision.revision_timestamp > from_).filter(Package.type=='dataset').\
+                        filter(Package.private!=True).all()
                 if until and not from_:
                     packages = packages.\
-                        filter(PackageRevision.revision_timestamp < until).all()
+                        filter(PackageRevision.revision_timestamp < until).filter(Package.type=='dataset').\
+                        filter(Package.private!=True).filter(Package.name==PackageRevision.name).all()
                 if from_ and until:
-                    packages = packages.filter(between(PackageRevision.revision_timestamp, from_, until)).all()
+                    packages = packages.filter(between(PackageRevision.revision_timestamp, from_, until)).\
+                        filter(Package.type=='dataset').filter(Package.name==PackageRevision.name).\
+                        filter(Package.private!=True).all()
         if cursor:
-            packages = packages[:cursor]
+            packages = packages[cursor:]
         for res in packages:
             data.append(self._record_for_dataset(res))
         return data
@@ -176,7 +189,7 @@ class CKANServer(ResumptionOAIPMH):
         data = []
         groups = Session.query(Group).filter(Group.state == 'active')
         if cursor:
-            groups = groups[:cursor]
+            groups = groups[cursor:]
         for dataset in groups:
             data.append((dataset.id, dataset.name, dataset.description))
         return data
