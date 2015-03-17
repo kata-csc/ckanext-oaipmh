@@ -168,15 +168,15 @@ class CKANServer(ResumptionOAIPMH):
                 if from_ and not until:
                     packages = packages.\
                         filter(PackageRevision.revision_timestamp > from_).filter(Package.type=='dataset').\
-                        filter(Package.private!=True).all()
+                        filter(Package.private!=True).filter(Package.name==PackageRevision.name).all()
                 if until and not from_:
                     packages = packages.\
                         filter(PackageRevision.revision_timestamp < until).filter(Package.type=='dataset').\
                         filter(Package.private!=True).filter(Package.name==PackageRevision.name).all()
                 if from_ and until:
                     packages = packages.filter(between(PackageRevision.revision_timestamp, from_, until)).\
-                        filter(Package.type=='dataset').filter(Package.name==PackageRevision.name).\
-                        filter(Package.private!=True).all()
+                        filter(Package.type=='dataset').filter(Package.private!=True).\
+                        filter(Package.name==PackageRevision.name).all()
         if cursor:
             packages = packages[cursor:]
         for res in packages:
