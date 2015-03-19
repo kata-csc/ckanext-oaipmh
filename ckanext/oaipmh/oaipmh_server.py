@@ -96,34 +96,35 @@ class CKANServer(ResumptionOAIPMH):
         packages = []
         if not set:
             if not from_ and not until:
-                packages = Session.query(Package).filter(Package.type=='dataset').filter(Package.private!=True).all()
+                packages = Session.query(Package).filter(Package.type=='dataset').\
+                    filter(Package.private!=True).filter(Package.state=='active').all()
             else:
                 if from_ and not until:
                     packages = Session.query(Package).filter(Package.type=='dataset').filter(Package.private!=True).\
                         filter(PackageRevision.revision_timestamp > from_).\
-                        filter(Package.name==PackageRevision.name).all()
+                        filter(Package.name==PackageRevision.name).filter(Package.state=='active').all()
                 if until and not from_:
                     packages = Session.query(Package).filter(Package.type=='dataset').filter(Package.private!=True).\
                         filter(PackageRevision.revision_timestamp < until).\
-                        filter(Package.name==PackageRevision.name).all()
+                        filter(Package.name==PackageRevision.name).filter(Package.state=='active').all()
                 if from_ and until:
                     packages = Session.query(Package).filter(Package.type=='dataset').filter(Package.private!=True).\
                         filter(between(PackageRevision.revision_timestamp, from_, until)).\
-                        filter(Package.name==PackageRevision.name).all()
+                        filter(Package.name==PackageRevision.name).filter(Package.state=='active').all()
         else:
             group = Group.get(set)
             if group:
                 packages = group.packages(return_query=True).filter(Package.type=='dataset').\
-                    filter(Package.private!=True)
+                    filter(Package.private!=True).filter(Package.state=='active')
                 if from_ and not until:
-                    packages = packages.\
-                        filter(PackageRevision.revision_timestamp > from_).filter(Package.name==PackageRevision.name)
+                    packages = packages.filter(PackageRevision.revision_timestamp > from_).\
+                        filter(Package.name==PackageRevision.name).filter(Package.state=='active')
                 if until and not from_:
-                    packages = packages.\
-                        filter(PackageRevision.revision_timestamp < until).filter(Package.name==PackageRevision.name)
+                    packages = packages.filter(PackageRevision.revision_timestamp < until).\
+                        filter(Package.name==PackageRevision.name).filter(Package.state=='active')
                 if from_ and until:
                     packages = packages.filter(between(PackageRevision.revision_timestamp, from_, until)).\
-                        filter(Package.name==PackageRevision.name)
+                        filter(Package.name==PackageRevision.name).filter(Package.state=='active')
                 packages = packages.all()
         if cursor:
             packages = packages[cursor:]
@@ -150,33 +151,36 @@ class CKANServer(ResumptionOAIPMH):
         packages = []
         if not set:
             if not from_ and not until:
-                packages = Session.query(Package).filter(Package.type=='dataset').filter(Package.private!=True).all()
+                packages = Session.query(Package).filter(Package.type=='dataset').filter(Package.private!=True).\
+                    filter(Package.state=='active').all()
             if from_ and not until:
                 packages = Session.query(Package).filter(Package.type=='dataset').filter(Package.private!=True).\
-                    filter(PackageRevision.revision_timestamp > from_).filter(Package.name==PackageRevision.name).all()
+                    filter(PackageRevision.revision_timestamp > from_).filter(Package.name==PackageRevision.name).\
+                    filter(Package.state=='active').all()
             if until and not from_:
                 packages = Session.query(Package).filter(Package.type=='dataset').filter(Package.private!=True).\
-                    filter(PackageRevision.revision_timestamp < until).filter(Package.name==PackageRevision.name).all()
+                    filter(PackageRevision.revision_timestamp < until).filter(Package.name==PackageRevision.name).\
+                    filter(Package.state=='active').all()
             if from_ and until:
-                packages = Session.query(Package).filter(Package.type=='dataset').filter(Package.private!=True).filter(
-                    between(PackageRevision.revision_timestamp, from_, until)).\
-                    filter(Package.name==PackageRevision.name).all()
+                packages = Session.query(Package).filter(Package.type=='dataset').filter(Package.private!=True).\
+                    filter(between(PackageRevision.revision_timestamp, from_, until)).\
+                    filter(Package.name==PackageRevision.name).filter(Package.state=='active').all()
         else:
             group = Group.get(set)
             if group:
                 packages = group.packages(return_query=True)
                 if from_ and not until:
-                    packages = packages.\
-                        filter(PackageRevision.revision_timestamp > from_).filter(Package.type=='dataset').\
-                        filter(Package.private!=True).filter(Package.name==PackageRevision.name).all()
+                    packages = packages.filter(PackageRevision.revision_timestamp > from_).\
+                        filter(Package.type=='dataset').filter(Package.private!=True).\
+                        filter(Package.name==PackageRevision.name).filter(Package.state=='active').all()
                 if until and not from_:
-                    packages = packages.\
-                        filter(PackageRevision.revision_timestamp < until).filter(Package.type=='dataset').\
-                        filter(Package.private!=True).filter(Package.name==PackageRevision.name).all()
+                    packages = packages.filter(PackageRevision.revision_timestamp < until).\
+                        filter(Package.type=='dataset').filter(Package.private!=True).\
+                        filter(Package.name==PackageRevision.name).filter(Package.state=='active').all()
                 if from_ and until:
                     packages = packages.filter(between(PackageRevision.revision_timestamp, from_, until)).\
                         filter(Package.type=='dataset').filter(Package.private!=True).\
-                        filter(Package.name==PackageRevision.name).all()
+                        filter(Package.name==PackageRevision.name).filter(Package.state=='active').all()
         if cursor:
             packages = packages[cursor:]
         for res in packages:
