@@ -108,8 +108,6 @@ class DcMetadataReader():
         for tag in sorted([a.string for a in self.dc('subject', recursive=False)]):
             tags.extend(self._resolve_tags(tag))
 
-        [dict(lang=a.get('xml:lang', ''), value=a.string) for a in self.dc('title', recursive=False)]
-
         transl_json = {}
         for title in self.dc('title', recursive=False):
             transl_json[title.get('xml:lang', '')] = title.string
