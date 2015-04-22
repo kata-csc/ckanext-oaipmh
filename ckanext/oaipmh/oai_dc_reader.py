@@ -8,6 +8,7 @@ import lxml.etree
 import pointfree as pf
 from fn.uniform import zip, filter, filterfalse
 from functionally import first
+import json
 
 from oaipmh import common as oc
 from ckanext.oaipmh import importcore
@@ -107,6 +108,14 @@ class DcMetadataReader():
         for tag in sorted([a.string for a in self.dc('subject', recursive=False)]):
             tags.extend(self._resolve_tags(tag))
 
+        [dict(lang=a.get('xml:lang', ''), value=a.string) for a in self.dc('title', recursive=False)]
+
+        transl_json = {}
+        for title in self.dc('title', recursive=False):
+            transl_json[title.get('xml:lang', '')] = title.string
+
+        title = json.dumps(transl_json)
+
         # Create a unified internal harvester format dict
         unified = dict(
             # ?=dc('source', recursive=False),
@@ -139,7 +148,9 @@ class DcMetadataReader():
             # Todo! Implement
             geographic_coverage='',
 
-            langtitle=[dict(lang=a.get('xml:lang', ''), value=a.string) for a in self.dc('title', recursive=False)],
+            #langtitle=[dict(lang=a.get('xml:lang', ''), value=a.string) for a in self.dc('title', recursive=False)],
+
+            title=title,
 
             language=','.join(sorted([a.string for a in self.dc('language', recursive=False)])),
 

@@ -5,6 +5,7 @@ from ckanext.oaipmh.importcore import generic_xml_metadata_reader
 import oaipmh.common
 from functionally import first
 from pylons import config
+import json
 
 
 class CmdiReaderException(Exception):
@@ -174,7 +175,17 @@ class CmdiReader(object):
 
         languages = self._text_xpath(cmd, "//cmd:corpusInfo/cmd:corpusMediaType/cmd:corpusTextInfo/cmd:languageInfo/cmd:languageId/text()")
         description = "\n\n".join(self._text_xpath(cmd, "//cmd:identificationInfo/cmd:description/text()"))
-        titles = [{'lang': title.get('{http://www.w3.org/XML/1998/namespace}lang', ''), 'value': title.text.strip()} for title in xml.xpath('//cmd:identificationInfo/cmd:resourceName', namespaces=self.namespaces)]
+
+
+        # titles = [{'lang': title.get('{http://www.w3.org/XML/1998/namespace}lang', ''), 'value': title.text.strip()} for title in xml.xpath('//cmd:identificationInfo/cmd:resourceName', namespaces=self.namespaces)]
+
+        # convert the titles to a JSON string of type {"fin":"otsikko", "eng","title"}
+        transl_json = {}
+        for title in xml.xpath('//cmd:identificationInfo/cmd:resourceName', namespaces=self.namespaces):
+            transl_json[title.get('{http://www.w3.org/XML/1998/namespace}lang', '')] = title.text.strip()
+
+        title = json.dumps(transl_json)
+
         version = first(self._text_xpath(resource_info, "//cmd:metadataInfo/cmd:metadataLastDateUpdated/text()")) or ""
         coverage = first(self._text_xpath(resource_info, "//cmd:corpusInfo/cmd:corpusMediaType/cmd:corpusTextInfo/cmd:timeCoverageInfo/cmd:timeCoverage/text()")) or ""
         license_identifier = first(self._text_xpath(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:licence/text()")) or 'notspecified'
@@ -225,7 +236,8 @@ class CmdiReader(object):
                   'pids': pids,
                   'version': version,
                   'notes': description,
-                  'langtitle': titles,
+                  #'langtitle': titles,
+                  'title': title,
                   'type': 'dataset',
                   'contact': contacts,
                   'agent': agents,
