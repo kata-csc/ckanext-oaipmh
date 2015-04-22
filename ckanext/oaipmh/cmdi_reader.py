@@ -182,7 +182,7 @@ class CmdiReader(object):
         # convert the titles to a JSON string of type {"fin":"otsikko", "eng","title"}
         transl_json = {}
         for title in xml.xpath('//cmd:identificationInfo/cmd:resourceName', namespaces=self.namespaces):
-            transl_json[title.get('{http://www.w3.org/XML/1998/namespace}lang', '')] = title.text.strip()
+            transl_json[title.get('{http://www.w3.org/XML/1998/namespace}lang', 'undefined')] = title.text.strip()
 
         title = json.dumps(transl_json)
 
