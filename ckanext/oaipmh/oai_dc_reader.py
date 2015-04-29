@@ -13,6 +13,7 @@ import json
 from oaipmh import common as oc
 from ckanext.oaipmh import importcore
 import ckanext.kata.utils
+import utils
 from ckanext.kata.utils import label_list_yso
 from urlparse import urlparse
 
@@ -110,7 +111,8 @@ class DcMetadataReader():
 
         transl_json = {}
         for title in self.dc('title', recursive=False):
-            transl_json[title.get('xml:lang', "undefined")] = title.string.strip()
+            lang = utils.convert_language(title.get('xml:lang', "undefined").strip())
+            transl_json[lang] = title.string.strip()
 
         title = json.dumps(transl_json)
 
