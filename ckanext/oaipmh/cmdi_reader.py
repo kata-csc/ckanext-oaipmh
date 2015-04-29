@@ -6,6 +6,7 @@ import oaipmh.common
 from functionally import first
 from pylons import config
 import json
+import utils
 
 
 class CmdiReaderException(Exception):
@@ -182,7 +183,8 @@ class CmdiReader(object):
         # convert the titles to a JSON string of type {"fin":"otsikko", "eng","title"}
         transl_json = {}
         for title in xml.xpath('//cmd:identificationInfo/cmd:resourceName', namespaces=self.namespaces):
-            transl_json[title.get('{http://www.w3.org/XML/1998/namespace}lang', 'undefined')] = title.text.strip()
+            lang = utils.convert_language(title.get('{http://www.w3.org/XML/1998/namespace}lang', 'undefined').strip())
+            transl_json[lang] = title.text.strip()
 
         title = json.dumps(transl_json)
 

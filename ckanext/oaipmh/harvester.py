@@ -413,7 +413,7 @@ class OAIPMHHarvester(HarvesterBase):
         uploader = ''
 
         try:
-            package_dict['title'] = ''
+            #package_dict['title'] = ''
             package = model.Package.get(harvest_object.harvest_source_id)
             if package and package.owner_org:
                 package_dict['owner_org'] = package.owner_org
