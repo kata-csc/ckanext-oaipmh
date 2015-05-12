@@ -320,10 +320,9 @@ class TestCMDIHarvester(TestCase):
 
         self.assertEquals(package.get('id', None), 'http://urn.fi/urn:nbn:fi:lb-20140730180')
         self.assertEquals(package.get('name', None), 'urn-nbn-fi-lb-20140730180')
-        self.assertEquals(package.get('notes', None), 'Test description')
+        self.assertEquals(package.get('notes', None), u'{"eng": "Test description"}')
         self.assertEquals(package.get('version', None), '2012-09-07')
-        self.assertEquals(package.get('langtitle', [])[0]['value'], 'Longi Corpus')
-        self.assertEquals(package.get('langtitle', [])[0]['lang'], 'eng')
+        self.assertEquals(package.get('title', []), '{"eng": "Longi Corpus"}')
         self.assertEquals(package.get('license_id', None), 'underNegotiation')
 
         provider = config['ckan.site_url']
