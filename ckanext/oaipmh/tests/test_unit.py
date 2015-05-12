@@ -294,10 +294,9 @@ class TestCMDIHarvester(TestCase):
         content= metadata.getMap()
         package = content['unified']
         self.assertEquals(package.get('name', None), 'urn-nbn-fi-lb-20140730180')
-        self.assertEquals(package.get('notes', None), 'Test description')
+        self.assertEquals(package.get('notes', None), '{"eng": "Test description"}')
         self.assertEquals(package.get('version', None), '2012-09-07')
-        self.assertEquals(package.get('langtitle', [])[0]['value'], 'Longi Corpus')
-        self.assertEquals(package.get('langtitle', [])[0]['lang'], 'en')
+        self.assertEquals(package.get('title', []), '{"eng": "Longi Corpus"}')
 
     def test_gather(self):
         source = HarvestSource(url="http://localhost/test_cmdi", type="cmdi")
@@ -364,13 +363,13 @@ class TestCMDIHarvester(TestCase):
 
     def test_fetch_xml(self):
         package = self.harvester.fetch_xml("file://%s" % _get_fixture('cmdi_1.xml'), {})
-        self.assertEquals(package.get('notes', None), 'Test description')
+        self.assertEquals(package.get('notes', None), '{"eng": "Test description"}')
         self.assertEquals(package.get('version', None), '2012-09-07')
 
     def test_parse_xml(self):
         with open(_get_fixture('cmdi_1.xml'), 'r') as source:
             package = self.harvester.parse_xml(source.read(), {})
-            self.assertEquals(package.get('notes', None), 'Test description')
+            self.assertEquals(package.get('notes', None), '{"eng": "Test description"}')
             self.assertEquals(package.get('version', None), '2012-09-07')
 
 
@@ -463,8 +462,9 @@ class TestOAIDCReaderHelda(TestCase):
                            'direct_download_URL': u'http://link.aip.org/link/?jcp/123/064507',
                            'discipline': '',
                            'geographic_coverage': '',
-                           'langtitle': [{'lang': '',
-                                          'value': u'Neutralization of solvated protons and formation of noble-gas hydride molecules: matrix-isolation indications of tunneling mechanisms?'}],
+                           #'langtitle': [{'lang': '',
+                           #               'value': u'Neutralization of solvated protons and formation of noble-gas hydride molecules: matrix-isolation indications of tunneling mechanisms?'}],
+                           'title': '{"": "Neutralization of solvated protons and formation of noble-gas hydride molecules: matrix-isolation indications of tunneling mechanisms?"}',
                            'language': u'en',
                            'license_URL': u'Copyright 2005 American Institute of Physics. This article may be downloaded for personal use only. Any other use requires prior permission of the author and the American Institute of Physics.',
                            'license_id': 'notspecified',
