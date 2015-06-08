@@ -175,10 +175,14 @@ class CmdiReader(object):
         data_identifiers = self._text_xpath(cmd, "//cmd:identificationInfo/cmd:url/text()")
 
         languages = self._text_xpath(cmd, "//cmd:corpusInfo/cmd:corpusMediaType/cmd:corpusTextInfo/cmd:languageInfo/cmd:languageId/text()")
-        description = "\n\n".join(self._text_xpath(cmd, "//cmd:identificationInfo/cmd:description/text()"))
 
+        # convert the descriptions to a JSON string of type {"fin":"kuvaus", "eng","desc"}
+        desc_json = {}
+        for desc in xml.xpath("//cmd:identificationInfo/cmd:description", namespaces=self.namespaces):
+            lang = utils.convert_language(desc.get('{http://www.w3.org/XML/1998/namespace}lang', 'undefined').strip())
+            desc_json[lang] = unicode(desc.text).strip()
 
-        # titles = [{'lang': title.get('{http://www.w3.org/XML/1998/namespace}lang', ''), 'value': title.text.strip()} for title in xml.xpath('//cmd:identificationInfo/cmd:resourceName', namespaces=self.namespaces)]
+        description = json.dumps(desc_json)
 
         # convert the titles to a JSON string of type {"fin":"otsikko", "eng","title"}
         transl_json = {}
