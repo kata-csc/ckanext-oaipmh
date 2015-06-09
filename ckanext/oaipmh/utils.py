@@ -4,9 +4,16 @@ def convert_language(lang):
     '''
     Convert alpha2 language (eg. 'en') to terminology language (eg. 'eng')
     '''
+
+    if not lang:
+        return "zxx"
+
     try:
         lang_object = languages.get(part1=lang)
         return lang_object.terminology
     except KeyError as ke:
-        #log.debug('Invalid language: {ke}'.format(ke=ke))
-        return ''
+        try:
+            lang_object = languages.get(part2b=lang)
+            return lang_object.terminology
+        except KeyError as ke:
+            return ''
