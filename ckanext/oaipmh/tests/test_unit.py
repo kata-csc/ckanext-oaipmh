@@ -323,7 +323,7 @@ class TestCMDIHarvester(TestCase):
         self.assertEquals(package.get('notes', None), u'{"eng": "Test description"}')
         self.assertEquals(package.get('version', None), '2012-09-07')
         self.assertEquals(package.get('title', []), '{"eng": "Longi Corpus"}')
-        self.assertEquals(package.get('license_id', None), 'underNegotiation')
+        self.assertEquals(package.get('license_id', None), 'undernegotiation')
 
         provider = config['ckan.site_url']
         expected_pid = {u'id': u'http://islrn.org/resources/248-895-085-557-0',
