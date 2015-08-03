@@ -56,8 +56,11 @@ class DcMetadataReader():
         return False
 
     def _read_notes(self):
-        return '\r\n\r\n'.join(sorted([a.string for a in self.dc(_filter_tag_name_namespace('description', NS['dc']),
+
+        desc = '\r\n\r\n'.join(sorted([a.string for a in self.dc(_filter_tag_name_namespace('description', NS['dc']),
                                                                  recursive=False) if not self._skip_note(a.string)])) or ''
+
+        return json.dumps({ "zxx" : desc })
 
     def _get_maintainer_stuff(self):
         for a in self.dc(_filter_tag_name_namespace(name='publisher', namespace=NS['dct']), recursive=False):
@@ -111,7 +114,7 @@ class DcMetadataReader():
 
         transl_json = {}
         for title in self.dc('title', recursive=False):
-            lang = utils.convert_language(title.get('xml:lang', "undefined").strip())
+            lang = utils.convert_language(title.get('xml:lang', '').strip())
             transl_json[lang] = title.string.strip()
 
         title = json.dumps(transl_json)

@@ -323,7 +323,7 @@ class TestCMDIHarvester(TestCase):
         self.assertEquals(package.get('notes', None), u'{"eng": "Test description"}')
         self.assertEquals(package.get('version', None), '2012-09-07')
         self.assertEquals(package.get('title', []), '{"eng": "Longi Corpus"}')
-        self.assertEquals(package.get('license_id', None), 'underNegotiation')
+        self.assertEquals(package.get('license_id', None), 'undernegotiation')
 
         provider = config['ckan.site_url']
         expected_pid = {u'id': u'http://islrn.org/resources/248-895-085-557-0',
@@ -463,13 +463,13 @@ class TestOAIDCReaderHelda(TestCase):
                            'geographic_coverage': '',
                            #'langtitle': [{'lang': '',
                            #               'value': u'Neutralization of solvated protons and formation of noble-gas hydride molecules: matrix-isolation indications of tunneling mechanisms?'}],
-                           'title': '{"": "Neutralization of solvated protons and formation of noble-gas hydride molecules: matrix-isolation indications of tunneling mechanisms?"}',
+                           'title': '{"zxx": "Neutralization of solvated protons and formation of noble-gas hydride molecules: matrix-isolation indications of tunneling mechanisms?"}',
                            'language': u'en',
                            'license_URL': u'Copyright 2005 American Institute of Physics. This article may be downloaded for personal use only. Any other use requires prior permission of the author and the American Institute of Physics.',
                            'license_id': 'notspecified',
                            'mimetype': '',
                            'name': 'http---link-aip-org-link--jcp-123-064507',
-                           'notes': '',
+                           'notes': '{"zxx": ""}',
                            'pids': [{'type': 'data',
                                      'id': u'http://link.aip.org/link/?jcp/123/064507',
                                      'provider': u'http://helda.helsinki.fi/oai/request'},
