@@ -70,7 +70,8 @@ class CKANServer(ResumptionOAIPMH):
             coverage.append("%s/%s" % (temporal_begin, temporal_end))
 
         pids = [pid.get('id') for pid in package.get('pids', {}) if pid.get('id', False)]
-        pids.append(config.get('ckan.site_url') + url_for(controller="package", action='read', id=package['id']))
+        pids.append(package.get('id'))
+        pids.append(config.get('ckan.site_url') + url_for(controller="package", action='read', id=package['name']))
 
         meta = {'title': self._get_json_content(package.get('title', None) or package.get('name')),
                 'creator': [author['name'] for author in helpers.get_authors(package) if 'name' in author],
@@ -78,6 +79,7 @@ class CKANServer(ResumptionOAIPMH):
                 'contributor': [author['name'] for author in helpers.get_contributors(package) if 'name' in author],
                 'identifier': pids,
                 'type': ['dataset'],
+                'language': [l.strip() for l in package.get('language').split(",")] if package.get('language', None) else None,
                 'description': self._get_json_content(package.get('notes')) if package.get('notes', None) else None,
                 'subject': [tag.get('display_name') for tag in package['tags']] if package.get('tags', None) else None,
                 'date': [dataset.metadata_created.strftime('%Y-%m-%d')] if dataset.metadata_created else None,
@@ -85,7 +87,7 @@ class CKANServer(ResumptionOAIPMH):
                 'coverage': coverage if coverage else None, }
 
         iters = dataset.extras.items()
-        meta = dict(meta.items() + iters)
+        meta = dict(iters + meta.items())
         metadata = {}
         # Fixes the bug on having a large dataset being scrambled to individual
         # letters
