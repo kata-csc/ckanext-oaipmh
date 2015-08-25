@@ -60,7 +60,7 @@ class DcMetadataReader():
         desc = '\r\n\r\n'.join(sorted([a.string for a in self.dc(_filter_tag_name_namespace('description', NS['dc']),
                                                                  recursive=False) if not self._skip_note(a.string)])) or ''
 
-        return json.dumps({ "zxx" : desc })
+        return json.dumps({ "und" : desc })
 
     def _get_maintainer_stuff(self):
         for a in self.dc(_filter_tag_name_namespace(name='publisher', namespace=NS['dct']), recursive=False):

@@ -6,7 +6,7 @@ def convert_language(lang):
     '''
 
     if not lang:
-        return "zxx"
+        return "und"
 
     try:
         lang_object = languages.get(part1=lang)
