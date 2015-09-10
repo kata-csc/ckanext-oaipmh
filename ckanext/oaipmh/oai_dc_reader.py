@@ -109,8 +109,9 @@ class DcMetadataReader():
         data_pids = list(_get_data_pids(self.dc))
 
         tags = []
-        for tag in sorted([a.string for a in self.dc('subject', recursive=False)]):
-            tags.extend(self._resolve_tags(tag))
+        #for tag in sorted([a.string for a in self.dc('subject', recursive=False)]):
+        #    tags.extend(self._resolve_tags(tag))
+        tags = [a.string for a in self.dc('subject', recursive=False)]
 
         transl_json = {}
         for title in self.dc('title', recursive=False):
@@ -181,8 +182,9 @@ class DcMetadataReader():
                  [dict(id=pid, provider=_get_provider(self.bs), type='metadata') for pid in _get_metadata_pid(self.dc)],
 
             agent=[dict(role='author', name=orgauth.get('value', ''), id='', organisation=orgauth.get('org', ''), URL='', fundingid='') for orgauth in _get_org_auth(self.dc)] +
+                  [dict(role='contributor', name=contributor.get('value', ''), id='', organisation=contributor.get('org', ''), URL='', fundingid='') for contributor in _get_contributor(self.dc)] +
                   [dict(role='funder', name=first(project_name) or '', id=first(project_name) or '', organisation=first(project_funder) or "", URL=first(project_homepage) or '', fundingid=first(project_funding) or '',)] +
-                  [dict(role='owner', name=first([a.get('resource') for a in self.dc('rightsHolder', recursive=False)]) or '', id='', organisation='', URL='', fundingid='')],
+                  [dict(role='owner', name=first([a.get('resource') for a in self.dc('rightsHolder', recursive=False)]) or first(_get_rightsholder(self.dc)) or '', id='', organisation='', URL='', fundingid='')],
 
             tag_string=','.join(tags) or '',
 
@@ -375,8 +377,7 @@ def _get_org_auth(tag_tree):
         '''
         for c in tag_tree(_filter_tag_name_namespace(name='creator', namespace=NS['dc']), recursive=False):
             yield {'org': '', 'value': c.string}
-        for c in tag_tree(_filter_tag_name_namespace(name='contributor', namespace=NS['dc']), recursive=False):
-            yield {'org': '', 'value': c.string}
+
 
     def ida():
         '''
@@ -392,6 +393,22 @@ def _get_org_auth(tag_tree):
                 yield {'org': c.Organization.find('name').string, 'value': ''}
 
     return ida() if first(ida()) else oai_dc()
+
+
+def _get_contributor(tag_tree):
+    def oai_dc():
+        for c in tag_tree(_filter_tag_name_namespace(name='contributor', namespace=NS['dc']), recursive=False):
+            yield {'org': '', 'value': c.string}
+
+    return oai_dc()
+
+
+def _get_rightsholder(tag_tree):
+    def oai_dc():
+        for c in tag_tree(_filter_tag_name_namespace(name='rightsHolder', namespace=NS['dc']), recursive=False):
+            yield c.string
+
+    return oai_dc()
 
 
 def _get_algorithm(tag_tree):
