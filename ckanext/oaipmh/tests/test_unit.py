@@ -168,7 +168,7 @@ class TestOAIPMHHarvester(TestCase):
         self._run_import('oai-pmh.xml', True)
         package = _get_single_package()
         tags = [tag.name for tag in package.get_tags()]
-        self.assertTrue('televisiokasvatus' in tags)
+        self.assertTrue('http://www.yso.fi/onto/yso/p2069' in tags)
 
     def test_import_stage_project(self):
         self._run_import('ida3.xml', True)
