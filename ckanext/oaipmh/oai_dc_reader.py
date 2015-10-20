@@ -119,6 +119,13 @@ class DcMetadataReader():
 
         title = json.dumps(transl_json)
 
+        def _get_primary_data_pid(data_pids):
+            for dpid in data_pids:
+                if dpid.startswith('urn:nbn:fi:csc-ida'):
+                    data_pids.remove(dpid)
+                    return [dpid]
+            return []
+
         # Create a unified internal harvester format dict
         unified = dict(
             # ?=dc('source', recursive=False),
@@ -176,7 +183,9 @@ class DcMetadataReader():
             # Todo! Using only the first entry, for now
             # owner=first([a.get('resource') for a in dc('rightsHolder', recursive=False)]) or '',
 
-            pids=[dict(id=pid, provider=_get_provider(self.bs), type='data') for pid in data_pids] +
+            pids=[dict(id=pid, provider=_get_provider(self.bs), type='data', primary='true')
+                  for pid in _get_primary_data_pid(data_pids)] +
+                 [dict(id=pid, provider=_get_provider(self.bs), type='data') for pid in data_pids] +
                  [dict(id=pid, provider=_get_provider(self.bs), type='version') for pid in self._get_version_pids()] +
                  [dict(id=pid, provider=_get_provider(self.bs), type='metadata') for pid in _get_metadata_pid(self.dc)],
 
