@@ -25,6 +25,8 @@ from ckanext.kata.tests.test_fixtures.unflattened import TEST_DATADICT
 from copy import deepcopy
 import os
 
+from pylons.util import AttribSafeContextObj, PylonsContext, pylons
+
 
 FIXTURE_LISTIDENTIFIERS = "listidentifiers.xml"
 FIXTURE_DATASET = "oai-pmh.xml"
@@ -43,9 +45,16 @@ class TestReadingFixtures(TestCase):
         '''
         Setup database and variables
         '''
+        model.repo.rebuild_db()
         harvest_model.setup()
         kata_model.setup()
         cls.harvester = OAIPMHHarvester()
+
+        # The Pylons globals are not available outside a request. This is a hack to provide context object.
+        c = AttribSafeContextObj()
+        py_obj = PylonsContext()
+        py_obj.tmpl_context = c
+        pylons.tmpl_context._push_object(c)
 
     @classmethod
     def teardown_class(cls):
@@ -99,8 +108,15 @@ class TestOaipmhServer(WsgiAppCase, TestCase):
         '''
         Setup database
         '''
+        model.repo.rebuild_db()
         harvest_model.setup()
         kata_model.setup()
+
+        # The Pylons globals are not available outside a request. This is a hack to provide context object.
+        c = AttribSafeContextObj()
+        py_obj = PylonsContext()
+        py_obj.tmpl_context = c
+        pylons.tmpl_context._push_object(c)
 
     @classmethod
     def teardown(cls):

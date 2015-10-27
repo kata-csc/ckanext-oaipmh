@@ -96,6 +96,7 @@ class TestOAIPMHHarvester(TestCase):
         '''
         Setup database and variables
         '''
+        ckan.model.repo.rebuild_db()
         harvest_model.setup()
         kata_model.setup()
         cls.harvester = OAIPMHHarvester()
