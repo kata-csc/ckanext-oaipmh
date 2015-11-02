@@ -528,6 +528,11 @@ class TestOAIDCReaderHelda(TestCase):
     #
     #     assert output == u'http://helda.helsinki.fi/oai/request', output
 
+    def test_get_contributor(self):
+        output = dcr._get_contributor(self.dc)
+
+        assert len(list(output)) == 0  # No contributors in Helda
+
 
 class TestOAIDCReaderIda(TestCase):
 
@@ -585,6 +590,21 @@ class TestOAIDCReaderIda(TestCase):
         output = dcr._get_provider(self.dc)
 
         assert output == 'ida', output
+
+    def test_get_contributor(self):
+        output = dcr._get_contributor(self.dc)
+
+        contributors = list(output)
+        assert len(contributors) == 2, contributors
+        assert contributors[0].get('value') == 'test1', contributors
+        assert contributors[1].get('value') == 'test2', contributors
+
+    def test_get_rightsholder(self):
+        output = dcr._get_rightsholder(self.dc)
+
+        holders = list(output)
+        assert len(holders) == 1, holders
+        assert holders[0] == 'http://orcid.org/0000-0003-0296-7410', holders
 
 
 class TestImportFormats(TestCase):
