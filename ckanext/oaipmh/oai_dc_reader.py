@@ -413,11 +413,11 @@ def _get_contributor(tag_tree):
 
 
 def _get_rightsholder(tag_tree):
-    def oai_dc():
-        for c in tag_tree(_filter_tag_name_namespace(name='rightsHolder', namespace=NS['dc']), recursive=False):
-            yield c.string
+    def ida():
+        for c in tag_tree(_filter_tag_name_namespace(name='rightsHolder', namespace=NS['dct']), recursive=False):
+            yield c.get('resource')
 
-    return oai_dc()
+    return ida()
 
 
 def _get_algorithm(tag_tree):
