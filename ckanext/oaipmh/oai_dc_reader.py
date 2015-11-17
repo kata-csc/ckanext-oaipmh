@@ -363,7 +363,9 @@ def _get_download(tag_tree):
     # @ExceptReturn(exception=Exception, returns=None)
     def ida():
         try:
-            yield tag_tree.hasFormat.File.get('about')
+            ida_id = tag_tree.identifier
+            if ida_id.string and ida_id.string.startswith('urn:nbn:fi:csc-ida'):
+                yield 'http://avaa.tdata.fi/openida/dl.jsp?pid=' + ida_id.string
         except Exception:
             pass
 

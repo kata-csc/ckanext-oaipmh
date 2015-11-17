@@ -420,7 +420,7 @@ class TestOAIDCReaderHelda(TestCase):
     def test_get_download(self):
         output = dcr._get_download(self.dc)
 
-        # We should get atleast some download link from the pids:
+        # We should get at least some download link from the pids:
         assert len(list(output)) > 0
 
     def test_get_org_auth(self):
@@ -583,7 +583,7 @@ class TestOAIDCReaderIda(TestCase):
     def test_get_download(self):
         output = dcr._get_download(self.dc)
 
-        # We should get atleast some download link:
+        # We should get at least some download link:
         assert len(list(output)) > 0
 
     def test_get_provider(self):
