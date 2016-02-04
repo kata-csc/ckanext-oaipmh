@@ -1,5 +1,4 @@
 pyoai
-ckanext-harvest
 lxml
 rdflib
 beautifulsoup4
