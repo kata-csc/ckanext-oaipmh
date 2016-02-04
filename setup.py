@@ -20,7 +20,8 @@ setup(
     zip_safe=False,
     install_requires=[
         'ckanext-harvest',
-        'pyoai == 2.4.5'],
+        'pyoai == 2.4.5',
+    ],
     entry_points="""
         [ckan.plugins]
         oaipmh=ckanext.oaipmh.plugin:OAIPMHPlugin
