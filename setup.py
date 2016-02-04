@@ -18,7 +18,9 @@ setup(
     namespace_packages=['ckanext', 'ckanext.oaipmh'],
     include_package_data=True,
     zip_safe=False,
-    install_requires=['ckanext-harvest'],
+    install_requires=[
+        'ckanext-harvest',
+        'pyoai == 2.4.5'],
     entry_points="""
         [ckan.plugins]
         oaipmh=ckanext.oaipmh.plugin:OAIPMHPlugin
