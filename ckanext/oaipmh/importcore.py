@@ -102,7 +102,7 @@ def generic_xml_metadata_reader(xml_element):
     result = {}
     flatten_with(namespaced_name(xml_element.tag, xml_element.nsmap.items()),
                  xml_element, result)
-    return oaipmh.common.Metadata(result)
+    return oaipmh.common.Metadata(xml_element, result)
 
 
 def is_reverse_relation(rel1, rel2):

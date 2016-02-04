@@ -1,4 +1,4 @@
-pyoai
+pyoai = 2.4.4
 lxml
 rdflib
 beautifulsoup4
