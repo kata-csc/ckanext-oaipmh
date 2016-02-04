@@ -231,7 +231,6 @@ class TestOaipmhServer(WsgiAppCase, TestCase):
         result = self.app.get(url, {'verb': 'ListIdentifiers', 'set': 'private-organization', 'metadataPrefix': 'oai_dc'})
 
         root = lxml.etree.fromstring(result.body)
-        print root
         self.assertFalse(root.xpath("//o:header", namespaces=self._namespaces))
         package2 = get_action('package_create')({'user': 'privateuser'}, package_2_data)
         result = self.app.get(url, {'verb': 'ListIdentifiers', 'set': 'private-organization', 'metadataPrefix': 'oai_dc'})

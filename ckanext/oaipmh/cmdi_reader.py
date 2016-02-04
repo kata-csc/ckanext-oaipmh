@@ -156,7 +156,7 @@ class CmdiReader(object):
         """
         result = generic_xml_metadata_reader(xml).getMap()
         result['unified'] = self.read_data(xml)
-        return oaipmh.common.Metadata(result)
+        return oaipmh.common.Metadata(xml, result)
 
     def read_data(self, xml):
         """ Extract package data from given XML.

@@ -97,8 +97,8 @@ class CKANServer(ResumptionOAIPMH):
             else:
                 metadata[str(key)] = value
 
-        return (common.Header(dataset.id, dataset.metadata_created, [dataset.name], False),
-                common.Metadata(metadata), None)
+        return (common.Header('', dataset.id, dataset.metadata_created, [dataset.name], False),
+                common.Metadata('', metadata), None)
 
     def getRecord(self, metadataPrefix, identifier):
         '''Simple getRecord for a dataset.
@@ -149,7 +149,7 @@ class CKANServer(ResumptionOAIPMH):
         if cursor:
             packages = packages[cursor:]
         for package in packages:
-            data.append(common.Header(package.id, package.metadata_created, [package.name], False))
+            data.append(common.Header('', package.id, package.metadata_created, [package.name], False))
 
         return data
 
