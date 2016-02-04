@@ -1,7 +1,7 @@
-pyoai
 lxml
 rdflib
 beautifulsoup4
 pointfree
 functionally
 fn
+pyoai
