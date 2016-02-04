@@ -50,7 +50,7 @@ class DcMetadataReader():
         unified = self._read()
         result = xml_reader(self.xml).getMap()
         result['unified'] = unified
-        return oc.Metadata(result)
+        return oc.Metadata(self.xml, result)
 
     def _skip_note(self, note):
         return False
