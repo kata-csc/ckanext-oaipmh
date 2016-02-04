@@ -18,17 +18,6 @@ setup(
     namespace_packages=['ckanext', 'ckanext.oaipmh'],
     include_package_data=True,
     zip_safe=False,
-    install_requires=[
-        # -*- Extra requirements: -*-
-        'pyoai',
-        'ckanext-harvest',
-        'lxml',
-        'rdflib',
-        'beautifulsoup4',
-        'pointfree',
-        'functionally',
-        'fn',
-    ],
     entry_points="""
         [ckan.plugins]
         oaipmh=ckanext.oaipmh.plugin:OAIPMHPlugin
