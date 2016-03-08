@@ -201,7 +201,7 @@ class DcMetadataReader():
             temporal_coverage_begin='',
             temporal_coverage_end='',
 
-            through_provider_URL=first(_get_download(self.dc)) or '',
+            through_provider_URL=first(_get_download(self.dc, False)) or '',
 
             type='dataset',
             uploader=uploader,
@@ -359,10 +359,12 @@ def _get_checksum(tag_tree):
         log.info('Checksum missing from dataset!')
 
 
-def _get_download(tag_tree):
+def _get_download(tag_tree, avaa=True):
     # @ExceptReturn(exception=Exception, returns=None)
     def ida():
         try:
+            if not avaa:
+                yield tag_tree.hasFormat.File.get('about')
             ida_id = tag_tree.identifier
             if ida_id.string and ida_id.string.startswith('urn:nbn:fi:csc-ida'):
                 yield 'http://avaa.tdata.fi/openida/dl.jsp?pid=' + ida_id.string
