@@ -9,11 +9,14 @@ from unittest import TestCase
 
 import oaipmh.client
 import ckan
+import random
 
+from ckan.model import Group
 from ckanext.harvest import model as harvest_model
 from ckanext.oaipmh import importformats
 from ckanext.oaipmh.harvester import OAIPMHHarvester
 import ckanext.kata.model as kata_model
+import ckanext.kata.utils as utils
 
 from ckan.tests import WsgiAppCase
 from ckan.lib.helpers import url_for
@@ -22,6 +25,7 @@ import lxml.etree
 from ckan.logic import get_action
 from ckan import model
 from ckanext.kata.tests.test_fixtures.unflattened import TEST_DATADICT
+
 from copy import deepcopy
 import os
 
@@ -137,6 +141,8 @@ class TestOaipmhServer(WsgiAppCase, TestCase):
         package_1_data['owner_org'] = organization['name']
         package_1_data['private'] = False
         package_1_data['name'] = 'test-package-coverage'
+        for pid in package_1_data.get('pids', []):
+            pid['id'] = utils.generate_pid()
 
         get_action('package_create')({'user': 'test_coverage'}, package_1_data)
         url = url_for('/oai')
@@ -165,32 +171,38 @@ class TestOaipmhServer(WsgiAppCase, TestCase):
         package_1_data['name'] = 'test-package1'
         package_2_data['name'] = 'test-package2'
 
+        for pid in package_1_data.get('pids', []):
+            pid['id'] = utils.generate_pid()
+        for pid in package_2_data.get('pids', []):
+            pid['id'] = utils.generate_pid()
+
         packages = [get_action('package_create')({'user': 'test'}, package_1_data),
                     get_action('package_create')({'user': 'test'}, package_2_data)]
-
-        package_identifiers = [package['id'] for package in packages]
-        package_names = [package['name'] for package in packages]
 
         url = url_for('/oai')
         result = self.app.get(url, {'verb': 'ListSets'})
 
         root = lxml.etree.fromstring(result.body)
         request_set = self._get_single_result(root, "//o:set")
+
         set_name = request_set.xpath("string(o:setName)", namespaces=self._namespaces)
         set_spec = request_set.xpath("string(o:setSpec)", namespaces=self._namespaces)
-        self.assertEquals(organization['id'], set_spec)
-        self.assertEquals(organization['name'], set_name)
+        self.assertEquals(organization['name'], set_spec)
+        self.assertEquals(organization['title'], set_name)
 
         result = self.app.get(url, {'verb': 'ListIdentifiers', 'set': set_spec, 'metadataPrefix': 'oai_dc'})
 
         root = lxml.etree.fromstring(result.body)
         fail = True
 
+        package_identifiers = [package['id'] for package in packages]
+        package_org_names = [Group.get(package['owner_org']).name for package in packages]
+
         for header in root.xpath("//o:header", namespaces=self._namespaces):
             fail = False
             set_spec = header.xpath("string(o:setSpec)", namespaces=self._namespaces)
             identifier = header.xpath("string(o:identifier)", namespaces=self._namespaces)
-            self.assertTrue(set_spec in package_names)
+            self.assertTrue(set_spec in package_org_names)
             self.assertTrue(identifier in package_identifiers)
 
             result = self.app.get(url, {'verb': 'GetRecord', 'identifier': identifier, 'metadataPrefix': 'oai_dc'})
@@ -204,7 +216,7 @@ class TestOaipmhServer(WsgiAppCase, TestCase):
                 self._get_single_result(record_result, 'o:metadata')
 
                 self.assertTrue(header.xpath("string(o:identifier)", namespaces=self._namespaces) in package_identifiers)
-                self.assertTrue(header.xpath("string(o:setSpec)", namespaces=self._namespaces) in package_names)
+                self.assertTrue(header.xpath("string(o:setSpec)", namespaces=self._namespaces) in package_org_names)
 
             self.assertFalse(fail_record, "No records received")
 
@@ -221,11 +233,15 @@ class TestOaipmhServer(WsgiAppCase, TestCase):
         package_1_data['private'] = True
         package_1_data['owner_org'] = organization['name']
         package_1_data['name'] = 'private-package'
+        for pid in package_1_data.get('pids', []):
+            pid['id'] = utils.generate_pid()
         package1 = get_action('package_create')({'user': 'privateuser'}, package_1_data)
         package_2_data = deepcopy(TEST_DATADICT)
         package_2_data['private'] = False
         package_2_data['owner_org'] = organization['name']
         package_2_data['name'] = 'public-package'
+        for pid in package_2_data.get('pids', []):
+            pid['id'] = utils.generate_pid()
 
         url = url_for('/oai')
         result = self.app.get(url, {'verb': 'ListIdentifiers', 'set': 'private-organization', 'metadataPrefix': 'oai_dc'})

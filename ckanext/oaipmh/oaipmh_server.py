@@ -54,7 +54,7 @@ class CKANServer(ResumptionOAIPMH):
         except:
             return [js]
 
-    def _record_for_dataset(self, dataset):
+    def _record_for_dataset(self, dataset, spec):
         '''Show a tuple of a header and metadata for this dataset.
         '''
         package = get_action('package_show')({}, {'id': dataset.id})
@@ -97,7 +97,7 @@ class CKANServer(ResumptionOAIPMH):
             else:
                 metadata[str(key)] = value
 
-        return (common.Header('', dataset.id, dataset.metadata_created, [dataset.name], False),
+        return (common.Header('', dataset.id, dataset.metadata_created, [spec], False),
                 common.Metadata('', metadata), None)
 
     def getRecord(self, metadataPrefix, identifier):
@@ -106,7 +106,12 @@ class CKANServer(ResumptionOAIPMH):
         package = Package.get(identifier)
         if not package:
             raise IdDoesNotExistError("No dataset with id %s" % identifier)
-        return self._record_for_dataset(package)
+        spec = package.name
+        if package.owner_org:
+            group = Group.get(package.owner_org)
+            if group and group.name:
+                spec = group.name
+        return self._record_for_dataset(package, spec)
 
     def listIdentifiers(self, metadataPrefix, set=None, cursor=None,
                         from_=None, until=None, batch_size=None):
@@ -114,6 +119,7 @@ class CKANServer(ResumptionOAIPMH):
         '''
         data = []
         packages = []
+        group = None
         if not set:
             if not from_ and not until:
                 packages = Session.query(Package).filter(Package.type=='dataset').\
@@ -149,7 +155,16 @@ class CKANServer(ResumptionOAIPMH):
         if cursor:
             packages = packages[cursor:]
         for package in packages:
-            data.append(common.Header('', package.id, package.metadata_created, [package.name], False))
+            spec = package.name
+            if group:
+                spec = group.name
+            else:
+                if package.owner_org:
+                    group = Group.get(package.owner_org)
+                    if group and group.name:
+                        spec = group.name
+                    group = None
+            data.append(common.Header('', package.id, package.metadata_created, [spec], False))
 
         return data
 
@@ -169,6 +184,7 @@ class CKANServer(ResumptionOAIPMH):
         '''
         data = []
         packages = []
+        group = None
         if not set:
             if not from_ and not until:
                 packages = Session.query(Package).filter(Package.type=='dataset').filter(Package.private!=True).\
@@ -204,7 +220,16 @@ class CKANServer(ResumptionOAIPMH):
         if cursor:
             packages = packages[cursor:]
         for res in packages:
-            data.append(self._record_for_dataset(res))
+            spec = res.name
+            if group:
+                spec = group.name
+            else:
+                if res.owner_org:
+                    group = Group.get(res.owner_org)
+                    if group and group.name:
+                        spec = group.name
+                    group = None
+            data.append(self._record_for_dataset(res, spec))
         return data
 
     def listSets(self, cursor=None, batch_size=None):
@@ -215,5 +240,5 @@ class CKANServer(ResumptionOAIPMH):
         if cursor:
             groups = groups[cursor:]
         for dataset in groups:
-            data.append((dataset.id, dataset.name, dataset.description))
+            data.append((dataset.name, dataset.title, dataset.description))
         return data
