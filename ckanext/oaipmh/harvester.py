@@ -99,7 +99,7 @@ class OAIPMHHarvester(HarvesterBase):
         '''
         return {
             'name': 'oai-pmh',
-            'title': 'OAI-PMH',
+            'title': 'OAI-PMH DC',
             'description': 'Harvests OAI-PMH providers'
         }
 

@@ -21,7 +21,7 @@ class CMDIHarvester(OAIPMHHarvester):
 
         return {
             'name': 'cmdi',
-            'title': 'CMDI',
+            'title': 'OAI-PMH CMDI',
             'description': 'Harvests CMDI dataset'
         }
 
