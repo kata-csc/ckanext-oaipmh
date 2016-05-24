@@ -6,7 +6,7 @@ from lxml import etree
 import oaipmh
 from ckanext.kata.utils import get_package_id_by_pid
 from ckanext.oaipmh import importformats
-from ckanext.oaipmh.cmdi_reader import CmdiReader
+from ckanext.oaipmh.etsin_rdf_reader import RdfReader
 from ckanext.oaipmh.harvester import OAIPMHHarvester
 
 log = logging.getLogger(__name__)
@@ -25,9 +25,9 @@ class RDFHarvester(OAIPMHHarvester):
             'description': 'Harvests RDF dataset'
         }
 
-    def get_schema(self, config, pkg):
-        from ckanext.kata.plugin import KataPlugin
-        return KataPlugin.create_package_schema_etsin_rdf()
+    # def get_schema(self, config, pkg):
+    #     from ckanext.kata.plugin import KataPlugin
+    #     return KataPlugin.create_package_schema_etsin_rdf()
 
     def on_deleted(self, harvest_object, header):
         """ See :meth:`OAIPMHHarvester.on_deleted`
