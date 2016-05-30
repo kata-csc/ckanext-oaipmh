@@ -90,12 +90,12 @@ class RdfReader(object):
         :param xpath: xpath selector used to get data
         :return: list of organization dictionaries
         """
-        return [{'role': cls._strip_first(organization.xpath("cmd:role/text()", namespaces=cls.namespaces)),
-                 'name': ", ".join(cls._text_xpath(organization, "cmd:organizationInfo/cmd:organizationName/text()")),
-                 'short_name': cls._strip_first(organization.xpath("cmd:organizationInfo/cmd:organizationShortName/text()", namespaces=cls.namespaces)),
-                 'email': cls._strip_first(organization.xpath("cmd:organizationInfo/cmd:communicationInfo/cmd:email/text()", namespaces=cls.namespaces)),
-                 'url': cls._strip_first(organization.xpath("cmd:organizationInfo/cmd:communicationInfo/cmd:email/text()", namespaces=cls.namespaces))}
-
+        return [{'role': 'affilation',
+                 'name': cls._strip_first(organization.xpath("foaf:organization/foaf:name/text()", namespaces=cls.namespaces)),
+                 # 'short_name': cls._strip_first(organization.xpath("cmd:organizationInfo/cmd:organizationShortName/text()", namespaces=cls.namespaces)),
+                 # 'email': cls._strip_first(organization.xpath("cmd:organizationInfo/cmd:communicationInfo/cmd:email/text()", namespaces=cls.namespaces)),
+                 # 'url': cls._strip_first(organization.xpath("cmd:organizationInfo/cmd:communicationInfo/cmd:email/text()", namespaces=cls.namespaces))
+                }
                 for organization in root.xpath(xpath, namespaces=cls.namespaces)]
 
     @classmethod
@@ -106,11 +106,12 @@ class RdfReader(object):
         :param xpath: xpath selector used to get data
         :return: list of person dictionaries
         """
-        return [{'role': cls._strip_first(person.xpath("cmd:role/text()", namespaces=cls.namespaces)),
-                 'surname': cls._strip_first(person.xpath("cmd:personInfo/cmd:surname/text()", namespaces=cls.namespaces)),
-                 'given_name': cls._strip_first(person.xpath("cmd:personInfo/cmd:givenName/text()", namespaces=cls.namespaces)),
-                 'email': cls._strip_first(person.xpath("cmd:personInfo/cmd:communicationInfo/cmd:email/text()", namespaces=cls.namespaces)),
-                 'organization': first(cls._get_organizations(person, "cmd:personInfo/cmd:affiliation"))}
+        return [{'role': 'creator',
+                 'surname': cls._strip_first(person.xpath("foaf:Agent/foaf:name/text()", namespaces=cls.namespaces)).split(',')[0],
+                 'given_name': cls._strip_first(person.xpath("foaf:Agent/foaf:name/text()", namespaces=cls.namespaces)).split(',')[1],
+                 'email': cls._strip_first(person.xpath("foaf:Agent/foaf:mbox[rdf:resource]", namespaces=cls.namespaces)).split(':')[0],
+                 # 'organization': cls._strip_first(person.xpath("foaf:Agent/org:memberOf/foaf:organization/foaf:name/text()", namespaces=cls.namespaces))}
+                 'organization': first(cls._get_organizations(person, "foaf:Agent/org:memberOf"))}
                 for person in root.xpath(xpath, namespaces=cls.namespaces)]
 
     @staticmethod
@@ -184,6 +185,7 @@ class RdfReader(object):
             raise RdfReaderException("Unexpected XML format: No CatalogRecord element found")
 
         metadata_identifiers = self._text_xpath(catalog_record, "//dct:identifier/text()")
+        # TODO JPL: Not working if multiple data_identifiers
         data_identifiers = self._text_xpath(rdf, "//dcat:Dataset/adms:identifier/text()")
 
         languages = self._text_xpath(rdf, "//dcat:Dataset/dct:language/text()")
@@ -243,11 +245,13 @@ class RdfReader(object):
         contacts = self._persons_as_contact(self._get_persons(rdf, "//cmd:contactPerson"))
 
         agents = []
-        # agents.extend(self._persons_as_agent(self._get_persons(resource_info, "//cmd:distributionInfo/cmd:iprHolderPerson"), 'author'))
+        agents.extend(self._persons_as_agent(self._get_persons(rdf, "//dcat:Dataset/dct:creator"), 'author'))
         # agents.extend(self._persons_as_agent(self._get_persons(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:distributionRightsHolderPerson"), 'owner'))
 
         # agents.extend(self._organization_as_agent(self._get_organizations(resource_info, "//cmd:distributionInfo/cmd:iprHolderOrganization"), 'author'))
         # agents.extend(self._organization_as_agent(self._get_organizations(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:distributionRightsHolderOrganization"), 'owner'))
+
+        #project
 
         result = {'name': self._to_name(primary_pid or first(metadata_identifiers)),
                   'language': ",".join(languages),
