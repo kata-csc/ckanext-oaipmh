@@ -111,12 +111,14 @@ class RdfReader(object):
             names = cls._strip_first(person.xpath("foaf:Agent/foaf:name/text()", namespaces=cls.namespaces)).split(',')
             # TODO JPL: Why there is "mailto:" prefix in email in read.rdf?
             email = cls._strip_first(person.xpath("foaf:Agent/foaf:mbox[rdf:resource]", namespaces=cls.namespaces)).split(':')
+            homepage = cls._strip_first(person.xpath("foaf:Agent/foaf:homepage[rdf:resource]", namespaces=cls.namespaces))
             persons.extend(
                 [{'role': 'creator',
                  'surname': names[0],
                  'given_name': names[1] if len(names) > 1 else '',
                  'email': email[1] if len(email) > 1 else '',
-                 'organization': first(cls._get_organizations(person, "foaf:Agent/org:memberOf"))}])
+                 'organization': first(cls._get_organizations(person, "foaf:Agent/org:memberOf")),
+                 'URL': homepage}])
         return persons
 
     @staticmethod
@@ -247,14 +249,14 @@ class RdfReader(object):
         #print "###", _get_organizations(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:distributionRightsHolderOrganization")
         #print "###", _get_organizations(resource_info, "//cmd:distributionInfo/cmd:iprHolderOrganization")
 
-        contacts = self._persons_as_contact(self._get_persons(rdf, "//cmd:contactPerson"))
+        contacts = self._persons_as_contact(self._get_persons(rdf, "//dcat:Dataset/dct:publisher"))
 
         agents = []
         agents.extend(self._persons_as_agent(self._get_persons(rdf, "//dcat:Dataset/dct:creator"), 'author'))
+        agents.extend(self._persons_as_agent(self._get_persons(rdf, "//dcat:Dataset/dct:contributor"), 'contributor'))
+        # TODO: When owner (or any other agent) is organization should xpath include foaf:organization in read.rdf to make explicit that it is organization?
+        # TODO: Owner org is not exported to rdf. Should it be?
         agents.extend(self._persons_as_agent(self._get_persons(rdf, "//dcat:Dataset/dct:rightsHolder"), 'owner'))
-
-        # agents.extend(self._organization_as_agent(self._get_organizations(resource_info, "//cmd:distributionInfo/cmd:iprHolderOrganization"), 'author'))
-        # agents.extend(self._organization_as_agent(self._get_organizations(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:distributionRightsHolderOrganization"), 'owner'))
 
         #project
 
