@@ -1,5 +1,5 @@
 pyoai>=2.4.5
-lxml>=3.1.2
+lxml>=3.6.0
 rdflib>=4.2.1
 beautifulsoup4>=4.4.1
 pointfree
