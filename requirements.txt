@@ -1,7 +1,7 @@
-pyoai==2.4.5
-lxml
-rdflib
-beautifulsoup4
+pyoai>=2.4.5
+lxml>=3.1.2
+rdflib>=4.2.1
+beautifulsoup4>=4.4.1
 pointfree
-functionally
+functionally>=1.0.1
 fn
