@@ -1,3 +1,4 @@
+import logging
 from lxml import etree
 from urlparse import urlparse
 from ckanext.kata.utils import datapid_to_name
@@ -8,6 +9,7 @@ from pylons import config
 import json
 import utils
 
+log = logging.getLogger(__name__)
 
 class RdfReaderException(Exception):
     """ Reader exception is thrown on unexpected data or error. """
@@ -102,23 +104,31 @@ class RdfReader(object):
     def _get_persons(cls, root, xpath):
         """ Extract person dictionary from XML using given Xpath.
 
-        :param root: parent element (lxml) where selection is done
+        :param root: parent element (lxml.etree) where selection is done
         :param xpath: xpath selector used to get data
         :return: list of person dictionaries
         """
         persons = []
         for person in root.xpath(xpath, namespaces=cls.namespaces):
             names = cls._strip_first(person.xpath("foaf:Agent/foaf:name/text()", namespaces=cls.namespaces)).split(',')
+            identifier = cls._strip_first(person.xpath("foaf:Agent/foaf:account/text()", namespaces=cls.namespaces))
             # TODO JPL: Why there is "mailto:" prefix in email in read.rdf?
-            email = cls._strip_first(person.xpath("foaf:Agent/foaf:mbox[rdf:resource]", namespaces=cls.namespaces)).split(':')
-            homepage = cls._strip_first(person.xpath("foaf:Agent/foaf:homepage[rdf:resource]", namespaces=cls.namespaces))
+            email_el = person.find(".//foaf:mbox[@rdf:resource]", namespaces=cls.namespaces)
+            email = email_el.attrib.values()[0].split(':') if email_el is not None else ''
+            phone_el = person.find(".//foaf:phone[@rdf:resource]", namespaces=cls.namespaces)
+            phone = phone_el.attrib.values()[0].split(':') if phone_el is not None else ''
+            homepage_el = person.find(".//foaf:homepage[@rdf:resource]", namespaces=cls.namespaces)
+            url = homepage_el.attrib.values()[0] if homepage_el is not None else ''
             persons.extend(
                 [{'role': 'creator',
-                 'surname': names[0],
-                 'given_name': names[1] if len(names) > 1 else '',
-                 'email': email[1] if len(email) > 1 else '',
-                 'organization': first(cls._get_organizations(person, "foaf:Agent/org:memberOf")),
-                 'URL': homepage}])
+                  'surname': names[0] if names else '',
+                  'given_name': names[1] if len(names) > 1 else '',
+                  'id': identifier if identifier else '',
+                  'email': email[1] if len(email) > 1 else '',
+                  'phone': phone[1] if len(phone) > 1 else '',
+                  'organization': first(cls._get_organizations(person, "foaf:Agent/org:memberOf")),
+                  'URL': url if url else ''}])
+        log.debug("JPL DEBUG: _get_persons(): {msg}".format(msg=persons))
         return persons
 
     @staticmethod
@@ -138,9 +148,9 @@ class RdfReader(object):
         :return: list of contact dictionaries
         """
         return [{'name': cls._get_person_name(person),
-                 'url': (person.get('organization', None) or {}).get('url', ""),
+                 'URL': person['URL'],
                  'email': person['email'],
-                 'phone': ""}
+                 'phone': person['phone']}
                 for person in persons]
 
     @staticmethod
@@ -165,6 +175,7 @@ class RdfReader(object):
         :return: list of agent dictionaries
         """
         return [{'name': cls._get_person_name(person),
+                 'id': person['id'],
                  'organisation': (person.get('organization', None) or {}).get('name', ""),
                  'role': agent_role}
                 for person in persons]
@@ -180,7 +191,7 @@ class RdfReader(object):
 
     def read_data(self, xml):
         """ Extract package data from given XML.
-        :param xml: xml element (lxml)
+        :param xml: xml element (lxml.etree)
         :return: dictionary
         """
         rdf = first(xml.xpath('//rdf:RDF', namespaces=self.namespaces))
