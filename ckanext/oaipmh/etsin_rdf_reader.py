@@ -180,6 +180,45 @@ class RdfReader(object):
                  'role': agent_role}
                 for person in persons]
 
+    @classmethod
+    def _funders_as_agent(cls, funders, agent_role):
+        """ Convert funder dictionaries to agent dictionaries.
+
+        :param funders: list of funder dictionaries
+        :param agent_role: name of the role
+        :return: list of agent dictionaries
+        """
+        return [{'name': funder['name'],
+                 'URL': funder['homepage'],
+                 'organisation': (funder.get('organization', None) or {}).get('name', ""),
+                 'fundingid': funder['fundingid'],
+                 'role': agent_role}
+                for funder in funders]
+
+    @classmethod
+    def _get_project(cls, root, xpath):
+        """ Extract project dictionary from XML using given Xpath.
+
+        :param root: parent element (lxml.etree) where selection is done
+        :param xpath: xpath selector used to get data
+        :return:
+
+        >>> _get_project(rdf, "//dcat:Dataset/frapo:isOutputOf")
+        [{u'URL': u'http://lehtilehti.org', u'fundingid': u'12345', u'name': u'\
+Testproject', u'organisation': u'Tekes', u'role': u'funder'}, {u'URL': u'', u'f\
+undingid': u'12345', u'name': u'', u'organisation': u'THL', u'role': u'funder'}]
+        """
+        funders = []
+        for project in root.xpath(xpath, namespaces=cls.namespaces):
+            homepage_el = project.find(".//foaf:homepage[@rdf:resource]", namespaces=cls.namespaces)
+            url = homepage_el.attrib.values()[0] if homepage_el is not None else ''
+            funders.extend([{'name': cls._strip_first(project.xpath("foaf:Project/foaf:name/text()", namespaces=cls.namespaces)),
+                            'homepage': url if url else '',
+                            'fundingid': cls._strip_first(project.xpath("foaf:Project/rdfs:comment/text()", namespaces=cls.namespaces)),
+                            'organization': first(cls._get_organizations(project, "foaf:Project/org:memberOf"))}])
+        log.debug("JPL DEBUG: _get_projects(): {msg}".format(msg=funders))
+        return funders
+
     def read(self, xml):
         """ Extract package data from given XML.
         :param xml: xml element (lxml)
@@ -268,8 +307,7 @@ class RdfReader(object):
         # TODO: When owner (or any other agent) is organization should xpath include foaf:organization in read.rdf to make explicit that it is organization?
         # TODO: Owner org is not exported to rdf. Should it be?
         agents.extend(self._persons_as_agent(self._get_persons(rdf, "//dcat:Dataset/dct:rightsHolder"), 'owner'))
-
-        #project
+        agents.extend(self._funders_as_agent(self._get_project(rdf, "//dcat:Dataset/frapo:isOutputOf"), 'funder'))
 
         result = {'name': self._to_name(primary_pid or first(metadata_identifiers)),
                   'language': ",".join(languages),
