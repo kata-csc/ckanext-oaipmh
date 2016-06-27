@@ -309,6 +309,13 @@ undingid': u'12345', u'name': u'', u'organisation': u'THL', u'role': u'funder'}]
         agents.extend(self._persons_as_agent(self._get_persons(rdf, "//dcat:Dataset/dct:rightsHolder"), 'owner'))
         agents.extend(self._funders_as_agent(self._get_project(rdf, "//dcat:Dataset/frapo:isOutputOf"), 'funder'))
 
+        tags = self._text_xpath(rdf, "//dcat:Dataset/dcat:keyword/text()")
+
+        discipline_tags = self._text_xpath(rdf, "//dcat:Dataset/dct:subject/text()")
+
+        distribution = first(rdf.xpath('//dcat:Dataset/dcat:distribution/dcat:Distribution', namespaces=self.namespaces))
+        availability = first(distribution.xpath(".//dct:title/text()", namespaces=self.namespaces))
+
         result = {'name': self._to_name(primary_pid or first(metadata_identifiers)),
                   'language': ",".join(languages),
                   'pids': pids,
@@ -319,10 +326,12 @@ undingid': u'12345', u'name': u'', u'organisation': u'THL', u'role': u'funder'}]
                   'type': 'dataset',
                   'contact': contacts,
                   'agent': agents,
-                  'availability': 'contact_owner',
+                  'availability': availability,
                   'temporal_coverage_begin': temporal_coverage_begin,
                   'temporal_coverage_end': temporal_coverage_end,
-                  'license_id': ''} ##license_identifier}
+                  'license_id': '',    ##license_identifier
+                  'tag_string': ','.join(tags) or '',
+                  'discipline': ','.join(discipline_tags) or ''}
 
         if not languages:
             result['langdis'] = u'True'
@@ -330,13 +339,19 @@ undingid': u'12345', u'name': u'', u'organisation': u'THL', u'role': u'funder'}]
         if primary_pid:
             result['id'] = primary_pid
 
+        access_URL_el = None
+        if availability == 'direct_download':
+            access_URL_el = first(distribution.xpath("//dcat:downloadURL", namespaces=self.namespaces))
+        elif availability in ['access_application', 'access_request', 'through_provider']:
+            access_URL_el = first(distribution.xpath("//dcat:accessURL", namespaces=self.namespaces))
+        access_URL = access_URL_el.attrib.values()[0] if access_URL_el is not None else ''
+        if availability in ['direct_download', 'access_request',
+                            'access_application', 'through_provider']:
+            result['{av}_URL'.format(av=availability)] = access_URL
+
         # TODO: Ask about distributionAccessMedium
         # _strip_first(_text_xpath(resource_info, "//cmd:distributionInfo/availability/text()"))
         # url = _strip_first(_text_xpath(resource_info, "//cmd:identificationInfo/cmd:url/text()"))
         # download_location = first(self._text_xpath(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:downloadLocation/text()"))
-
-        # if download_location:
-        #     result['through_provider_URL'] = download_location
-        #     result['availability'] = 'through_provider'
 
         return result
