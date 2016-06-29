@@ -1,7 +1,6 @@
 from lxml import etree
 from urlparse import urlparse
 from ckanext.kata.utils import datapid_to_name
-from ckanext.kata.utils import generate_pid
 from ckanext.oaipmh.importcore import generic_xml_metadata_reader
 import oaipmh.common
 from functionally import first
@@ -197,12 +196,13 @@ class CmdiReader(object):
         coverage = first(self._text_xpath(resource_info, "//cmd:corpusInfo/cmd:corpusMediaType/cmd:corpusTextInfo/cmd:timeCoverageInfo/cmd:timeCoverage/text()")) or ""
         license_identifier = first(self._text_xpath(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:licence/text()")) or 'notspecified'
 
+        primary_pid = None
         provider = self.provider
 
         pids = []
         for pid in [dict(id=pid, provider=provider, type='metadata') for pid in metadata_identifiers]:
             if 'urn' in pid.get('id', ""):
-                pids.append(dict(id=pid['id'], provider=provider, type='metadata', primary=True))
+                primary_pid = pid['id']
             else:
                 pids.append(pid)
 
@@ -237,9 +237,7 @@ class CmdiReader(object):
         agents.extend(self._organization_as_agent(self._get_organizations(resource_info, "//cmd:distributionInfo/cmd:iprHolderOrganization"), 'author'))
         agents.extend(self._organization_as_agent(self._get_organizations(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:distributionRightsHolderOrganization"), 'owner'))
 
-        package_id = generate_pid()
-
-        result = {'name': datapid_to_name(package_id),
+        result = {'name': self._to_name(primary_pid or first(metadata_identifiers)),
                   'language': ",".join(languages),
                   'pids': pids,
                   'version': version,
@@ -257,8 +255,8 @@ class CmdiReader(object):
         if not languages:
             result['langdis'] = u'True'
 
-        if package_id:
-            result['id'] = package_id
+        if primary_pid:
+            result['id'] = primary_pid
 
         # TODO: Ask about distributionAccessMedium
         # _strip_first(_text_xpath(resource_info, "//cmd:distributionInfo/availability/text()"))
