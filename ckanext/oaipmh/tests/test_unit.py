@@ -28,6 +28,7 @@ import os
 from ckan import model
 from ckan.logic import get_action
 import json
+import ckanext.kata.utils as utils
 
 
 FIXTURE_HELDA = "helda_oai_dc.xml"
@@ -294,7 +295,8 @@ class TestCMDIHarvester(TestCase):
         metadata = CmdiReader("http://localhost/test")(record)
         content= metadata.getMap()
         package = content['unified']
-        self.assertEquals(package.get('name', None), 'urn-nbn-fi-lb-20140730180')
+        self.assertEquals(package.get('name', None), utils.datapid_to_name(package.get('id', None)))
+        self.assertEquals(utils.get_primary_pid('metadata', package), u'http://urn.fi/urn:nbn:fi:lb-20140730180')
         self.assertEquals(package.get('notes', None), '{"eng": "Test description"}')
         self.assertEquals(package.get('version', None), '2012-09-07')
         self.assertEquals(package.get('title', []), '{"eng": "Longi Corpus"}')
@@ -314,13 +316,14 @@ class TestCMDIHarvester(TestCase):
         job.save()
 
         harvest_object = self._run_import("cmdi_1.xml", job)
+        package_id = json.loads(harvest_object.content)['unified']['id']
 
         self.assertEquals(len(harvest_object.errors), 0, u"\n".join(unicode(error.message) for error in (harvest_object.errors or [])))
 
-        package = get_action('package_show')({'user': 'harvest'}, {'id': 'urn-nbn-fi-lb-20140730180'})
+        package = get_action('package_show')({'user': 'harvest'}, {'id': package_id})
 
-        self.assertEquals(package.get('id', None), 'http://urn.fi/urn:nbn:fi:lb-20140730180')
-        self.assertEquals(package.get('name', None), 'urn-nbn-fi-lb-20140730180')
+        self.assertEquals(package.get('name', None), utils.datapid_to_name(package.get('id', None)))
+        self.assertEquals(utils.get_primary_pid('metadata', package), u'http://urn.fi/urn:nbn:fi:lb-20140730180')
         self.assertEquals(package.get('notes', None), u'{"eng": "Test description"}')
         self.assertEquals(package.get('version', None), '2012-09-07')
         self.assertEquals(package.get('title', []), '{"eng": "Longi Corpus"}')
@@ -336,10 +339,11 @@ class TestCMDIHarvester(TestCase):
         model.Session.flush()
 
         harvest_object = self._run_import("cmdi_2.xml", job)
+        package_id = json.loads(harvest_object.content)['unified']['id']
 
         self.assertEquals(len(harvest_object.errors), 0, u"\n".join(unicode(error.message) for error in (harvest_object.errors or [])))
 
-        package = get_action('package_show')({'user': 'harvest'}, {'id': 'urn-nbn-fi-lb-20140730186'})
+        package = get_action('package_show')({'user': 'harvest'}, {'id': package_id})
 
         self.assertEquals(package['temporal_coverage_begin'], '1880')
         self.assertEquals(package['temporal_coverage_end'], '1939')
