@@ -118,6 +118,7 @@ class CmdiReader(object):
         :return: list of contact dictionaries
         """
         return [{'name': cls._get_person_name(person),
+                 # TODO JUHO: Check if this should be 'URL' instead.
                  'url': (person.get('organization', None) or {}).get('url', ""),
                  'email': person['email'],
                  'phone': ""}

@@ -24,6 +24,7 @@ class RdfReader(object):
                   'dct': "http://purl.org/dc/terms/",
                   'foaf': "http://xmlns.com/foaf/0.1/",
                   'frapo': "http://purl.org/cerif/frapo/",
+                  'mets': "http://www.loc.gov/METS/",  ## TODO: Why this is separate definition in read.rdf?
                   'org': "http://www.w3.org/ns/org#",
                   'rdf': "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
                   'rdfs': "http://www.w3.org/2000/01/rdf-schema#",
@@ -266,6 +267,12 @@ undingid': u'12345', u'name': u'', u'organisation': u'THL', u'role': u'funder'}]
         # version = first(self._text_xpath(resource_info, "//cmd:metadataInfo/cmd:metadataLastDateUpdated/text()")) or ""
         # coverage = first(self._text_xpath(resource_info, "//cmd:corpusInfo/cmd:corpusMediaType/cmd:corpusTextInfo/cmd:timeCoverageInfo/cmd:timeCoverage/text()")) or ""
         # license_identifier = first(self._text_xpath(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:licence/text()")) or 'notspecified'
+        license = ''
+        rightscategory = first(rdf.xpath('//dcat:Dataset/dct:rights/RightsDeclarationMD[@RIGHTSCATEGORY]', namespaces=self.namespaces))
+        awfdaf
+        if rightscategory == 'CONTRACTUAL':
+            licenses = rdf.xpath('//dcat:Dataset/dct:rights/RightsDeclarationMD/RightsDeclaration/text()', namespaces=self.namespaces)
+            leave_out_rems_url(licenses, access_URL)
 
         primary_pid = None
         provider = self.provider
