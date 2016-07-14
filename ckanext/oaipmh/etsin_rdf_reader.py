@@ -267,12 +267,6 @@ undingid': u'12345', u'name': u'', u'organisation': u'THL', u'role': u'funder'}]
         # version = first(self._text_xpath(resource_info, "//cmd:metadataInfo/cmd:metadataLastDateUpdated/text()")) or ""
         # coverage = first(self._text_xpath(resource_info, "//cmd:corpusInfo/cmd:corpusMediaType/cmd:corpusTextInfo/cmd:timeCoverageInfo/cmd:timeCoverage/text()")) or ""
         # license_identifier = first(self._text_xpath(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:licence/text()")) or 'notspecified'
-        license = ''
-        rightscategory = first(rdf.xpath('//dcat:Dataset/dct:rights/RightsDeclarationMD[@RIGHTSCATEGORY]', namespaces=self.namespaces))
-        awfdaf
-        if rightscategory == 'CONTRACTUAL':
-            licenses = rdf.xpath('//dcat:Dataset/dct:rights/RightsDeclarationMD/RightsDeclaration/text()', namespaces=self.namespaces)
-            leave_out_rems_url(licenses, access_URL)
 
         primary_pid = None
         provider = self.provider
@@ -336,7 +330,6 @@ undingid': u'12345', u'name': u'', u'organisation': u'THL', u'role': u'funder'}]
                   'availability': availability,
                   'temporal_coverage_begin': temporal_coverage_begin,
                   'temporal_coverage_end': temporal_coverage_end,
-                  'license_id': '',    ##license_identifier
                   'tag_string': ','.join(tags) or '',
                   'discipline': ','.join(discipline_tags) or ''}
 
@@ -355,6 +348,19 @@ undingid': u'12345', u'name': u'', u'organisation': u'THL', u'role': u'funder'}]
         if availability in ['direct_download', 'access_request',
                             'access_application', 'through_provider']:
             result['{av}_URL'.format(av=availability)] = access_URL
+
+        # License
+        rc_el = first(rdf.xpath('//dcat:Dataset/dct:rights/mets:RightsDeclarationMD', namespaces=self.namespaces))
+        rightscategory = rc_el.attrib.values()[0] if rc_el is not None else ''
+        licenses = rdf.xpath('//dcat:Dataset/dct:rights/mets:RightsDeclarationMD/mets:RightsDeclaration/text()', namespaces=self.namespaces)
+        if rightscategory == 'CONTRACTUAL':
+            license_url = self._strip_first([ lic for lic in licenses if lic != access_URL ])
+        else:
+            license_url = self._strip_first(licenses)
+        with open(urlparse(config.get("licenses_group_url", None)).path, 'r') as lf:
+            known_licenses = json.load(lf)
+        license_id = self._strip_first([ kl.get('id') for kl in known_licenses if kl.get('url') == license_url])
+        result['license_id'] = license_id
 
         # TODO: Ask about distributionAccessMedium
         # _strip_first(_text_xpath(resource_info, "//cmd:distributionInfo/availability/text()"))
