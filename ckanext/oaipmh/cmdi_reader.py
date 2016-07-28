@@ -19,6 +19,9 @@ class CmdiReader(object):
     """ Reader for CMDI XML data """
 
     namespaces = {'oai': "http://www.openarchives.org/OAI/2.0/", 'cmd': "http://www.clarin.eu/cmd/"}
+    LICENCE_CLARIN_PUB = "CLARIN_PUB"
+    LICENCE_CLARIN_ACA = "CLARIN_ACA"
+    LICENCE_CLARIN_RES = "CLARIN_RES"
 
     def __init__(self, provider=None):
         """ Generate new reader instance.
@@ -150,6 +153,32 @@ class CmdiReader(object):
                  'role': agent_role}
                 for person in persons]
 
+    @classmethod
+    def _language_bank_availability_from_licence(cls, licence):
+      """
+      Get availability from licence for datasets harvested
+      from language bank interface using the following rules:
+
+      CLARIN_ACA-NC -> downloadable after registration / identification
+      CLARIN_RES -> with data access application form
+      CLARIN_PUB -> directly downloadable
+      Otherwise -> only by contacting the distributor
+
+
+      :param licence: string value for the licence
+      :return: string value for availability
+      """
+
+      if licence.startswith(cls.LICENCE_CLARIN_ACA):
+        return "access_request"
+      elif licence == cls.LICENCE_CLARIN_RES:
+        return "access_application"
+      elif licence == cls.LICENCE_CLARIN_PUB:
+        return "direct_download"
+      else:
+        return "contact_owner"
+
+
     def read(self, xml):
         """ Extract package data from given XML.
         :param xml: xml element (lxml)
@@ -196,13 +225,28 @@ class CmdiReader(object):
         version = first(self._text_xpath(resource_info, "//cmd:metadataInfo/cmd:metadataLastDateUpdated/text()")) or ""
         coverage = first(self._text_xpath(resource_info, "//cmd:corpusInfo/cmd:corpusMediaType/cmd:corpusTextInfo/cmd:timeCoverageInfo/cmd:timeCoverage/text()")) or ""
         license_identifier = first(self._text_xpath(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:licence/text()")) or 'notspecified'
+        availability = CmdiReader._language_bank_availability_from_licence(license_identifier)
 
         provider = self.provider
 
         pids = []
+        direct_download_URL = ''
+        access_request_URL = ''
+        access_application_URL = ''
         for pid in [dict(id=pid, provider=provider, type='metadata') for pid in metadata_identifiers]:
             if 'urn' in pid.get('id', ""):
                 pids.append(dict(id=pid['id'], provider=provider, type='metadata', primary=True))
+
+                # Related to language bank licence-availability mapping
+                if availability == 'direct_download':
+                    direct_download_URL = pid.get('id', "")
+                if availability == 'access_request':
+                    access_request_URL = pid.get('id', "")
+                if availability == 'access_application':
+                    sliced_pid = pid.get('id', "").rsplit('/', 1)
+                    if len(sliced_pid) >= 2:
+                        access_application_URL = 'https://lbr.csc.fi/web/guest/catalogue?domain=LBR&target=basket&resource=' + sliced_pid[1]
+
             else:
                 pids.append(pid)
 
@@ -249,7 +293,10 @@ class CmdiReader(object):
                   'type': 'dataset',
                   'contact': contacts,
                   'agent': agents,
-                  'availability': 'contact_owner',
+                  'availability': availability,
+                  'direct_download_URL': direct_download_URL,
+                  'access_request_URL': access_request_URL,
+                  'access_application_URL': access_application_URL,
                   'temporal_coverage_begin': temporal_coverage_begin,
                   'temporal_coverage_end': temporal_coverage_end,
                   'license_id': license_identifier}
