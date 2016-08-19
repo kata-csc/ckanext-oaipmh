@@ -225,27 +225,33 @@ class CmdiReader(object):
         version = first(self._text_xpath(resource_info, "//cmd:metadataInfo/cmd:metadataLastDateUpdated/text()")) or ""
         coverage = first(self._text_xpath(resource_info, "//cmd:corpusInfo/cmd:corpusMediaType/cmd:corpusTextInfo/cmd:timeCoverageInfo/cmd:timeCoverage/text()")) or ""
         license_identifier = first(self._text_xpath(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:licence/text()")) or 'notspecified'
-        availability = CmdiReader._language_bank_availability_from_licence(license_identifier)
 
         provider = self.provider
 
+        availability = CmdiReader._language_bank_availability_from_licence(license_identifier)
+        download_location = first(self._text_xpath(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:downloadLocation/text()"))
+        direct_download_URL = None
+        if download_location:
+            availability = 'direct_download'
+            direct_download_URL = download_location
+
         pids = []
-        direct_download_URL = ''
         access_request_URL = ''
         access_application_URL = ''
         for pid in [dict(id=pid, provider=provider, type='metadata') for pid in metadata_identifiers]:
             if 'urn' in pid.get('id', ""):
                 pids.append(dict(id=pid['id'], provider=provider, type='metadata', primary=True))
 
-                # Related to language bank licence-availability mapping
-                if availability == 'direct_download':
-                    direct_download_URL = pid.get('id', "")
-                if availability == 'access_request':
-                    access_request_URL = pid.get('id', "")
-                if availability == 'access_application':
-                    sliced_pid = pid.get('id', "").rsplit('/', 1)
-                    if len(sliced_pid) >= 2:
-                        access_application_URL = 'https://lbr.csc.fi/web/guest/catalogue?domain=LBR&target=basket&resource=' + sliced_pid[1]
+                if direct_download_URL is None:
+                    # Related to language bank licence-availability mapping
+                    if availability == 'direct_download':
+                        direct_download_URL = pid.get('id', "")
+                    if availability == 'access_request':
+                        access_request_URL = pid.get('id', "")
+                    if availability == 'access_application':
+                        sliced_pid = pid.get('id', "").rsplit('/', 1)
+                        if len(sliced_pid) >= 2:
+                            access_application_URL = 'https://lbr.csc.fi/web/guest/catalogue?domain=LBR&target=basket&resource=' + sliced_pid[1]
 
             else:
                 pids.append(pid)
@@ -310,10 +316,5 @@ class CmdiReader(object):
         # TODO: Ask about distributionAccessMedium
         # _strip_first(_text_xpath(resource_info, "//cmd:distributionInfo/availability/text()"))
         # url = _strip_first(_text_xpath(resource_info, "//cmd:identificationInfo/cmd:url/text()"))
-        download_location = first(self._text_xpath(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:downloadLocation/text()"))
-
-        if download_location:
-            result['through_provider_URL'] = download_location
-            result['availability'] = 'through_provider'
 
         return result
