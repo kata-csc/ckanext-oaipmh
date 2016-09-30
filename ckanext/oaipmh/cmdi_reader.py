@@ -167,7 +167,7 @@ class CmdiReader(object):
         """
         output = license
         if license.startswith(cls.LICENCE_CC_BY):
-            output = output + "-3.0"
+            output = output + "-4.0"
         return output
 
     @classmethod

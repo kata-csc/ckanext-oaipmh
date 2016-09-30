@@ -201,8 +201,6 @@ class DcMetadataReader():
             temporal_coverage_begin='',
             temporal_coverage_end='',
 
-            through_provider_URL=first(_get_download(self.dc, False)) or '',
-
             type='dataset',
             uploader=uploader,
 
