@@ -29,7 +29,7 @@ import ckanext.kata.plugin
 import fnmatch
 import re
 import ckanext.kata.kata_ldap as ld
-from ckanext.kata.utils import datapid_to_name
+from ckanext.kata.utils import pid_to_name
 
 log = logging.getLogger(__name__)
 
@@ -268,9 +268,9 @@ class OAIPMHHarvester(HarvesterBase):
         if not self._recreate(harvest_job) and package_ids:
             converted_identifiers = {}
             for identifier in package_ids:
-                converted_identifiers[datapid_to_name(identifier)] = identifier
+                converted_identifiers[pid_to_name(identifier)] = identifier
                 if identifier.endswith(u'm'):
-                    converted_identifiers[datapid_to_name(u"%ss" % identifier[0:-1])] = identifier
+                    converted_identifiers[pid_to_name(u"%ss" % identifier[0:-1])] = identifier
 
             for package in model.Session.query(model.Package).filter(model.Package.name.in_(converted_identifiers.keys())).all():
                 converted_name = package.name
@@ -399,7 +399,7 @@ class OAIPMHHarvester(HarvesterBase):
 
         # If package exists use old PID, otherwise create new
 
-        pkg_id = ckanext.kata.utils.get_package_id_by_data_pids(package_dict)
+        pkg_id = ckanext.kata.utils.get_package_id_by_access_or_primary_pid(package_dict)
 
         pkg = Session.query(Package).filter(Package.id == pkg_id).first() if pkg_id else None
         log.debug('Package: "{pkg}"'.format(pkg=pkg))

@@ -1,6 +1,6 @@
 from lxml import etree
 from urlparse import urlparse
-from ckanext.kata.utils import datapid_to_name
+from ckanext.kata.utils import pid_to_name
 from ckanext.kata.utils import generate_pid
 from ckanext.oaipmh.importcore import generic_xml_metadata_reader
 import oaipmh.common
@@ -64,7 +64,7 @@ class CmdiReader(object):
         :param identifier: identifier string
         :return: CKAN package name
         """
-        return datapid_to_name(cls._to_identifier(identifier))
+        return pid_to_name(cls._to_identifier(identifier))
 
     @staticmethod
     def _strip_first(elements):
@@ -258,25 +258,16 @@ class CmdiReader(object):
 
         license_identifier = CmdiReader._language_bank_license_enhancement(first(self._text_xpath(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:licence/text()")) or 'notspecified')
         availability = CmdiReader._language_bank_availability_from_licence(license_identifier)
-        download_location = first(self._text_xpath(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:downloadLocation/text()"))
 
         if license_identifier.lower().strip() != 'undernegotiation':
-            if download_location:
-                if availability == 'direct_download':
-                    direct_download_URL = download_location
-                if availability == 'access_request':
-                    access_request_URL = download_location
-                if availability == 'access_application':
-                    access_application_URL = download_location
-            else:
-                if availability == 'direct_download':
-                    direct_download_URL = pid_url
-                if availability == 'access_request':
-                    access_request_URL = pid_url
-                if availability == 'access_application':
-                    sliced_pid = pid_url.rsplit('/', 1)
-                    if len(sliced_pid) >= 2:
-                        access_application_URL = 'https://lbr.csc.fi/web/guest/catalogue?domain=LBR&target=basket&resource=' + sliced_pid[1]
+            if availability == 'direct_download':
+                direct_download_URL = pid_url
+            if availability == 'access_request':
+                access_request_URL = pid_url
+            if availability == 'access_application':
+                sliced_pid = pid_url.rsplit('/', 1)
+                if len(sliced_pid) >= 2:
+                    access_application_URL = 'https://lbr.csc.fi/web/guest/catalogue?domain=LBR&target=basket&resource=' + sliced_pid[1]
 
         temporal_coverage_begin = ""
         temporal_coverage_end = ""
@@ -309,7 +300,7 @@ class CmdiReader(object):
 
         package_id = generate_pid()
 
-        result = {'name': datapid_to_name(package_id),
+        result = {'name': pid_to_name(package_id),
                   'language': ",".join(languages),
                   'pids': pids,
                   'version': version,

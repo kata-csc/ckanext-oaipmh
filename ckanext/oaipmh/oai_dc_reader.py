@@ -176,7 +176,7 @@ class DcMetadataReader():
             # dc('hasFormat', recursive=False)
             mimetype=self._get_mime_type(),
 
-            name=ckanext.kata.utils.datapid_to_name(first(data_pids) or ''),
+            name=ckanext.kata.utils.pid_to_name(first(data_pids) or ''),
             # name=first(map(pf.partial(urllib.quote_plus, safe=':'), get_data_pids(dc))) or '',
 
             notes=self._read_notes(),

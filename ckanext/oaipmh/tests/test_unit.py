@@ -295,7 +295,7 @@ class TestCMDIHarvester(TestCase):
         metadata = CmdiReader("http://localhost/test")(record)
         content= metadata.getMap()
         package = content['unified']
-        self.assertEquals(package.get('name', None), utils.datapid_to_name(package.get('id', None)))
+        self.assertEquals(package.get('name', None), utils.pid_to_name(package.get('id', None)))
         self.assertEquals(utils.get_primary_pid('metadata', package), u'http://urn.fi/urn:nbn:fi:lb-20140730180')
         self.assertEquals(package.get('notes', None), '{"eng": "Test description"}')
         self.assertEquals(package.get('version', None), '2012-09-07')
@@ -322,7 +322,7 @@ class TestCMDIHarvester(TestCase):
 
         package = get_action('package_show')({'user': 'harvest'}, {'id': package_id})
 
-        self.assertEquals(package.get('name', None), utils.datapid_to_name(package.get('id', None)))
+        self.assertEquals(package.get('name', None), utils.pid_to_name(package.get('id', None)))
         self.assertEquals(utils.get_primary_pid('metadata', package), u'http://urn.fi/urn:nbn:fi:lb-20140730180')
         self.assertEquals(package.get('notes', None), u'{"eng": "Test description"}')
         self.assertEquals(package.get('version', None), '2012-09-07')
