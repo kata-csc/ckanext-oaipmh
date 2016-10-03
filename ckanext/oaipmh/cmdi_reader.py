@@ -247,14 +247,33 @@ class CmdiReader(object):
         access_request_URL = ''
         access_application_URL = ''
         pid_url = None
-        for pid in [dict(id=pid, provider=provider, type='metadata') for pid in metadata_identifiers]:
-            if 'urn' in pid.get('id', ""):
-                pids.append(dict(id=pid['id'], provider=provider, type='metadata', primary=True))
+
+        # OLD CODE
+        # for pid in [dict(id=pid, provider=provider, type='metadata') for pid in metadata_identifiers]:
+        #     if 'urn' in pid.get('id', ""):
+        #         pids.append(dict(id=pid['id'], provider=provider, type='metadata', primary=True))
+        #         if not pid_url:
+        #             pid_url = pid.get('id', "")
+        #     else:
+        #         pids.append(pid)
+        # pids += [dict(id=pid, provider=provider, type='data', primary=data_identifiers.index(pid) == 0) for pid in data_identifiers]
+
+        # NEW CODE PROPOSITION
+        for pid in metadata_identifiers:
+            if 'urn' in pid:
+                pids.append(dict(id=pid, provider=provider, type='primary'))
                 if not pid_url:
-                    pid_url = pid.get('id', "")
+                    pid_url = pid
             else:
-                pids.append(pid)
-        pids += [dict(id=pid, provider=provider, type='data', primary=data_identifiers.index(pid) == 0) for pid in data_identifiers]
+                pids.append(dict(id=pid, provider=provider, type='relation'))
+
+        for pid in data_identifiers:
+            if data_identifiers.index(pid) == 0:
+                pids.append(dict(id=pid, provider=provider, type='access'))
+            else:
+                pids.append(dict(id=pid, provider=provider, type='relation'))
+
+        # PROPOSITION ENDS
 
         license_identifier = CmdiReader._language_bank_license_enhancement(first(self._text_xpath(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:licence/text()")) or 'notspecified')
         availability = CmdiReader._language_bank_availability_from_licence(license_identifier)
