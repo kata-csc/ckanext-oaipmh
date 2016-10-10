@@ -247,6 +247,7 @@ class CmdiReader(object):
         access_request_URL = ''
         access_application_URL = ''
         pid_url = None
+        external_id = None
 
         # OLD CODE
         # for pid in [dict(id=pid, provider=provider, type='metadata') for pid in metadata_identifiers]:
@@ -269,7 +270,7 @@ class CmdiReader(object):
 
         for pid in data_identifiers:
             if data_identifiers.index(pid) == 0:
-                pids.append(dict(id=pid, provider=provider, type='access'))
+                external_id = pid
             else:
                 pids.append(dict(id=pid, provider=provider, type='relation'))
 
@@ -335,7 +336,8 @@ class CmdiReader(object):
                   'access_application_URL': access_application_URL,
                   'temporal_coverage_begin': temporal_coverage_begin,
                   'temporal_coverage_end': temporal_coverage_end,
-                  'license_id': license_identifier}
+                  'license_id': license_identifier,
+                  'external_id': external_id}
 
         if not languages:
             result['langdis'] = u'True'
