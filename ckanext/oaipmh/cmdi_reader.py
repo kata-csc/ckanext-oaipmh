@@ -1,4 +1,3 @@
-from lxml import etree
 from urlparse import urlparse
 from ckanext.kata.utils import datapid_to_name
 from ckanext.oaipmh.importcore import generic_xml_metadata_reader
@@ -18,6 +17,10 @@ class CmdiReader(object):
     """ Reader for CMDI XML data """
 
     namespaces = {'oai': "http://www.openarchives.org/OAI/2.0/", 'cmd': "http://www.clarin.eu/cmd/"}
+    LICENSE_CLARIN_PUB = "CLARIN_PUB"
+    LICENSE_CLARIN_ACA = "CLARIN_ACA"
+    LICENSE_CLARIN_RES = "CLARIN_RES"
+    LICENSE_CC_BY = "CC-BY"
 
     def __init__(self, provider=None):
         """ Generate new reader instance.
@@ -149,6 +152,48 @@ class CmdiReader(object):
                  'role': agent_role}
                 for person in persons]
 
+
+    @classmethod
+
+    def _language_bank_license_enhancement(cls, license):
+        """
+        Enhance language bank licenses due to lacking source data
+        so that Etsin understands them better.
+
+        :param license: License
+        :return:
+        """
+        output = license
+        if license.startswith(cls.LICENSE_CC_BY):
+            output = output + "-4.0"
+        return output
+
+    @classmethod
+    def _language_bank_availability_from_license(cls, license):
+      """
+      Get availability from license for datasets harvested
+      from language bank interface using the following rules:
+
+      CLARIN_ACA-NC -> downloadable after registration / identification
+      CLARIN_RES -> with data access application form
+      CLARIN_PUB -> directly downloadable
+      Otherwise -> only by contacting the distributor
+
+
+      :param license: string value for the license
+      :return: string value for availability
+      """
+
+      if license.startswith(cls.LICENSE_CLARIN_ACA):
+        return "access_request"
+      elif license == cls.LICENSE_CLARIN_RES:
+        return "access_application"
+      elif license == cls.LICENSE_CLARIN_PUB or license.startswith(cls.LICENSE_CC_BY):
+        return "direct_download"
+      else:
+        return "contact_owner"
+
+
     def read(self, xml):
         """ Extract package data from given XML.
         :param xml: xml element (lxml)
@@ -191,22 +236,37 @@ class CmdiReader(object):
             transl_json[lang] = title.text.strip()
 
         title = json.dumps(transl_json)
-
+        provider = self.provider
         version = first(self._text_xpath(resource_info, "//cmd:metadataInfo/cmd:metadataLastDateUpdated/text()")) or ""
         coverage = first(self._text_xpath(resource_info, "//cmd:corpusInfo/cmd:corpusMediaType/cmd:corpusTextInfo/cmd:timeCoverageInfo/cmd:timeCoverage/text()")) or ""
-        license_identifier = first(self._text_xpath(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:licence/text()")) or 'notspecified'
 
         primary_pid = None
-        provider = self.provider
-
         pids = []
+        direct_download_URL = ''
+        access_request_URL = ''
+        access_application_URL = ''
+
         for pid in [dict(id=pid, provider=provider, type='metadata') for pid in metadata_identifiers]:
             if 'urn' in pid.get('id', ""):
-                primary_pid = pid['id']
+                if not primary_pid:
+                    primary_pid = pid['id']
             else:
                 pids.append(pid)
 
         pids += [dict(id=pid, provider=provider, type='data', primary=data_identifiers.index(pid) == 0) for pid in data_identifiers]
+
+        license_identifier = CmdiReader._language_bank_license_enhancement(first(self._text_xpath(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:licence/text()")) or 'notspecified')
+        availability = CmdiReader._language_bank_availability_from_license(license_identifier)
+
+        if license_identifier.lower().strip() != 'undernegotiation':
+            if availability == 'direct_download':
+                direct_download_URL = primary_pid
+            if availability == 'access_request':
+                access_request_URL = primary_pid
+            if availability == 'access_application':
+                sliced_pid = primary_pid.rsplit('/', 1)
+                if len(sliced_pid) >= 2:
+                    access_application_URL = 'https://lbr.csc.fi/web/guest/catalogue?domain=LBR&target=basket&resource=' + sliced_pid[1]
 
         temporal_coverage_begin = ""
         temporal_coverage_end = ""
@@ -218,24 +278,24 @@ class CmdiReader(object):
                 temporal_coverage_end = split[1]
 
         # TODO: Check agent mapping.
-        #print "###", _get_persons(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:licensorPerson")
-        #print "###", _get_persons(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:distributionRightsHolderPerson")
+        #print "###", _get_persons(resource_info, "//cmd:distributionInfo/cmd:licenseInfo/cmd:licensorPerson")
+        #print "###", _get_persons(resource_info, "//cmd:distributionInfo/cmd:licenseInfo/cmd:distributionRightsHolderPerson")
         #print "###", _get_persons(resource_info, "//cmd:distributionInfo/cmd:iprHolderPerson")
         #print "###", _get_persons(resource_info, "//cmd:contactPerson")
         #print "###", _get_persons(resource_info, "//cmd:metadataInfo/cmd:metadataCreator")
 
-        #print "###", _get_organizations(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:licensorOrganization")
-        #print "###", _get_organizations(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:distributionRightsHolderOrganization")
+        #print "###", _get_organizations(resource_info, "//cmd:distributionInfo/cmd:licenseInfo/cmd:licensorOrganization")
+        #print "###", _get_organizations(resource_info, "//cmd:distributionInfo/cmd:licenseInfo/cmd:distributionRightsHolderOrganization")
         #print "###", _get_organizations(resource_info, "//cmd:distributionInfo/cmd:iprHolderOrganization")
 
         contacts = self._persons_as_contact(self._get_persons(resource_info, "//cmd:contactPerson"))
 
         agents = []
         agents.extend(self._persons_as_agent(self._get_persons(resource_info, "//cmd:distributionInfo/cmd:iprHolderPerson"), 'author'))
-        agents.extend(self._persons_as_agent(self._get_persons(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:distributionRightsHolderPerson"), 'owner'))
+        agents.extend(self._persons_as_agent(self._get_persons(resource_info, "//cmd:distributionInfo/cmd:licenseInfo/cmd:distributionRightsHolderPerson"), 'owner'))
 
         agents.extend(self._organization_as_agent(self._get_organizations(resource_info, "//cmd:distributionInfo/cmd:iprHolderOrganization"), 'author'))
-        agents.extend(self._organization_as_agent(self._get_organizations(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:distributionRightsHolderOrganization"), 'owner'))
+        agents.extend(self._organization_as_agent(self._get_organizations(resource_info, "//cmd:distributionInfo/cmd:licenseInfo/cmd:distributionRightsHolderOrganization"), 'owner'))
 
         result = {'name': self._to_name(primary_pid or first(metadata_identifiers)),
                   'language': ",".join(languages),
@@ -247,10 +307,14 @@ class CmdiReader(object):
                   'type': 'dataset',
                   'contact': contacts,
                   'agent': agents,
-                  'availability': 'contact_owner',
+                  'availability': availability,
+                  'direct_download_URL': direct_download_URL,
+                  'access_request_URL': access_request_URL,
+                  'access_application_URL': access_application_URL,
                   'temporal_coverage_begin': temporal_coverage_begin,
                   'temporal_coverage_end': temporal_coverage_end,
-                  'license_id': license_identifier}
+                  'license_id': license_identifier,
+                  'license_URL': ''}
 
         if not languages:
             result['langdis'] = u'True'
@@ -261,10 +325,5 @@ class CmdiReader(object):
         # TODO: Ask about distributionAccessMedium
         # _strip_first(_text_xpath(resource_info, "//cmd:distributionInfo/availability/text()"))
         # url = _strip_first(_text_xpath(resource_info, "//cmd:identificationInfo/cmd:url/text()"))
-        download_location = first(self._text_xpath(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:downloadLocation/text()"))
-
-        if download_location:
-            result['through_provider_URL'] = download_location
-            result['availability'] = 'through_provider'
 
         return result
