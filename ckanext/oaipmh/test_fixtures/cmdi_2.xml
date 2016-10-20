@@ -45,9 +45,9 @@ The corpus will be made available at http://korp.csc.fi/.</description>
               </identificationInfo>
               <distributionInfo>
                 <availability>available-restrictedUse</availability>
-                <licenseInfo>
+                <licenceInfo>
 
-                  <license>other</license>
+                  <licence>other</licence>
                   <restrictionsOfUse>other</restrictionsOfUse>
                   <restrictionsOfUse>shareAlike</restrictionsOfUse>
                   <distributionAccessMedium>downloadable</distributionAccessMedium>
@@ -88,7 +88,7 @@ The corpus will be made available at http://korp.csc.fi/.</description>
                       </communicationInfo>
                     </organizationInfo>
                   </distributionRightsHolderOrganization>
-                </licenseInfo>
+                </licenceInfo>
                 <iprHolderOrganization>
                   <role>iprHolder</role>
                   <organizationInfo>

@@ -194,7 +194,7 @@ class CmdiReader(object):
 
         version = first(self._text_xpath(resource_info, "//cmd:metadataInfo/cmd:metadataLastDateUpdated/text()")) or ""
         coverage = first(self._text_xpath(resource_info, "//cmd:corpusInfo/cmd:corpusMediaType/cmd:corpusTextInfo/cmd:timeCoverageInfo/cmd:timeCoverage/text()")) or ""
-        license_identifier = first(self._text_xpath(resource_info, "//cmd:distributionInfo/cmd:licenseInfo/cmd:license/text()")) or 'notspecified'
+        license_identifier = first(self._text_xpath(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:licence/text()")) or 'notspecified'
 
         primary_pid = None
         provider = self.provider
@@ -218,24 +218,24 @@ class CmdiReader(object):
                 temporal_coverage_end = split[1]
 
         # TODO: Check agent mapping.
-        #print "###", _get_persons(resource_info, "//cmd:distributionInfo/cmd:licenseInfo/cmd:licensorPerson")
-        #print "###", _get_persons(resource_info, "//cmd:distributionInfo/cmd:licenseInfo/cmd:distributionRightsHolderPerson")
+        #print "###", _get_persons(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:licensorPerson")
+        #print "###", _get_persons(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:distributionRightsHolderPerson")
         #print "###", _get_persons(resource_info, "//cmd:distributionInfo/cmd:iprHolderPerson")
         #print "###", _get_persons(resource_info, "//cmd:contactPerson")
         #print "###", _get_persons(resource_info, "//cmd:metadataInfo/cmd:metadataCreator")
 
-        #print "###", _get_organizations(resource_info, "//cmd:distributionInfo/cmd:licenseInfo/cmd:licensorOrganization")
-        #print "###", _get_organizations(resource_info, "//cmd:distributionInfo/cmd:licenseInfo/cmd:distributionRightsHolderOrganization")
+        #print "###", _get_organizations(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:licensorOrganization")
+        #print "###", _get_organizations(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:distributionRightsHolderOrganization")
         #print "###", _get_organizations(resource_info, "//cmd:distributionInfo/cmd:iprHolderOrganization")
 
         contacts = self._persons_as_contact(self._get_persons(resource_info, "//cmd:contactPerson"))
 
         agents = []
         agents.extend(self._persons_as_agent(self._get_persons(resource_info, "//cmd:distributionInfo/cmd:iprHolderPerson"), 'author'))
-        agents.extend(self._persons_as_agent(self._get_persons(resource_info, "//cmd:distributionInfo/cmd:licenseInfo/cmd:distributionRightsHolderPerson"), 'owner'))
+        agents.extend(self._persons_as_agent(self._get_persons(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:distributionRightsHolderPerson"), 'owner'))
 
         agents.extend(self._organization_as_agent(self._get_organizations(resource_info, "//cmd:distributionInfo/cmd:iprHolderOrganization"), 'author'))
-        agents.extend(self._organization_as_agent(self._get_organizations(resource_info, "//cmd:distributionInfo/cmd:licenseInfo/cmd:distributionRightsHolderOrganization"), 'owner'))
+        agents.extend(self._organization_as_agent(self._get_organizations(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:distributionRightsHolderOrganization"), 'owner'))
 
         result = {'name': self._to_name(primary_pid or first(metadata_identifiers)),
                   'language': ",".join(languages),
@@ -261,7 +261,7 @@ class CmdiReader(object):
         # TODO: Ask about distributionAccessMedium
         # _strip_first(_text_xpath(resource_info, "//cmd:distributionInfo/availability/text()"))
         # url = _strip_first(_text_xpath(resource_info, "//cmd:identificationInfo/cmd:url/text()"))
-        download_location = first(self._text_xpath(resource_info, "//cmd:distributionInfo/cmd:licenseInfo/cmd:downloadLocation/text()"))
+        download_location = first(self._text_xpath(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:downloadLocation/text()"))
 
         if download_location:
             result['through_provider_URL'] = download_location

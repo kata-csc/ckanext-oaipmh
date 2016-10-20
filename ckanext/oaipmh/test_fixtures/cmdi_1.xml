@@ -42,12 +42,12 @@
                             </identificationInfo>
                             <distributionInfo>
                                 <availability>underNegotiation</availability>
-                                <licenseInfo>
+                                <licenceInfo>
                                     <distributionAccessMedium>accessibleThroughInterface</distributionAccessMedium>
                                     <distributionAccessMedium>downloadable</distributionAccessMedium>
                                     <downloadLocation>https://example.com/download_location</downloadLocation>
                                     <executionLocation>https://example.com/execution_location</executionLocation>
-                                    <license>underNegotiation</license>
+                                    <licence>underNegotiation</licence>
                                     <licensorPerson>
                                         <role>licensor</role>
                                         <personInfo>
@@ -100,7 +100,7 @@
                                             </affiliation>
                                         </personInfo>
                                     </distributionRightsHolderPerson>
-                                </licenseInfo>
+                                </licenceInfo>
                                 <iprHolderPerson>
                                     <role>iprHolder</role>
                                     <personInfo>
