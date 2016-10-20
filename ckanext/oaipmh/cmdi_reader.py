@@ -19,10 +19,6 @@ class CmdiReader(object):
     """ Reader for CMDI XML data """
 
     namespaces = {'oai': "http://www.openarchives.org/OAI/2.0/", 'cmd': "http://www.clarin.eu/cmd/"}
-    LICENSE_CLARIN_PUB = "CLARIN_PUB"
-    LICENSE_CLARIN_ACA = "CLARIN_ACA"
-    LICENSE_CLARIN_RES = "CLARIN_RES"
-    LICENSE_CC_BY = "CC-BY"
 
     def __init__(self, provider=None):
         """ Generate new reader instance.
@@ -57,14 +53,6 @@ class CmdiReader(object):
             identifier = parsed.path.strip('/')
         return identifier
 
-    @classmethod
-    def _to_name(cls, identifier):
-        """ Convert identifier to CKAN package name.
-
-        :param identifier: identifier string
-        :return: CKAN package name
-        """
-        return pid_to_name(cls._to_identifier(identifier))
 
     @staticmethod
     def _strip_first(elements):
@@ -154,48 +142,6 @@ class CmdiReader(object):
                  'role': agent_role}
                 for person in persons]
 
-
-    @classmethod
-
-    def _language_bank_license_enhancement(cls, license):
-        """
-        Enhance language bank licenses due to lacking source data
-        so that Etsin understands them better.
-
-        :param license: License
-        :return:
-        """
-        output = license
-        if license.startswith(cls.LICENSE_CC_BY):
-            output = output + "-4.0"
-        return output
-
-    @classmethod
-    def _language_bank_availability_from_license(cls, license):
-      """
-      Get availability from license for datasets harvested
-      from language bank interface using the following rules:
-
-      CLARIN_ACA-NC -> downloadable after registration / identification
-      CLARIN_RES -> with data access application form
-      CLARIN_PUB -> directly downloadable
-      Otherwise -> only by contacting the distributor
-
-
-      :param license: string value for the license
-      :return: string value for availability
-      """
-
-      if license.startswith(cls.LICENSE_CLARIN_ACA):
-        return "access_request"
-      elif license == cls.LICENSE_CLARIN_RES:
-        return "access_application"
-      elif license == cls.LICENSE_CLARIN_PUB or license.startswith(cls.LICENSE_CC_BY):
-        return "direct_download"
-      else:
-        return "contact_owner"
-
-
     def read(self, xml):
         """ Extract package data from given XML.
         :param xml: xml element (lxml)
@@ -238,56 +184,28 @@ class CmdiReader(object):
             transl_json[lang] = title.text.strip()
 
         title = json.dumps(transl_json)
-        provider = self.provider
+
         version = first(self._text_xpath(resource_info, "//cmd:metadataInfo/cmd:metadataLastDateUpdated/text()")) or ""
         coverage = first(self._text_xpath(resource_info, "//cmd:corpusInfo/cmd:corpusMediaType/cmd:corpusTextInfo/cmd:timeCoverageInfo/cmd:timeCoverage/text()")) or ""
+        license_identifier = first(self._text_xpath(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:licence/text()")) or 'notspecified'
 
         pids = []
-        direct_download_URL = ''
-        access_request_URL = ''
-        access_application_URL = ''
         pid_url = None
         external_id = None
+        provider = self.provider
 
-        # OLD CODE
-        # for pid in [dict(id=pid, provider=provider, type='metadata') for pid in metadata_identifiers]:
-        #     if 'urn' in pid.get('id', ""):
-        #         pids.append(dict(id=pid['id'], provider=provider, type='metadata', primary=True))
-        #         if not pid_url:
-        #             pid_url = pid.get('id', "")
-        #     else:
-        #         pids.append(pid)
-        # pids += [dict(id=pid, provider=provider, type='data', primary=data_identifiers.index(pid) == 0) for pid in data_identifiers]
-
-        # NEW CODE PROPOSITION
         for pid in metadata_identifiers:
-            if 'urn' in pid:
+            if 'urn' in pid and not pid_url:
                 pids.append(dict(id=pid, provider=provider, type='primary'))
-                if not pid_url:
-                    pid_url = pid
+                pid_url = pid
             else:
-                pids.append(dict(id=pid, provider=provider, type='relation'))
+                pids.append(dict(id=pid, provider=provider, type='relation', relation='generalRelation'))
 
         for pid in data_identifiers:
-            if data_identifiers.index(pid) == 0:
+            if data_identifiers.index(pid) == 0:# and availability == '' | When 1145-Finclarin-availability-based-on-license branch code is merged here, external_id needs to be set when reetta is used for access application
                 external_id = pid
             else:
-                pids.append(dict(id=pid, provider=provider, type='relation'))
-
-        # PROPOSITION ENDS
-
-        license_identifier = CmdiReader._language_bank_license_enhancement(first(self._text_xpath(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:licence/text()")) or 'notspecified')
-        availability = CmdiReader._language_bank_availability_from_license(license_identifier)
-
-        if license_identifier.lower().strip() != 'undernegotiation':
-            if availability == 'direct_download':
-                direct_download_URL = pid_url
-            if availability == 'access_request':
-                access_request_URL = pid_url
-            if availability == 'access_application':
-                sliced_pid = pid_url.rsplit('/', 1)
-                if len(sliced_pid) >= 2:
-                    access_application_URL = 'https://lbr.csc.fi/web/guest/catalogue?domain=LBR&target=basket&resource=' + sliced_pid[1]
+                pids.append(dict(id=pid, provider=provider, type='relation', relation='generalRelation'))
 
         temporal_coverage_begin = ""
         temporal_coverage_end = ""
@@ -330,10 +248,7 @@ class CmdiReader(object):
                   'type': 'dataset',
                   'contact': contacts,
                   'agent': agents,
-                  'availability': availability,
-                  'direct_download_URL': direct_download_URL,
-                  'access_request_URL': access_request_URL,
-                  'access_application_URL': access_application_URL,
+                  'availability': 'contact_owner',
                   'temporal_coverage_begin': temporal_coverage_begin,
                   'temporal_coverage_end': temporal_coverage_end,
                   'license_id': license_identifier,

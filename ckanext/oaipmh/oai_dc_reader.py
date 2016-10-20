@@ -120,7 +120,7 @@ class DcMetadataReader():
 
         title = json.dumps(transl_json)
 
-        def _get_primary_data_pid(data_pids):
+        def _get_primary_pid(data_pids):
             for dpid in data_pids:
                 if dpid.startswith('urn:nbn:fi:csc-ida'):
                     data_pids.remove(dpid)
@@ -184,11 +184,11 @@ class DcMetadataReader():
             # Todo! Using only the first entry, for now
             # owner=first([a.get('resource') for a in dc('rightsHolder', recursive=False)]) or '',
 
-            pids=[dict(id=pid, provider=_get_provider(self.bs), type='data', primary='true')
-                  for pid in _get_primary_data_pid(data_pids)] +
-                 [dict(id=pid, provider=_get_provider(self.bs), type='data') for pid in data_pids] +
-                 [dict(id=pid, provider=_get_provider(self.bs), type='version') for pid in self._get_version_pids()] +
-                 [dict(id=pid, provider=_get_provider(self.bs), type='metadata') for pid in _get_metadata_pid(self.dc)],
+            pids=[dict(id=pid, provider=_get_provider(self.bs), type='primary')
+                  for pid in _get_primary_pid(data_pids)] +
+                 [dict(id=pid, provider=_get_provider(self.bs), type='relation', relation='generalRelation') for pid in data_pids] +
+                 [dict(id=pid, provider=_get_provider(self.bs), type='relation', relation='generalRelation') for pid in self._get_version_pids()] +
+                 [dict(id=pid, provider=_get_provider(self.bs), type='relation', relation='generalRelation') for pid in _get_metadata_pid(self.dc)],
 
             agent=[dict(role='author', name=orgauth.get('value', ''), id='', organisation=orgauth.get('org', ''), URL='', fundingid='') for orgauth in _get_org_auth(self.dc)] +
                   [dict(role='contributor', name=contributor.get('value', ''), id='', organisation=contributor.get('org', ''), URL='', fundingid='') for contributor in _get_contributor(self.dc)] +
@@ -365,7 +365,7 @@ def _get_download(tag_tree, avaa=True):
                 yield tag_tree.hasFormat.File.get('about')
             ida_id = tag_tree.identifier
             if ida_id.string and ida_id.string.startswith('urn:nbn:fi:csc-ida'):
-                yield 'http://avaa.tdata.fi/openida/dl.jsp?pid=' + ida_id.string
+                yield 'https://avaa.tdata.fi/openida/dl.jsp?pid=' + ida_id.string
         except Exception:
             pass
 
