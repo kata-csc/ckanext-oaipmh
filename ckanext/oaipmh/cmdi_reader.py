@@ -19,10 +19,10 @@ class CmdiReader(object):
     """ Reader for CMDI XML data """
 
     namespaces = {'oai': "http://www.openarchives.org/OAI/2.0/", 'cmd': "http://www.clarin.eu/cmd/"}
-    LICENCE_CLARIN_PUB = "CLARIN_PUB"
-    LICENCE_CLARIN_ACA = "CLARIN_ACA"
-    LICENCE_CLARIN_RES = "CLARIN_RES"
-    LICENCE_CC_BY = "CC-BY"
+    LICENSE_CLARIN_PUB = "CLARIN_PUB"
+    LICENSE_CLARIN_ACA = "CLARIN_ACA"
+    LICENSE_CLARIN_RES = "CLARIN_RES"
+    LICENSE_CC_BY = "CC-BY"
 
     def __init__(self, provider=None):
         """ Generate new reader instance.
@@ -162,18 +162,18 @@ class CmdiReader(object):
         Enhance language bank licenses due to lacking source data
         so that Etsin understands them better.
 
-        :param licence: License
+        :param license: License
         :return:
         """
         output = license
-        if license.startswith(cls.LICENCE_CC_BY):
+        if license.startswith(cls.LICENSE_CC_BY):
             output = output + "-4.0"
         return output
 
     @classmethod
-    def _language_bank_availability_from_licence(cls, license):
+    def _language_bank_availability_from_license(cls, license):
       """
-      Get availability from licence for datasets harvested
+      Get availability from license for datasets harvested
       from language bank interface using the following rules:
 
       CLARIN_ACA-NC -> downloadable after registration / identification
@@ -182,15 +182,15 @@ class CmdiReader(object):
       Otherwise -> only by contacting the distributor
 
 
-      :param licence: string value for the licence
+      :param license: string value for the license
       :return: string value for availability
       """
 
-      if license.startswith(cls.LICENCE_CLARIN_ACA):
+      if license.startswith(cls.LICENSE_CLARIN_ACA):
         return "access_request"
-      elif license == cls.LICENCE_CLARIN_RES:
+      elif license == cls.LICENSE_CLARIN_RES:
         return "access_application"
-      elif license == cls.LICENCE_CLARIN_PUB or license.startswith(cls.LICENCE_CC_BY):
+      elif license == cls.LICENSE_CLARIN_PUB or license.startswith(cls.LICENSE_CC_BY):
         return "direct_download"
       else:
         return "contact_owner"
@@ -277,7 +277,7 @@ class CmdiReader(object):
         # PROPOSITION ENDS
 
         license_identifier = CmdiReader._language_bank_license_enhancement(first(self._text_xpath(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:licence/text()")) or 'notspecified')
-        availability = CmdiReader._language_bank_availability_from_licence(license_identifier)
+        availability = CmdiReader._language_bank_availability_from_license(license_identifier)
 
         if license_identifier.lower().strip() != 'undernegotiation':
             if availability == 'direct_download':
