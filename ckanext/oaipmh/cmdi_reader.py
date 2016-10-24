@@ -278,24 +278,24 @@ class CmdiReader(object):
                 temporal_coverage_end = split[1]
 
         # TODO: Check agent mapping.
-        #print "###", _get_persons(resource_info, "//cmd:distributionInfo/cmd:licenseInfo/cmd:licensorPerson")
-        #print "###", _get_persons(resource_info, "//cmd:distributionInfo/cmd:licenseInfo/cmd:distributionRightsHolderPerson")
+        #print "###", _get_persons(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:licensorPerson")
+        #print "###", _get_persons(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:distributionRightsHolderPerson")
         #print "###", _get_persons(resource_info, "//cmd:distributionInfo/cmd:iprHolderPerson")
         #print "###", _get_persons(resource_info, "//cmd:contactPerson")
         #print "###", _get_persons(resource_info, "//cmd:metadataInfo/cmd:metadataCreator")
 
-        #print "###", _get_organizations(resource_info, "//cmd:distributionInfo/cmd:licenseInfo/cmd:licensorOrganization")
-        #print "###", _get_organizations(resource_info, "//cmd:distributionInfo/cmd:licenseInfo/cmd:distributionRightsHolderOrganization")
+        #print "###", _get_organizations(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:licensorOrganization")
+        #print "###", _get_organizations(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:distributionRightsHolderOrganization")
         #print "###", _get_organizations(resource_info, "//cmd:distributionInfo/cmd:iprHolderOrganization")
 
         contacts = self._persons_as_contact(self._get_persons(resource_info, "//cmd:contactPerson"))
 
         agents = []
         agents.extend(self._persons_as_agent(self._get_persons(resource_info, "//cmd:distributionInfo/cmd:iprHolderPerson"), 'author'))
-        agents.extend(self._persons_as_agent(self._get_persons(resource_info, "//cmd:distributionInfo/cmd:licenseInfo/cmd:distributionRightsHolderPerson"), 'owner'))
+        agents.extend(self._persons_as_agent(self._get_persons(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:distributionRightsHolderPerson"), 'owner'))
 
         agents.extend(self._organization_as_agent(self._get_organizations(resource_info, "//cmd:distributionInfo/cmd:iprHolderOrganization"), 'author'))
-        agents.extend(self._organization_as_agent(self._get_organizations(resource_info, "//cmd:distributionInfo/cmd:licenseInfo/cmd:distributionRightsHolderOrganization"), 'owner'))
+        agents.extend(self._organization_as_agent(self._get_organizations(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:distributionRightsHolderOrganization"), 'owner'))
 
         result = {'name': self._to_name(primary_pid or first(metadata_identifiers)),
                   'language': ",".join(languages),
