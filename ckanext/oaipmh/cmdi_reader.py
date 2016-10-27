@@ -21,6 +21,7 @@ class CmdiReader(object):
     LICENSE_CLARIN_ACA = "CLARIN_ACA"
     LICENSE_CLARIN_RES = "CLARIN_RES"
     LICENSE_CC_BY = "CC-BY"
+    PID_PREFIX_URN = "urn.fi"
 
     def __init__(self, provider=None):
         """ Generate new reader instance.
@@ -154,7 +155,6 @@ class CmdiReader(object):
 
 
     @classmethod
-
     def _language_bank_license_enhancement(cls, license):
         """
         Enhance language bank licenses due to lacking source data
@@ -192,6 +192,13 @@ class CmdiReader(object):
         return "direct_download"
       else:
         return "contact_owner"
+
+    @classmethod
+    def _language_bank_urn_pid_enhancement(cls, pid):
+        output = pid
+        if pid.startswith(cls.PID_PREFIX_URN):
+            output = 'http://' + pid
+        return output
 
 
     def read(self, xml):
@@ -246,14 +253,14 @@ class CmdiReader(object):
         access_request_URL = ''
         access_application_URL = ''
 
-        for pid in [dict(id=pid, provider=provider, type='metadata') for pid in metadata_identifiers]:
+        for pid in [dict(id=CmdiReader._language_bank_urn_pid_enhancement(pid), provider=provider, type='metadata') for pid in metadata_identifiers]:
             if 'urn' in pid.get('id', ""):
                 if not primary_pid:
-                    primary_pid = pid['id']
+                    primary_pid = CmdiReader._language_bank_urn_pid_enhancement(pid['id'])
             else:
                 pids.append(pid)
 
-        pids += [dict(id=pid, provider=provider, type='data', primary=data_identifiers.index(pid) == 0) for pid in data_identifiers]
+        pids += [dict(id=CmdiReader._language_bank_urn_pid_enhancement(pid), provider=provider, type='data', primary=data_identifiers.index(pid) == 0) for pid in data_identifiers]
 
         license_identifier = CmdiReader._language_bank_license_enhancement(first(self._text_xpath(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:licence/text()")) or 'notspecified')
         availability = CmdiReader._language_bank_availability_from_license(license_identifier)
