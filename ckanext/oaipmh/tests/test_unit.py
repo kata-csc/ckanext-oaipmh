@@ -296,7 +296,7 @@ class TestCMDIHarvester(TestCase):
         content= metadata.getMap()
         package = content['unified']
         self.assertEquals(package.get('name', None), utils.pid_to_name(package.get('id', None)))
-        self.assertEquals(utils.get_primary_pid('metadata', package), u'http://urn.fi/urn:nbn:fi:lb-20140730180')
+        self.assertEquals(utils.get_primary_pid(package), u'http://urn.fi/urn:nbn:fi:lb-20140730180')
         self.assertEquals(package.get('notes', None), '{"eng": "Test description"}')
         self.assertEquals(package.get('version', None), '2012-09-07')
         self.assertEquals(package.get('title', []), '{"eng": "Longi Corpus"}')
@@ -473,14 +473,14 @@ class TestOAIDCReaderHelda(TestCase):
                            'license_URL': u'Copyright 2005 American Institute of Physics. This article may be downloaded for personal use only. Any other use requires prior permission of the author and the American Institute of Physics.',
                            'license_id': 'notspecified',
                            'mimetype': '',
-                           'name': 'http---link-aip-org-link--jcp-123-064507',
                            'notes': '{"und": ""}',
-                           'pids': [{'type': 'data',
+                           'pids': [{'type': 'primary',
                                      'id': u'http://link.aip.org/link/?jcp/123/064507',
                                      'provider': u'http://helda.helsinki.fi/oai/request'},
                                     {'id': u'http://hdl.handle.net/10138/1074',
                                      'provider': u'http://helda.helsinki.fi/oai/request',
-                                     'type': 'data'},
+                                     'type': 'relation',
+                                     'relation': 'hasPart'},
                                     ],
                            'tag_string': '',
                            'temporal_coverage_begin': '',

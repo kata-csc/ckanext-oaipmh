@@ -33,7 +33,7 @@ class CMDIHarvester(OAIPMHHarvester):
         """ See :meth:`OAIPMHHarvester.on_deleted`
             Mark package for deletion.
         """
-        package_id = get_package_id_by_pid(header.identifier(), 'metadata')
+        package_id = get_package_id_by_pid(header.identifier(), 'primary')
         if package_id:
             harvest_object.package_id = package_id
         harvest_object.content = None

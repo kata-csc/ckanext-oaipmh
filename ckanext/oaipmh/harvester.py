@@ -399,7 +399,7 @@ class OAIPMHHarvester(HarvesterBase):
 
         # If package exists use old PID, otherwise create new
 
-        pkg_id = ckanext.kata.utils.get_package_id_by_access_or_primary_pid(package_dict)
+        pkg_id = ckanext.kata.utils.get_package_id_by_primary_pid(package_dict)
 
         pkg = Session.query(Package).filter(Package.id == pkg_id).first() if pkg_id else None
         log.debug('Package: "{pkg}"'.format(pkg=pkg))
