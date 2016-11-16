@@ -241,15 +241,16 @@ class CmdiReader(object):
         coverage = first(self._text_xpath(resource_info, "//cmd:corpusInfo/cmd:corpusMediaType/cmd:corpusTextInfo/cmd:timeCoverageInfo/cmd:timeCoverage/text()")) or ""
 
         pids = []
-        primary_pid_found = False
+        primary_pid = ''
         direct_download_URL = ''
         access_request_URL = ''
+        access_application = ''
         access_application_URL = ''
 
         for pid in [CmdiReader._language_bank_urn_pid_enhancement(metadata_pid) for metadata_pid in metadata_identifiers]:
-            if 'urn' in pid and not primary_pid_found:
+            if 'urn' in pid and not primary_pid:
                 pids.append(dict(id=pid, provider=provider, type='primary'))
-                primary_pid_found = True
+                primary_pid=pid
             else:
                 pids.append(dict(id=pid, provider=provider, type='relation', relation='generalRelation'))
 
@@ -266,6 +267,7 @@ class CmdiReader(object):
                 access_request_URL = primary_pid
             if availability == 'access_application':
                 sliced_pid = primary_pid.rsplit('/', 1)
+                access_application = 'access_application_other'
                 if len(sliced_pid) >= 2:
                     access_application_URL = 'https://lbr.csc.fi/web/guest/catalogue?domain=LBR&target=basket&resource=' + sliced_pid[1]
 
@@ -298,9 +300,9 @@ class CmdiReader(object):
         agents.extend(self._organization_as_agent(self._get_organizations(resource_info, "//cmd:distributionInfo/cmd:iprHolderOrganization"), 'author'))
         agents.extend(self._organization_as_agent(self._get_organizations(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:distributionRightsHolderOrganization"), 'owner'))
 
-        package_id = generate_pid()
+       # package_id = generate_pid()
 
-        result = {'name': pid_to_name(package_id),
+        result = {#'name': pid_to_name(package_id),
                   'language': ",".join(languages),
                   'pids': pids,
                   'version': version,
@@ -314,17 +316,17 @@ class CmdiReader(object):
                   'direct_download_URL': direct_download_URL,
                   'access_request_URL': access_request_URL,
                   'access_application_URL': access_application_URL,
+                  'access_application': access_application,
                   'temporal_coverage_begin': temporal_coverage_begin,
                   'temporal_coverage_end': temporal_coverage_end,
                   'license_id': license_identifier,
-                  'license_URL': '',
-                  'external_id': external_id}
+                  'license_URL': ''}
 
         if not languages:
             result['langdis'] = u'True'
 
-        if package_id:
-            result['id'] = package_id
+   #     if package_id:
+   #         result['id'] = package_id
 
         # TODO: Ask about distributionAccessMedium
         # _strip_first(_text_xpath(resource_info, "//cmd:distributionInfo/availability/text()"))
