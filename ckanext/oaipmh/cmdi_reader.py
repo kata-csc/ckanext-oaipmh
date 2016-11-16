@@ -1,4 +1,3 @@
-from lxml import etree
 from urlparse import urlparse
 from ckanext.kata.utils import pid_to_name
 from ckanext.kata.utils import generate_pid
@@ -19,6 +18,11 @@ class CmdiReader(object):
     """ Reader for CMDI XML data """
 
     namespaces = {'oai': "http://www.openarchives.org/OAI/2.0/", 'cmd': "http://www.clarin.eu/cmd/"}
+    LICENSE_CLARIN_PUB = "CLARIN_PUB"
+    LICENSE_CLARIN_ACA = "CLARIN_ACA"
+    LICENSE_CLARIN_RES = "CLARIN_RES"
+    LICENSE_CC_BY = "CC-BY"
+    PID_PREFIX_URN = "urn.fi"
 
     def __init__(self, provider=None):
         """ Generate new reader instance.
@@ -142,6 +146,54 @@ class CmdiReader(object):
                  'role': agent_role}
                 for person in persons]
 
+
+    @classmethod
+    def _language_bank_license_enhancement(cls, license):
+        """
+        Enhance language bank licenses due to lacking source data
+        so that Etsin understands them better.
+
+        :param license: License
+        :return:
+        """
+        output = license
+        if license.startswith(cls.LICENSE_CC_BY):
+            output = output + "-4.0"
+        return output
+
+    @classmethod
+    def _language_bank_availability_from_license(cls, license):
+      """
+      Get availability from license for datasets harvested
+      from language bank interface using the following rules:
+
+      CLARIN_ACA-NC -> downloadable after registration / identification
+      CLARIN_RES -> with data access application form
+      CLARIN_PUB -> directly downloadable
+      Otherwise -> only by contacting the distributor
+
+
+      :param license: string value for the license
+      :return: string value for availability
+      """
+
+      if license.startswith(cls.LICENSE_CLARIN_ACA):
+        return "access_request"
+      elif license == cls.LICENSE_CLARIN_RES:
+        return "access_application"
+      elif license == cls.LICENSE_CLARIN_PUB or license.startswith(cls.LICENSE_CC_BY):
+        return "direct_download"
+      else:
+        return "contact_owner"
+
+    @classmethod
+    def _language_bank_urn_pid_enhancement(cls, pid):
+        output = pid
+        if pid.startswith(cls.PID_PREFIX_URN):
+            output = 'http://' + pid
+        return output
+
+
     def read(self, xml):
         """ Extract package data from given XML.
         :param xml: xml element (lxml)
@@ -184,28 +236,38 @@ class CmdiReader(object):
             transl_json[lang] = title.text.strip()
 
         title = json.dumps(transl_json)
-
+        provider = self.provider
         version = first(self._text_xpath(resource_info, "//cmd:metadataInfo/cmd:metadataLastDateUpdated/text()")) or ""
         coverage = first(self._text_xpath(resource_info, "//cmd:corpusInfo/cmd:corpusMediaType/cmd:corpusTextInfo/cmd:timeCoverageInfo/cmd:timeCoverage/text()")) or ""
-        license_identifier = first(self._text_xpath(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:licence/text()")) or 'notspecified'
 
         pids = []
-        pid_url = None
-        external_id = None
-        provider = self.provider
+        primary_pid_found = False
+        direct_download_URL = ''
+        access_request_URL = ''
+        access_application_URL = ''
 
-        for pid in metadata_identifiers:
-            if 'urn' in pid and not pid_url:
+        for pid in [CmdiReader._language_bank_urn_pid_enhancement(metadata_pid) for metadata_pid in metadata_identifiers]:
+            if 'urn' in pid and not primary_pid_found:
                 pids.append(dict(id=pid, provider=provider, type='primary'))
-                pid_url = pid
+                primary_pid_found = True
             else:
                 pids.append(dict(id=pid, provider=provider, type='relation', relation='generalRelation'))
 
-        for pid in data_identifiers:
-            if data_identifiers.index(pid) == 0:# and availability == '' | When 1145-Finclarin-availability-based-on-license branch code is merged here, external_id needs to be set when reetta is used for access application
-                external_id = pid
-            else:
-                pids.append(dict(id=pid, provider=provider, type='relation', relation='generalRelation'))
+        pids += [dict(id=CmdiReader._language_bank_urn_pid_enhancement(pid), provider=provider, type='relation',
+                      relation='generalRelation') for pid in data_identifiers]
+
+        license_identifier = CmdiReader._language_bank_license_enhancement(first(self._text_xpath(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:licence/text()")) or 'notspecified')
+        availability = CmdiReader._language_bank_availability_from_license(license_identifier)
+
+        if license_identifier.lower().strip() != 'undernegotiation':
+            if availability == 'direct_download':
+                direct_download_URL = primary_pid
+            if availability == 'access_request':
+                access_request_URL = primary_pid
+            if availability == 'access_application':
+                sliced_pid = primary_pid.rsplit('/', 1)
+                if len(sliced_pid) >= 2:
+                    access_application_URL = 'https://lbr.csc.fi/web/guest/catalogue?domain=LBR&target=basket&resource=' + sliced_pid[1]
 
         temporal_coverage_begin = ""
         temporal_coverage_end = ""
@@ -248,10 +310,14 @@ class CmdiReader(object):
                   'type': 'dataset',
                   'contact': contacts,
                   'agent': agents,
-                  'availability': 'contact_owner',
+                  'availability': availability,
+                  'direct_download_URL': direct_download_URL,
+                  'access_request_URL': access_request_URL,
+                  'access_application_URL': access_application_URL,
                   'temporal_coverage_begin': temporal_coverage_begin,
                   'temporal_coverage_end': temporal_coverage_end,
                   'license_id': license_identifier,
+                  'license_URL': '',
                   'external_id': external_id}
 
         if not languages:
