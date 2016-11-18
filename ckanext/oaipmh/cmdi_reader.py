@@ -1,12 +1,13 @@
 from urlparse import urlparse
 from ckanext.kata.utils import pid_to_name
 from ckanext.kata.utils import generate_pid
+from utils import convert_language
+from ckanext.kata.utils import get_package_id_by_pid
 from ckanext.oaipmh.importcore import generic_xml_metadata_reader
 import oaipmh.common
 from functionally import first
 from pylons import config
 import json
-import utils
 
 
 class CmdiReaderException(Exception):
@@ -224,7 +225,7 @@ class CmdiReader(object):
         # convert the descriptions to a JSON string of type {"fin":"kuvaus", "eng","desc"}
         desc_json = {}
         for desc in xml.xpath("//cmd:identificationInfo/cmd:description", namespaces=self.namespaces):
-            lang = utils.convert_language(desc.get('{http://www.w3.org/XML/1998/namespace}lang', 'undefined').strip())
+            lang = convert_language(desc.get('{http://www.w3.org/XML/1998/namespace}lang', 'undefined').strip())
             desc_json[lang] = unicode(desc.text).strip()
 
         description = json.dumps(desc_json)
@@ -232,7 +233,7 @@ class CmdiReader(object):
         # convert the titles to a JSON string of type {"fin":"otsikko", "eng","title"}
         transl_json = {}
         for title in xml.xpath('//cmd:identificationInfo/cmd:resourceName', namespaces=self.namespaces):
-            lang = utils.convert_language(title.get('{http://www.w3.org/XML/1998/namespace}lang', 'undefined').strip())
+            lang = convert_language(title.get('{http://www.w3.org/XML/1998/namespace}lang', 'undefined').strip())
             transl_json[lang] = title.text.strip()
 
         title = json.dumps(transl_json)
@@ -300,9 +301,10 @@ class CmdiReader(object):
         agents.extend(self._organization_as_agent(self._get_organizations(resource_info, "//cmd:distributionInfo/cmd:iprHolderOrganization"), 'author'))
         agents.extend(self._organization_as_agent(self._get_organizations(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:distributionRightsHolderOrganization"), 'owner'))
 
-       # package_id = generate_pid()
+        existing_package_id = get_package_id_by_pid(primary_pid, u'primary')
+        package_id = existing_package_id if existing_package_id else generate_pid()
 
-        result = {#'name': pid_to_name(package_id),
+        result = {'name': pid_to_name(package_id),
                   'language': ",".join(languages),
                   'pids': pids,
                   'version': version,
@@ -325,8 +327,8 @@ class CmdiReader(object):
         if not languages:
             result['langdis'] = u'True'
 
-   #     if package_id:
-   #         result['id'] = package_id
+        if package_id:
+            result['id'] = package_id
 
         # TODO: Ask about distributionAccessMedium
         # _strip_first(_text_xpath(resource_info, "//cmd:distributionInfo/availability/text()"))
