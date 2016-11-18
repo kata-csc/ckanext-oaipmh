@@ -398,9 +398,7 @@ class OAIPMHHarvester(HarvesterBase):
         package_dict['xpaths'] = content
 
         # If package exists use old PID, otherwise create new
-
         pkg_id = ckanext.kata.utils.get_package_id_by_primary_pid(package_dict)
-
         pkg = Session.query(Package).filter(Package.id == pkg_id).first() if pkg_id else None
         log.debug('Package: "{pkg}"'.format(pkg=pkg))
 
@@ -413,7 +411,6 @@ class OAIPMHHarvester(HarvesterBase):
         uploader = ''
 
         try:
-            #package_dict['title'] = ''
             package = model.Package.get(harvest_object.harvest_source_id)
             if package and package.owner_org:
                 package_dict['owner_org'] = package.owner_org
