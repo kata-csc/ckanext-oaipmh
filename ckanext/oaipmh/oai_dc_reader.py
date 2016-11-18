@@ -17,6 +17,10 @@ import utils
 from ckanext.kata.utils import label_list_yso
 from urlparse import urlparse
 
+from ckanext.kata.utils import generate_pid
+from ckanext.kata.utils import get_package_id_by_pid
+from ckanext.kata.utils import pid_to_name
+
 xml_reader = importcore.generic_xml_metadata_reader
 log = logging.getLogger(__name__)
 
@@ -127,6 +131,12 @@ class DcMetadataReader():
                     return [dpid]
             return []
 
+        primary_pid = _get_primary_pid(data_pids)
+        existing_package_id = get_package_id_by_pid(primary_pid[0], u'primary') if primary_pid else None
+        package_id = existing_package_id if existing_package_id else generate_pid()
+        package_name = pid_to_name(package_id)
+        primary_pid_array = [dict(id=primary_pid[0], provider=_get_provider(self.bs), type=u'primary')] if primary_pid else []
+
         # Create a unified internal harvester format dict
         unified = dict(
             # ?=dc('source', recursive=False),
@@ -159,6 +169,8 @@ class DcMetadataReader():
             # Todo! Implement
             geographic_coverage='',
 
+            id=package_id,
+
             #langtitle=[dict(lang=a.get('xml:lang', ''), value=a.string) for a in self.dc('title', recursive=False)],
 
             title=title,
@@ -176,7 +188,7 @@ class DcMetadataReader():
             # dc('hasFormat', recursive=False)
             mimetype=self._get_mime_type(),
 
-            name=ckanext.kata.utils.pid_to_name(first(data_pids) or ''),
+            name=package_name,
             # name=first(map(pf.partial(urllib.quote_plus, safe=':'), get_data_pids(dc))) or '',
 
             notes=self._read_notes(),
@@ -184,11 +196,10 @@ class DcMetadataReader():
             # Todo! Using only the first entry, for now
             # owner=first([a.get('resource') for a in dc('rightsHolder', recursive=False)]) or '',
 
-            pids=[dict(id=pid, provider=_get_provider(self.bs), type='primary')
-                  for pid in _get_primary_pid(data_pids)] +
-                 [dict(id=pid, provider=_get_provider(self.bs), type='relation', relation='generalRelation') for pid in data_pids] +
-                 [dict(id=pid, provider=_get_provider(self.bs), type='relation', relation='generalRelation') for pid in self._get_version_pids()] +
-                 [dict(id=pid, provider=_get_provider(self.bs), type='relation', relation='generalRelation') for pid in _get_metadata_pid(self.dc)],
+            pids=primary_pid_array +
+                 [dict(id=pid, provider=_get_provider(self.bs), type=u'relation', relation=u'generalRelation') for pid in data_pids] +
+                 [dict(id=pid, provider=_get_provider(self.bs), type=u'relation', relation=u'generalRelation') for pid in self._get_version_pids()] +
+                 [dict(id=pid, provider=_get_provider(self.bs), type=u'relation', relation=u'generalRelation') for pid in _get_metadata_pid(self.dc)],
 
             agent=[dict(role='author', name=orgauth.get('value', ''), id='', organisation=orgauth.get('org', ''), URL='', fundingid='') for orgauth in _get_org_auth(self.dc)] +
                   [dict(role='contributor', name=contributor.get('value', ''), id='', organisation=contributor.get('org', ''), URL='', fundingid='') for contributor in _get_contributor(self.dc)] +

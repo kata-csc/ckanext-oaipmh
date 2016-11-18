@@ -30,6 +30,7 @@ import fnmatch
 import re
 import ckanext.kata.kata_ldap as ld
 from ckanext.kata.utils import pid_to_name
+from ckanext.kata.utils import generate_pid
 
 log = logging.getLogger(__name__)
 
@@ -406,7 +407,7 @@ class OAIPMHHarvester(HarvesterBase):
             log.debug("Not re-creating package: %s", pkg_id)
             return True
         if not package_dict.get('id', None):
-            package_dict['id'] = pkg.id if pkg else ckanext.kata.utils.generate_pid()
+            package_dict['id'] = pkg.id if pkg else generate_pid()
 
         uploader = ''
 

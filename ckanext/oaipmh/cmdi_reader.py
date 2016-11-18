@@ -309,7 +309,6 @@ class CmdiReader(object):
                   'pids': pids,
                   'version': version,
                   'notes': description,
-                  #'langtitle': titles,
                   'title': title,
                   'type': 'dataset',
                   'contact': contacts,
