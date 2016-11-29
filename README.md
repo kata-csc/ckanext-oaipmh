@@ -1,6 +1,6 @@
 OAI-PMH harvester for CKAN. 
 This extends CKAN harvester to parse OAI-PMH metadata sources and import datasets. 
-Supported metadata schemas are oai_dc (Dublin Core), CMDI (Component MetaData Infrastructure).
+Supported metadata schemas are oai_dc (Dublin Core), CMDI (Component MetaData Infrastructure) and DataCite v.3.0.
 
 The list of supported verbs consists of:
 

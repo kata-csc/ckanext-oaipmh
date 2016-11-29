@@ -392,7 +392,7 @@ class OAIPMHHarvester(HarvesterBase):
             return False
 
         content = json.loads(harvest_object.content)
-        # import pprint; pprint.pprint(content)
+#        import pprint; pprint.pprint(content)  # debug
 
         package_dict = content.pop('unified')
         package_dict['xpaths'] = content
