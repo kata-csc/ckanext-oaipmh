@@ -17,7 +17,7 @@ class DataCiteHarvester(OAIPMHHarvester):
         return {
             'name': 'datacite',
             'title': 'OAI-PMH DataCite',
-            'description': 'Harvests DataCite v.3.0 datasets'
+            'description': 'Harvests DataCite v.3.1 datasets'
         }
 
 
