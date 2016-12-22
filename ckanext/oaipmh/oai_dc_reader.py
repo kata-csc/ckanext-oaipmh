@@ -104,7 +104,7 @@ class DcMetadataReader():
 
         # Todo! This needs to be improved to use also simple-dc
         # dc(filter_tag_name_namespace('publisher', ns['dc']), recursive=False)
-        availability, license_id, license_url, access_application_url = _get_rights(self.dc) or ('', '', '', '')
+        availability, access_application_type, license_id, license_url, access_application_url = _get_rights(self.dc) or ('', '', '', '')
         if not availability:
             availability = first(self._get_availability())
 
@@ -134,7 +134,6 @@ class DcMetadataReader():
         primary_pid = _get_primary_pid(data_pids)
         existing_package_id = get_package_id_by_pid(primary_pid[0], u'primary') if primary_pid else None
         package_id = existing_package_id if existing_package_id else generate_pid()
-        package_name = pid_to_name(package_id)
         primary_pid_array = [dict(id=primary_pid[0], provider=_get_provider(self.bs), type=u'primary')] if primary_pid else []
 
         # Create a unified internal harvester format dict
@@ -143,6 +142,7 @@ class DcMetadataReader():
             # ?=dc('relation', recursive=False),
             # ?=dc('type', recursive=False),
 
+            access_application=access_application_type or '',
             access_application_URL=access_application_url or '',
 
             # Todo! Implement
@@ -151,7 +151,7 @@ class DcMetadataReader():
             algorithm=first(_get_algorithm(self.dc)) or '',
 
             # TODO: Handle availabilities better
-            availability=availability or 'through_provider' if first(_get_download(self.dc)) else '',
+            availability=availability,
 
             checksum=_get_checksum(self.dc) or '',
 
@@ -188,9 +188,6 @@ class DcMetadataReader():
             # dc('hasFormat', recursive=False)
             mimetype=self._get_mime_type(),
 
-            name=package_name,
-            # name=first(map(pf.partial(urllib.quote_plus, safe=':'), get_data_pids(dc))) or '',
-
             notes=self._read_notes(),
 
             # Todo! Using only the first entry, for now
@@ -214,6 +211,8 @@ class DcMetadataReader():
 
             type='dataset',
             uploader=uploader,
+
+            smear_url=first(_get_download(self.dc, False)) or '',
 
             # Todo! This should be more exactly picked
             version=(self.dc.modified or self.dc.date).string if (self.dc.modified or self.dc.date) else '',
@@ -446,7 +445,7 @@ def _get_algorithm(tag_tree):
 
 def _get_rights(tag_tree):
     '''
-    Returns a quadruple of rights information (availability, license-id, license-url, access-application-url)
+    Returns a bunch of rights information (availability, access_application, license-id, license-url, access-application-url)
     '''
     def ida():
         '''
@@ -466,6 +465,7 @@ def _get_rights(tag_tree):
             elif cat == 'CONTRACTUAL':
                 avail = 'access_application'
                 lid = 'notspecified'
+                aapp = 'access_application_other'
                 aaurl = decl
             elif cat == 'PUBLIC DOMAIN':
                 avail = 'direct_download'
@@ -476,7 +476,7 @@ def _get_rights(tag_tree):
                 lurl = decl
             else:
                 return None
-            return avail, lid, lurl, aaurl
+            return avail, aapp, lid, lurl, aaurl
         except AttributeError as e:
             log.info('IDA rights not detected. Probably not harvesting IDA. {e}'.format(e=e))
 
