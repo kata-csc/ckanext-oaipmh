@@ -100,7 +100,7 @@ class DcMetadataReader():
 
         # Todo! This needs to be improved to use also simple-dc
         # dc(filter_tag_name_namespace('publisher', ns['dc']), recursive=False)
-        availability, access_application_type, license_id, license_url, access_application_url = _get_rights(self.dc) or ('', '', '', '', '')
+        availability, license_id, license_url, access_application_url = _get_rights(self.dc) or ('', '', '', '', '')
         if not availability:
             availability = first(self._get_availability())
 
@@ -133,7 +133,6 @@ class DcMetadataReader():
             # ?=dc('relation', recursive=False),
             # ?=dc('type', recursive=False),
 
-            access_application=access_application_type or '',
             access_application_URL=access_application_url or '',
 
             # Todo! Implement
@@ -436,7 +435,7 @@ def _get_algorithm(tag_tree):
 
 def _get_rights(tag_tree):
     '''
-    Returns a bunch of rights information (availability, access_application, license-id, license-url, access-application-url)
+    Returns a bunch of rights information (availability, license-id, license-url, access-application-url)
     '''
     def ida():
         '''
@@ -454,9 +453,8 @@ def _get_rights(tag_tree):
                 lid = 'notspecified'
                 lurl = decl
             elif cat == 'CONTRACTUAL':
-                avail = 'access_application'
+                avail = 'access_application_other'
                 lid = 'notspecified'
-                aapp = 'access_application_other'
                 aaurl = decl
             elif cat == 'PUBLIC DOMAIN':
                 avail = 'direct_download'
@@ -467,7 +465,7 @@ def _get_rights(tag_tree):
                 lurl = decl
             else:
                 return None
-            return avail, aapp, lid, lurl, aaurl
+            return avail, lid, lurl, aaurl
         except AttributeError as e:
             log.info('IDA rights not detected. Probably not harvesting IDA. {e}'.format(e=e))
 
