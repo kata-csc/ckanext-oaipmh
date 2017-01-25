@@ -100,7 +100,7 @@ class DcMetadataReader():
 
         # Todo! This needs to be improved to use also simple-dc
         # dc(filter_tag_name_namespace('publisher', ns['dc']), recursive=False)
-        availability, license_id, license_url, access_application_url = _get_rights(self.dc) or ('', '', '', '', '')
+        availability, license_id, license_url, access_application_url = _get_rights(self.dc) or ('', '', '', '')
         if not availability:
             availability = first(self._get_availability())
 
