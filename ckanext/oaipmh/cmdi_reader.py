@@ -181,7 +181,7 @@ class CmdiReader(object):
       if license.startswith(cls.LICENSE_CLARIN_ACA):
         return "access_request"
       elif license == cls.LICENSE_CLARIN_RES:
-        return "access_application"
+        return "access_application_other"
       elif license == cls.LICENSE_CLARIN_PUB or license.startswith(cls.LICENSE_CC_BY):
         return "direct_download"
       else:
@@ -245,7 +245,6 @@ class CmdiReader(object):
         primary_pid = ''
         direct_download_URL = ''
         access_request_URL = ''
-        access_application = ''
         access_application_URL = ''
 
         for pid in [CmdiReader._language_bank_urn_pid_enhancement(metadata_pid) for metadata_pid in metadata_identifiers]:
@@ -266,9 +265,8 @@ class CmdiReader(object):
                 direct_download_URL = primary_pid
             if availability == 'access_request':
                 access_request_URL = primary_pid
-            if availability == 'access_application':
+            if availability == 'access_application_other':
                 sliced_pid = primary_pid.rsplit('/', 1)
-                access_application = 'access_application_other'
                 if len(sliced_pid) >= 2:
                     access_application_URL = 'https://lbr.csc.fi/web/guest/catalogue?domain=LBR&target=basket&resource=' + sliced_pid[1]
 
@@ -317,7 +315,6 @@ class CmdiReader(object):
                   'direct_download_URL': direct_download_URL,
                   'access_request_URL': access_request_URL,
                   'access_application_URL': access_application_URL,
-                  'access_application': access_application,
                   'temporal_coverage_begin': temporal_coverage_begin,
                   'temporal_coverage_end': temporal_coverage_end,
                   'license_id': license_identifier,
