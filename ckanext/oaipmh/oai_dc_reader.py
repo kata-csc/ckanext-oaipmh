@@ -214,11 +214,15 @@ class DcMetadataReader():
         if not unified['language']:
             unified['langdis'] = 'True'
 
-        # Create name. Assuming Ida data always has primary id.
+        # Create name. If primary id is missing, create one of those, too.
         for pid in unified['pids']:
             if pid['type'] == u'primary':
                 unified['name'] = pid_to_name(pid['id'])
                 break
+        if not 'name' in unified:
+            primary_pid = generate_pid()
+            unified['pids'].append(dict(id=primary_pid, type=u'primary'))
+            unified['name'] = pid_to_name(primary_pid)
 
         # if not unified['project_name']:
         #    unified['projdis'] = 'True'
