@@ -14,7 +14,7 @@ from oaipmh import common as oc
 from ckanext.oaipmh import importcore
 import ckanext.kata.utils
 import utils
-from ckanext.kata.utils import label_list_yso
+from ckanext.kata.utils import label_list_yso, generate_pid, pid_to_name
 from urlparse import urlparse
 
 xml_reader = importcore.generic_xml_metadata_reader
@@ -213,6 +213,12 @@ class DcMetadataReader():
         )
         if not unified['language']:
             unified['langdis'] = 'True'
+
+        # Create name. Assuming Ida data always has primary id.
+        for pid in unified['pids']:
+            if pid['type'] == u'primary':
+                unified['name'] = pid_to_name(pid['id'])
+                break
 
         # if not unified['project_name']:
         #    unified['projdis'] = 'True'

@@ -251,14 +251,14 @@ class TestIdaHarvester(TestCase):
 
     def test_fetch_xml(self):
         package = self.harvester.fetch_xml("file://%s" % _get_fixture('ida.xml'), {})
-        assert package.get('name', None).startswith('urn-nbn-fi-csc-kata')
+        assert package.get('name', None).startswith('urn-nbn-fi-csc-ida')
         pid_ids = [pid.get('id') for pid in package.get('pids', [])]
         self.assertTrue(u'urn:nbn:fi:csc-ida2014010800372s' in pid_ids)
 
     def test_parse_xml(self):
         with open(_get_fixture('ida.xml'), 'r') as source:
             package = self.harvester.parse_xml(source.read(), {})
-            assert package.get('name', None).startswith('urn-nbn-fi-csc-kata')
+            assert package.get('name', None).startswith('urn-nbn-fi-csc-ida')
             pid_ids = [pid.get('id') for pid in package.get('pids', [])]
             self.assertTrue(u'urn:nbn:fi:csc-ida2014010800372s' in pid_ids)
 
