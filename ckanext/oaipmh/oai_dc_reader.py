@@ -72,8 +72,8 @@ class DcMetadataReader():
                 yield n, m, p, h
 
     def _get_availability(self):
-        """ Get fallback availability. By default does not return any data. """
-        return []
+        """ Get fallback availability. """
+        return ['contact_owner']
 
     def _get_uploader(self):
         return ''
@@ -214,15 +214,13 @@ class DcMetadataReader():
         if not unified['language']:
             unified['langdis'] = 'True'
 
-        # Create name. If primary id is missing, create one of those, too.
-        for pid in unified['pids']:
-            if pid['type'] == u'primary':
-                unified['name'] = pid_to_name(pid['id'])
-                break
-        if not 'name' in unified:
-            primary_pid = generate_pid()
-            unified['pids'].append(dict(id=primary_pid, type=u'primary'))
-            unified['name'] = pid_to_name(primary_pid)
+        # Create id and name
+        unified['id'] = generate_pid()
+        unified['name'] = pid_to_name(unified['id'])
+
+        # If primary pid is missing, set package id as primary pid
+        if not any(pid.get('type', None) == u'primary' for pid in unified['pids']):
+            unified['pids'].append(dict(id=unified['id'], type=u'primary', provider=None))
 
         # if not unified['project_name']:
         #    unified['projdis'] = 'True'
