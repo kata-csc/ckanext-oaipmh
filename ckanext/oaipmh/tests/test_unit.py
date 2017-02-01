@@ -331,7 +331,7 @@ class TestCMDIHarvester(TestCase):
         package = get_action('package_show')({'user': 'harvest'}, {'id': package_id})
 
         self.assertEquals(package.get('name', None), utils.pid_to_name(package.get('id', None)))
-        self.assertEquals(utils.get_primary_pid_from_package(package), u'http://urn.fi/urn:nbn:fi:lb-20140730180')
+        self.assertEquals(utils.get_primary_pid(package), u'http://urn.fi/urn:nbn:fi:lb-20140730180')
         self.assertEquals(package.get('notes', None), u'{"eng": "Test description"}')
         self.assertEquals(package.get('version', None), '2012-09-07')
         self.assertEquals(package.get('title', []), '{"eng": "Longi Corpus"}')
@@ -340,7 +340,8 @@ class TestCMDIHarvester(TestCase):
         provider = config['ckan.site_url']
         expected_pid = {u'id': u'http://islrn.org/resources/248-895-085-557-0',
                         u'provider': provider,
-                        u'type': u'metadata'}
+                        u'type': u'relation',
+                        u'relation': u'generalRelation'}
 
         self.assertTrue(expected_pid in package.get('pids'))
 
