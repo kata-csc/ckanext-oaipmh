@@ -181,34 +181,6 @@ class TestOAIPMHHarvester(TestCase):
         for key, value in expected:
             self.assertEquals(package.extras.get(key), value)
 
-    def test_import_stage_recreate(self):
-        """ Manual test for recreating harvested dataset multiple times """
-
-        for xml, recreate in ('ida.xml', False), ('ida2.xml', False), ('ida2.xml', True):
-            configuration = {'type': 'ida'}
-            if recreate:
-                configuration['recreate'] = True
-
-            self._run_import(xml, True, configuration)
-
-            package = _get_single_package()
-            if recreate:
-                self.assertEquals(package.extras.get('availability', None), 'MODIFIED')
-            else:
-                self.assertEquals(package.extras.get('availability', None), 'direct_download')
-
-        package.delete()
-        model.repo.commit()
-
-        for xml, expected, recreate in ('helda.xml', 'ORIGINAL', True), ('helda2.xml', 'MODIFIED', True), ('helda.xml', 'MODIFIED', False):
-            configuration = {'type': 'default'}
-            if not recreate:
-                configuration['recreate'] = False
-
-            self._run_import(xml, False, configuration)
-            package = _get_single_package()
-            self.assertEquals(package.extras.get('agent_1_name', None), expected)
-
     def test_validate_config_valid(self):
         config = '{"from": "2014-03-03", "limit": 5}'
 
