@@ -29,7 +29,8 @@ import ckanext.kata.plugin
 import fnmatch
 import re
 import ckanext.kata.kata_ldap as ld
-from ckanext.kata.utils import datapid_to_name
+from ckanext.kata.utils import pid_to_name
+from ckanext.kata.utils import generate_pid
 
 log = logging.getLogger(__name__)
 
@@ -268,9 +269,9 @@ class OAIPMHHarvester(HarvesterBase):
         if not self._recreate(harvest_job) and package_ids:
             converted_identifiers = {}
             for identifier in package_ids:
-                converted_identifiers[datapid_to_name(identifier)] = identifier
+                converted_identifiers[pid_to_name(identifier)] = identifier
                 if identifier.endswith(u'm'):
-                    converted_identifiers[datapid_to_name(u"%ss" % identifier[0:-1])] = identifier
+                    converted_identifiers[pid_to_name(u"%ss" % identifier[0:-1])] = identifier
 
             for package in model.Session.query(model.Package).filter(model.Package.name.in_(converted_identifiers.keys())).all():
                 converted_name = package.name
@@ -398,9 +399,7 @@ class OAIPMHHarvester(HarvesterBase):
         package_dict['xpaths'] = content
 
         # If package exists use old PID, otherwise create new
-
-        pkg_id = ckanext.kata.utils.get_package_id_by_data_pids(package_dict)
-
+        pkg_id = ckanext.kata.utils.get_package_id_by_primary_pid(package_dict)
         pkg = Session.query(Package).filter(Package.id == pkg_id).first() if pkg_id else None
         log.debug('Package: "{pkg}"'.format(pkg=pkg))
 
@@ -408,12 +407,11 @@ class OAIPMHHarvester(HarvesterBase):
             log.debug("Not re-creating package: %s", pkg_id)
             return True
         if not package_dict.get('id', None):
-            package_dict['id'] = pkg.id if pkg else ckanext.kata.utils.generate_pid()
+            package_dict['id'] = pkg.id if pkg else generate_pid()
 
         uploader = ''
 
         try:
-            #package_dict['title'] = ''
             package = model.Package.get(harvest_object.harvest_source_id)
             if package and package.owner_org:
                 package_dict['owner_org'] = package.owner_org

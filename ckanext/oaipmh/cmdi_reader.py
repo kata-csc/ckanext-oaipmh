@@ -1,11 +1,13 @@
 from urlparse import urlparse
-from ckanext.kata.utils import datapid_to_name
+from ckanext.kata.utils import pid_to_name
+from ckanext.kata.utils import get_unique_package_id
+from utils import convert_language
+from ckanext.kata.utils import get_package_id_by_pid
 from ckanext.oaipmh.importcore import generic_xml_metadata_reader
 import oaipmh.common
 from functionally import first
 from pylons import config
 import json
-import utils
 
 
 class CmdiReaderException(Exception):
@@ -56,14 +58,6 @@ class CmdiReader(object):
             identifier = parsed.path.strip('/')
         return identifier
 
-    @classmethod
-    def _to_name(cls, identifier):
-        """ Convert identifier to CKAN package name.
-
-        :param identifier: identifier string
-        :return: CKAN package name
-        """
-        return datapid_to_name(cls._to_identifier(identifier))
 
     @staticmethod
     def _strip_first(elements):
@@ -187,7 +181,7 @@ class CmdiReader(object):
       if license.startswith(cls.LICENSE_CLARIN_ACA):
         return "access_request"
       elif license == cls.LICENSE_CLARIN_RES:
-        return "access_application"
+        return "access_application_other"
       elif license == cls.LICENSE_CLARIN_PUB or license.startswith(cls.LICENSE_CC_BY):
         return "direct_download"
       else:
@@ -231,7 +225,7 @@ class CmdiReader(object):
         # convert the descriptions to a JSON string of type {"fin":"kuvaus", "eng","desc"}
         desc_json = {}
         for desc in xml.xpath("//cmd:identificationInfo/cmd:description", namespaces=self.namespaces):
-            lang = utils.convert_language(desc.get('{http://www.w3.org/XML/1998/namespace}lang', 'undefined').strip())
+            lang = convert_language(desc.get('{http://www.w3.org/XML/1998/namespace}lang', 'undefined').strip())
             desc_json[lang] = unicode(desc.text).strip()
 
         description = json.dumps(desc_json)
@@ -239,7 +233,7 @@ class CmdiReader(object):
         # convert the titles to a JSON string of type {"fin":"otsikko", "eng","title"}
         transl_json = {}
         for title in xml.xpath('//cmd:identificationInfo/cmd:resourceName', namespaces=self.namespaces):
-            lang = utils.convert_language(title.get('{http://www.w3.org/XML/1998/namespace}lang', 'undefined').strip())
+            lang = convert_language(title.get('{http://www.w3.org/XML/1998/namespace}lang', 'undefined').strip())
             transl_json[lang] = title.text.strip()
 
         title = json.dumps(transl_json)
@@ -247,20 +241,21 @@ class CmdiReader(object):
         version = first(self._text_xpath(resource_info, "//cmd:metadataInfo/cmd:metadataLastDateUpdated/text()")) or ""
         coverage = first(self._text_xpath(resource_info, "//cmd:corpusInfo/cmd:corpusMediaType/cmd:corpusTextInfo/cmd:timeCoverageInfo/cmd:timeCoverage/text()")) or ""
 
-        primary_pid = None
         pids = []
+        primary_pid = ''
         direct_download_URL = ''
         access_request_URL = ''
         access_application_URL = ''
 
-        for pid in [dict(id=CmdiReader._language_bank_urn_pid_enhancement(pid), provider=provider, type='metadata') for pid in metadata_identifiers]:
-            if 'urn' in pid.get('id', ""):
-                if not primary_pid:
-                    primary_pid = CmdiReader._language_bank_urn_pid_enhancement(pid['id'])
+        for pid in [CmdiReader._language_bank_urn_pid_enhancement(metadata_pid) for metadata_pid in metadata_identifiers]:
+            if 'urn' in pid and not primary_pid:
+                pids.append(dict(id=pid, provider=provider, type='primary'))
+                primary_pid=pid
             else:
-                pids.append(pid)
+                pids.append(dict(id=pid, provider=provider, type='relation', relation='generalRelation'))
 
-        pids += [dict(id=CmdiReader._language_bank_urn_pid_enhancement(pid), provider=provider, type='data', primary=data_identifiers.index(pid) == 0) for pid in data_identifiers]
+        pids += [dict(id=CmdiReader._language_bank_urn_pid_enhancement(pid), provider=provider, type='relation',
+                      relation='generalRelation') for pid in data_identifiers]
 
         license_identifier = CmdiReader._language_bank_license_enhancement(first(self._text_xpath(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:licence/text()")) or 'notspecified')
         availability = CmdiReader._language_bank_availability_from_license(license_identifier)
@@ -270,7 +265,7 @@ class CmdiReader(object):
                 direct_download_URL = primary_pid
             if availability == 'access_request':
                 access_request_URL = primary_pid
-            if availability == 'access_application':
+            if availability == 'access_application_other':
                 sliced_pid = primary_pid.rsplit('/', 1)
                 if len(sliced_pid) >= 2:
                     access_application_URL = 'https://lbr.csc.fi/web/guest/catalogue?domain=LBR&target=basket&resource=' + sliced_pid[1]
@@ -304,12 +299,14 @@ class CmdiReader(object):
         agents.extend(self._organization_as_agent(self._get_organizations(resource_info, "//cmd:distributionInfo/cmd:iprHolderOrganization"), 'author'))
         agents.extend(self._organization_as_agent(self._get_organizations(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:distributionRightsHolderOrganization"), 'owner'))
 
-        result = {'name': self._to_name(primary_pid or first(metadata_identifiers)),
+        existing_package_id = get_package_id_by_pid(primary_pid, u'primary')
+        package_id = existing_package_id if existing_package_id else get_unique_package_id()
+
+        result = {'name': pid_to_name(package_id),
                   'language': ",".join(languages),
                   'pids': pids,
                   'version': version,
                   'notes': description,
-                  #'langtitle': titles,
                   'title': title,
                   'type': 'dataset',
                   'contact': contacts,
@@ -326,8 +323,8 @@ class CmdiReader(object):
         if not languages:
             result['langdis'] = u'True'
 
-        if primary_pid:
-            result['id'] = primary_pid
+        if package_id:
+            result['id'] = package_id
 
         # TODO: Ask about distributionAccessMedium
         # _strip_first(_text_xpath(resource_info, "//cmd:distributionInfo/availability/text()"))

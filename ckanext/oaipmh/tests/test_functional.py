@@ -140,13 +140,13 @@ class TestOaipmhServer(WsgiAppCase, TestCase):
         package_1_data = deepcopy(TEST_DATADICT)
         package_1_data['owner_org'] = organization['name']
         package_1_data['private'] = False
-        package_1_data['name'] = 'test-package-coverage'
         for pid in package_1_data.get('pids', []):
             pid['id'] = utils.generate_pid()
 
-        get_action('package_create')({'user': 'test_coverage'}, package_1_data)
+        package = get_action('package_create')({'user': 'test_coverage'}, package_1_data)
+        package_name = package['name']
         url = url_for('/oai')
-        result = self.app.get(url, {'verb': 'GetRecord', 'identifier': 'test-package-coverage', 'metadataPrefix': 'oai_dc'})
+        result = self.app.get(url, {'verb': 'GetRecord', 'identifier': package_name, 'metadataPrefix': 'oai_dc'})
 
         root = lxml.etree.fromstring(result.body)
         expected = ['Keilaniemi (populated place)', 'Espoo (city)', '2003-07-10T06:36:27-12:00/2010-04-15T03:24:47+12:45']
@@ -167,9 +167,6 @@ class TestOaipmhServer(WsgiAppCase, TestCase):
         package_1_data['owner_org'] = organization['name']
         package_1_data['private'] = False
         package_2_data = deepcopy(package_1_data)
-
-        package_1_data['name'] = 'test-package1'
-        package_2_data['name'] = 'test-package2'
 
         for pid in package_1_data.get('pids', []):
             pid['id'] = utils.generate_pid()

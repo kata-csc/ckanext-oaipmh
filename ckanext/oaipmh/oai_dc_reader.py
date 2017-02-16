@@ -14,7 +14,7 @@ from oaipmh import common as oc
 from ckanext.oaipmh import importcore
 import ckanext.kata.utils
 import utils
-from ckanext.kata.utils import label_list_yso
+from ckanext.kata.utils import label_list_yso, generate_pid, pid_to_name
 from urlparse import urlparse
 
 xml_reader = importcore.generic_xml_metadata_reader
@@ -72,8 +72,8 @@ class DcMetadataReader():
                 yield n, m, p, h
 
     def _get_availability(self):
-        """ Get fallback availability. By default does not return any data. """
-        return []
+        """ Get fallback availability. """
+        return ['contact_owner']
 
     def _get_uploader(self):
         return ''
@@ -120,7 +120,7 @@ class DcMetadataReader():
 
         title = json.dumps(transl_json)
 
-        def _get_primary_data_pid(data_pids):
+        def _get_primary_pid(data_pids):
             for dpid in data_pids:
                 if dpid.startswith('urn:nbn:fi:csc-ida'):
                     data_pids.remove(dpid)
@@ -141,7 +141,7 @@ class DcMetadataReader():
             algorithm=first(_get_algorithm(self.dc)) or '',
 
             # TODO: Handle availabilities better
-            availability=availability or 'through_provider' if first(_get_download(self.dc)) else '',
+            availability=availability,
 
             checksum=_get_checksum(self.dc) or '',
 
@@ -176,19 +176,15 @@ class DcMetadataReader():
             # dc('hasFormat', recursive=False)
             mimetype=self._get_mime_type(),
 
-            name=ckanext.kata.utils.datapid_to_name(first(data_pids) or ''),
-            # name=first(map(pf.partial(urllib.quote_plus, safe=':'), get_data_pids(dc))) or '',
-
             notes=self._read_notes(),
 
             # Todo! Using only the first entry, for now
             # owner=first([a.get('resource') for a in dc('rightsHolder', recursive=False)]) or '',
 
-            pids=[dict(id=pid, provider=_get_provider(self.bs), type='data', primary='true')
-                  for pid in _get_primary_data_pid(data_pids)] +
-                 [dict(id=pid, provider=_get_provider(self.bs), type='data') for pid in data_pids] +
-                 [dict(id=pid, provider=_get_provider(self.bs), type='version') for pid in self._get_version_pids()] +
-                 [dict(id=pid, provider=_get_provider(self.bs), type='metadata') for pid in _get_metadata_pid(self.dc)],
+            pids=[dict(id=pid, provider=_get_provider(self.bs), type=u'primary') for pid in _get_primary_pid(data_pids)] +
+                 [dict(id=pid, provider=_get_provider(self.bs), type=u'relation', relation=u'generalRelation') for pid in data_pids] +
+                 [dict(id=pid, provider=_get_provider(self.bs), type=u'relation', relation=u'generalRelation') for pid in self._get_version_pids()] +
+                 [dict(id=pid, provider=_get_provider(self.bs), type=u'relation', relation=u'generalRelation') for pid in _get_metadata_pid(self.dc)],
 
             agent=[dict(role='author', name=orgauth.get('value', ''), id='', organisation=orgauth.get('org', ''), URL='', fundingid='') for orgauth in _get_org_auth(self.dc)] +
                   [dict(role='contributor', name=contributor.get('value', ''), id='', organisation=contributor.get('org', ''), URL='', fundingid='') for contributor in _get_contributor(self.dc)] +
@@ -201,10 +197,12 @@ class DcMetadataReader():
             temporal_coverage_begin='',
             temporal_coverage_end='',
 
-            through_provider_URL=first(_get_download(self.dc, False)) or '',
-
             type='dataset',
             uploader=uploader,
+
+            # Used in smear harvest code to extract variable, station and year values, but is not used when
+            # creating the dataset via API.
+            smear_url=first(_get_download(self.dc, False)) or '',
 
             # Todo! This should be more exactly picked
             version=(self.dc.modified or self.dc.date).string if (self.dc.modified or self.dc.date) else '',
@@ -215,6 +213,14 @@ class DcMetadataReader():
         )
         if not unified['language']:
             unified['langdis'] = 'True'
+
+        # Create id and name
+        unified['id'] = generate_pid()
+        unified['name'] = pid_to_name(unified['id'])
+
+        # If primary pid is missing, set package id as primary pid
+        if not any(pid.get('type', None) == u'primary' for pid in unified['pids']):
+            unified['pids'].append(dict(id=unified['id'], type=u'primary', provider=None))
 
         # if not unified['project_name']:
         #    unified['projdis'] = 'True'
@@ -437,7 +443,7 @@ def _get_algorithm(tag_tree):
 
 def _get_rights(tag_tree):
     '''
-    Returns a quadruple of rights information (availability, license-id, license-url, access-application-url)
+    Returns a bunch of rights information (availability, license-id, license-url, access-application-url)
     '''
     def ida():
         '''
@@ -455,7 +461,7 @@ def _get_rights(tag_tree):
                 lid = 'notspecified'
                 lurl = decl
             elif cat == 'CONTRACTUAL':
-                avail = 'access_application'
+                avail = 'access_application_other'
                 lid = 'notspecified'
                 aaurl = decl
             elif cat == 'PUBLIC DOMAIN':

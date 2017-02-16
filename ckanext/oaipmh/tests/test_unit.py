@@ -28,6 +28,7 @@ import os
 from ckan import model
 from ckan.logic import get_action
 import json
+import ckanext.kata.utils as utils
 
 
 FIXTURE_HELDA = "helda_oai_dc.xml"
@@ -180,34 +181,6 @@ class TestOAIPMHHarvester(TestCase):
         for key, value in expected:
             self.assertEquals(package.extras.get(key), value)
 
-    def test_import_stage_recreate(self):
-        """ Manual test for recreating harvested dataset multiple times """
-
-        for xml, recreate in ('ida.xml', False), ('ida2.xml', False), ('ida2.xml', True):
-            configuration = {'type': 'ida'}
-            if recreate:
-                configuration['recreate'] = True
-
-            self._run_import(xml, True, configuration)
-
-            package = _get_single_package()
-            if recreate:
-                self.assertEquals(package.extras.get('availability', None), 'MODIFIED')
-            else:
-                self.assertEquals(package.extras.get('availability', None), 'direct_download')
-
-        package.delete()
-        model.repo.commit()
-
-        for xml, expected, recreate in ('helda.xml', 'ORIGINAL', True), ('helda2.xml', 'MODIFIED', True), ('helda.xml', 'MODIFIED', False):
-            configuration = {'type': 'default'}
-            if not recreate:
-                configuration['recreate'] = False
-
-            self._run_import(xml, False, configuration)
-            package = _get_single_package()
-            self.assertEquals(package.extras.get('agent_1_name', None), expected)
-
     def test_validate_config_valid(self):
         config = '{"from": "2014-03-03", "limit": 5}'
 
@@ -224,12 +197,16 @@ class TestOAIPMHHarvester(TestCase):
 
     def test_fetch_xml(self):
         package = self.harvester.fetch_xml("file://%s" % _get_fixture('helda.xml'), {})
-        self.assertEquals(package.get('name', None), u'http---hdl-handle-net-10138-8487')
+        assert package.get('name', None).startswith('urn-nbn-fi-csc-kata')
+        pid_ids = [pid.get('id') for pid in package.get('pids', [])]
+        self.assertTrue(u'http://hdl.handle.net/10138/8487' in pid_ids)
 
     def test_parse_xml(self):
         with open(_get_fixture('helda.xml'), 'r') as source:
             package = self.harvester.parse_xml(source.read(), {})
-            self.assertEquals(package.get('name', None), u'http---hdl-handle-net-10138-8487')
+            assert package.get('name', None).startswith('urn-nbn-fi-csc-kata')
+            pid_ids = [pid.get('id') for pid in package.get('pids', [])]
+            self.assertTrue(u'http://hdl.handle.net/10138/8487' in pid_ids)
 
 
 class TestIdaHarvester(TestCase):
@@ -246,12 +223,16 @@ class TestIdaHarvester(TestCase):
 
     def test_fetch_xml(self):
         package = self.harvester.fetch_xml("file://%s" % _get_fixture('ida.xml'), {})
-        self.assertEquals(package.get('name', None), u'urn-nbn-fi-csc-ida2014010800372s')
+        assert package.get('name', None).startswith('urn-nbn-fi-csc-kata')
+        pid_ids = [pid.get('id') for pid in package.get('pids', [])]
+        self.assertTrue(u'urn:nbn:fi:csc-ida2014010800372s' in pid_ids)
 
     def test_parse_xml(self):
         with open(_get_fixture('ida.xml'), 'r') as source:
             package = self.harvester.parse_xml(source.read(), {})
-            self.assertEquals(package.get('name', None), u'urn-nbn-fi-csc-ida2014010800372s')
+            assert package.get('name', None).startswith('urn-nbn-fi-csc-kata')
+            pid_ids = [pid.get('id') for pid in package.get('pids', [])]
+            self.assertTrue(u'urn:nbn:fi:csc-ida2014010800372s' in pid_ids)
 
 
 class TestCMDIHarvester(TestCase):
@@ -294,7 +275,8 @@ class TestCMDIHarvester(TestCase):
         metadata = CmdiReader("http://localhost/test")(record)
         content= metadata.getMap()
         package = content['unified']
-        self.assertEquals(package.get('name', None), 'urn-nbn-fi-lb-20140730180')
+        self.assertEquals(package.get('name', None), utils.pid_to_name(package.get('id', None)))
+        self.assertEquals(utils.get_primary_pid(package), u'http://urn.fi/urn:nbn:fi:lb-20140730180')
         self.assertEquals(package.get('notes', None), '{"eng": "Test description"}')
         self.assertEquals(package.get('version', None), '2012-09-07')
         self.assertEquals(package.get('title', []), '{"eng": "Longi Corpus"}')
@@ -314,13 +296,14 @@ class TestCMDIHarvester(TestCase):
         job.save()
 
         harvest_object = self._run_import("cmdi_1.xml", job)
+        package_id = json.loads(harvest_object.content)['unified']['id']
 
         self.assertEquals(len(harvest_object.errors), 0, u"\n".join(unicode(error.message) for error in (harvest_object.errors or [])))
 
-        package = get_action('package_show')({'user': 'harvest'}, {'id': 'urn-nbn-fi-lb-20140730180'})
+        package = get_action('package_show')({'user': 'harvest'}, {'id': package_id})
 
-        self.assertEquals(package.get('id', None), 'http://urn.fi/urn:nbn:fi:lb-20140730180')
-        self.assertEquals(package.get('name', None), 'urn-nbn-fi-lb-20140730180')
+        self.assertEquals(package.get('name', None), utils.pid_to_name(package.get('id', None)))
+        self.assertEquals(utils.get_primary_pid(package), u'http://urn.fi/urn:nbn:fi:lb-20140730180')
         self.assertEquals(package.get('notes', None), u'{"eng": "Test description"}')
         self.assertEquals(package.get('version', None), '2012-09-07')
         self.assertEquals(package.get('title', []), '{"eng": "Longi Corpus"}')
@@ -329,17 +312,19 @@ class TestCMDIHarvester(TestCase):
         provider = config['ckan.site_url']
         expected_pid = {u'id': u'http://islrn.org/resources/248-895-085-557-0',
                         u'provider': provider,
-                        u'type': u'metadata'}
+                        u'type': u'relation',
+                        u'relation': u'generalRelation'}
 
         self.assertTrue(expected_pid in package.get('pids'))
 
         model.Session.flush()
 
         harvest_object = self._run_import("cmdi_2.xml", job)
+        package_id = json.loads(harvest_object.content)['unified']['id']
 
         self.assertEquals(len(harvest_object.errors), 0, u"\n".join(unicode(error.message) for error in (harvest_object.errors or [])))
 
-        package = get_action('package_show')({'user': 'harvest'}, {'id': 'urn-nbn-fi-lb-20140730186'})
+        package = get_action('package_show')({'user': 'harvest'}, {'id': package_id})
 
         self.assertEquals(package['temporal_coverage_begin'], '1880')
         self.assertEquals(package['temporal_coverage_end'], '1939')
@@ -456,7 +441,7 @@ class TestOAIDCReaderHelda(TestCase):
         EXPECTED_FIELDS = {'access_application_URL': '',
                            'access_request_URL': '',
                            'algorithm': '',
-                           'availability': 'through_provider',
+                           'availability': 'contact_owner',
                            'checksum': '',
                            'contact': [],
                            'direct_download_URL': u'http://link.aip.org/link/?jcp/123/064507',
@@ -469,19 +454,19 @@ class TestOAIDCReaderHelda(TestCase):
                            'license_URL': u'Copyright 2005 American Institute of Physics. This article may be downloaded for personal use only. Any other use requires prior permission of the author and the American Institute of Physics.',
                            'license_id': 'notspecified',
                            'mimetype': '',
-                           'name': 'http---link-aip-org-link--jcp-123-064507',
                            'notes': '{"und": ""}',
-                           'pids': [{'type': 'data',
+                           'pids': [{'type': u'relation',
+                                     'relation': u'generalRelation',
                                      'id': u'http://link.aip.org/link/?jcp/123/064507',
                                      'provider': u'http://helda.helsinki.fi/oai/request'},
                                     {'id': u'http://hdl.handle.net/10138/1074',
                                      'provider': u'http://helda.helsinki.fi/oai/request',
-                                     'type': 'data'},
+                                     'type': u'relation',
+                                     'relation': u'generalRelation'},
                                     ],
                            'tag_string': '',
                            'temporal_coverage_begin': '',
                            'temporal_coverage_end': '',
-                           'through_provider_URL': u'http://link.aip.org/link/?jcp/123/064507',
                            'type': 'dataset',
                            'version': u'2005-08-08',
                            'uploader': u''}
@@ -494,6 +479,18 @@ class TestOAIDCReaderHelda(TestCase):
         temp = copy.copy(data_dict)
 
         temp.pop('agent')   # TODO: Compare also agents directly
+
+        temp.pop('id') # Do not compare id since it is always generated by Etsin
+        temp.pop('name') # Do not compare id since it is always generated by Etsin
+
+        ### Pid reform introduced some changes that can't be validated with a 
+        ### simple dict compare
+        # Do not compare primary pid generated by Etsin
+        temp['pids'] = [pid for pid in temp['pids'] if pid['type'] != u'primary']
+        # Smear url value may be any data pid id
+        if temp['smear_url'] in \
+        ['http://link.aip.org/link/?jcp/123/064507', 'http://hdl.handle.net/10138/1074']:
+            temp.pop('smear_url')
 
         testfixtures.compare(temp, EXPECTED_FIELDS)
 
