@@ -3,6 +3,7 @@
 import datetime
 import oaipmh.common
 
+from ckanext.kata.utils import get_package_id_by_pid, get_unique_package_id
 from ckanext.oaipmh.importcore import generic_xml_metadata_reader
 from lxml import etree
 from pylons import config
@@ -46,16 +47,12 @@ class DataCiteReader(object):
 
         # MAP DATACITE MANDATORY FIELD
 
-        # Identifier to primary pid and data pid
+        # Identifier to primary pid
         identifier = xml.find('.//{http://datacite.org/schema/kernel-3}identifier')
-        primary_pid = identifier.text
         pids = [{
-            'id': primary_pid, 
-            'type': 'data', 
-            'primary': 'True', 
+            'id': identifier.text, 
+            'type': 'primary', 
             'provider': identifier.get('identifierType')}]
-
-        log.debug(pids)
 
         # Creator name to agent
         # TODO: map nameIdentifier to agent.id and nameIdentifierScheme and schemeURI 
@@ -70,11 +67,11 @@ class DataCiteReader(object):
                 'organisation': creatorAffiliation
                 })
 
-        # Primary title to name and title
+        # Primary title to title
         # TODO: if titleType is present, check to find out if title is actually primary
         # TODO: map non-primary titles to extras
-        name = xml.find('.//{http://datacite.org/schema/kernel-3}title').text
-        langtitle = [{'lang': 'en', 'value': name}] # Assuming we always harvest English
+        title = xml.find('.//{http://datacite.org/schema/kernel-3}title').text
+        langtitle = [{'lang': 'en', 'value': title}] # Assuming we always harvest English
 
         # Publisher to contact
         publisher = xml.find('.//{http://datacite.org/schema/kernel-3}publisher').text
@@ -156,16 +153,22 @@ class DataCiteReader(object):
             license_URL += right.text + ' ' + right.get('rightsURI') + ' '
 
 
+        # OTHER - REQUIRED BY CKANEXT-HARVEST
+
+        # Get or create package id
+        existing_package_id = get_package_id_by_pid(identifier.text, u'primary')
+        package_id = existing_package_id if existing_package_id else get_unique_package_id()
+
         result = {
                   'agent': agents,
                   'contact': contacts,
                   'event': events,
-                  'id': primary_pid,
+                  'id': package_id,
                   'langnotes': langnotes,
                   'langtitle': langtitle,
                   'license_URL': license_URL,
-                  'name': name,
                   'pids': pids,
+                  'title': title,
                   'type': 'dataset',
                   'version': datetime.datetime.now().strftime("%Y-%m-%d")
                   }
