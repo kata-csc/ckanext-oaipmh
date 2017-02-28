@@ -11,6 +11,7 @@ from pylons import config
 
 from sqlalchemy import between
 
+from ckanext.dcat import processors as dcatp
 from oaipmh.common import ResumptionOAIPMH
 from oaipmh import common
 from ckanext.kata import helpers
@@ -58,40 +59,13 @@ class CKANServer(ResumptionOAIPMH):
         '''Show a tuple of a header and metadata for this dataset.
         '''
         package = get_action('package_show')({}, {'id': dataset.id})
+        serializer = dcatp.RDFserializer()
+        dataset_xml = serializer.serialize_dataset(package, _format='xml')
 
-        coverage = []
-        temporal_begin = package.get('temporal_coverage_begin', '')
-        temporal_end = package.get('temporal_coverage_end', '')
-
-        geographic = package.get('geographic_coverage', '')
-        if geographic:
-            coverage.extend(geographic.split(','))
-        if temporal_begin or temporal_end:
-            coverage.append("%s/%s" % (temporal_begin, temporal_end))
-
-        pids = [pid.get('id') for pid in package.get('pids', {}) if pid.get('id', False)]
-        pids.append(package.get('id'))
-        pids.append(config.get('ckan.site_url') + url_for(controller="package", action='read', id=package['name']))
-
-        meta = {'title': self._get_json_content(package.get('title', None) or package.get('name')),
-                'creator': [author['name'] for author in helpers.get_authors(package) if 'name' in author],
-                'publisher': [agent['name'] for agent in helpers.get_distributors(package) + helpers.get_contacts(package) if 'name' in agent],
-                'contributor': [author['name'] for author in helpers.get_contributors(package) if 'name' in author],
-                'identifier': pids,
-                'type': ['dataset'],
-                'language': [l.strip() for l in package.get('language').split(",")] if package.get('language', None) else None,
-                'description': self._get_json_content(package.get('notes')) if package.get('notes', None) else None,
-                'subject': [tag.get('display_name') for tag in package['tags']] if package.get('tags', None) else None,
-                'date': [dataset.metadata_created.strftime('%Y-%m-%d')] if dataset.metadata_created else None,
-                'rights': [package['license_title']] if package.get('license_title', None) else None,
-                'coverage': coverage if coverage else None, }
-
-        iters = dataset.extras.items()
-        meta = dict(iters + meta.items())
         metadata = {}
         # Fixes the bug on having a large dataset being scrambled to individual
         # letters
-        for key, value in meta.items():
+        for key, value in dataset_xml.items():
             if not isinstance(value, list):
                 metadata[str(key)] = [value]
             else:
