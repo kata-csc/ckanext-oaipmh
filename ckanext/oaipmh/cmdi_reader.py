@@ -251,11 +251,11 @@ class CmdiReader(object):
             if 'urn' in pid and not primary_pid:
                 pids.append(dict(id=pid, provider=provider, type='primary'))
                 primary_pid=pid
-            else:
-                pids.append(dict(id=pid, provider=provider, type='relation', relation='generalRelation'))
-
-        pids += [dict(id=CmdiReader._language_bank_urn_pid_enhancement(pid), provider=provider, type='relation',
-                      relation='generalRelation') for pid in data_identifiers]
+        #     else:
+        #         pids.append(dict(id=pid, provider=provider, type='relation', relation='generalRelation'))
+        #
+        # pids += [dict(id=CmdiReader._language_bank_urn_pid_enhancement(pid), provider=provider, type='relation',
+        #               relation='generalRelation') for pid in data_identifiers]
 
         license_identifier = CmdiReader._language_bank_license_enhancement(first(self._text_xpath(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:licence/text()")) or 'notspecified')
         availability = CmdiReader._language_bank_availability_from_license(license_identifier)
