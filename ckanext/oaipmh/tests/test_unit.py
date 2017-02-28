@@ -315,7 +315,7 @@ class TestCMDIHarvester(TestCase):
                         u'type': u'relation',
                         u'relation': u'generalRelation'}
 
-        self.assertTrue(expected_pid in package.get('pids'))
+        self.assertTrue(expected_pid not in package.get('pids'))
 
         model.Session.flush()
 
