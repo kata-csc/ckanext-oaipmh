@@ -218,7 +218,6 @@ class CmdiReader(object):
             raise CmdiReaderException("Unexpected XML format: No resourceInfo -element found")
 
         metadata_identifiers = self._text_xpath(cmd, "//cmd:identificationInfo/cmd:identifier/text()")
-        data_identifiers = self._text_xpath(cmd, "//cmd:identificationInfo/cmd:url/text()")
 
         languages = self._text_xpath(cmd, "//cmd:corpusInfo/cmd:corpusMediaType/cmd:corpusTextInfo/cmd:languageInfo/cmd:languageId/text()")
 
@@ -246,6 +245,8 @@ class CmdiReader(object):
         direct_download_URL = ''
         access_request_URL = ''
         access_application_URL = ''
+
+        # data_identifiers = self._text_xpath(cmd, "//cmd:identificationInfo/cmd:url/text()")
 
         for pid in [CmdiReader._language_bank_urn_pid_enhancement(metadata_pid) for metadata_pid in metadata_identifiers]:
             if 'urn' in pid and not primary_pid:
