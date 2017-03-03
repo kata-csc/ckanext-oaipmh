@@ -11,7 +11,7 @@ from pylons import config
 
 from sqlalchemy import between
 
-from ckanext.dcat import processors as dcatp
+from ckanext.dcat.processors import RDFSerializer
 from oaipmh.common import ResumptionOAIPMH
 from oaipmh import common
 from ckanext.kata import helpers
@@ -21,6 +21,7 @@ from oaipmh.error import IdDoesNotExistError
 
 log = logging.getLogger(__name__)
 
+rdfs = RDFSerializer()
 
 class CKANServer(ResumptionOAIPMH):
     '''A OAI-PMH implementation class for CKAN.
@@ -59,20 +60,21 @@ class CKANServer(ResumptionOAIPMH):
         '''Show a tuple of a header and metadata for this dataset.
         '''
         package = get_action('package_show')({}, {'id': dataset.id})
-        serializer = dcatp.RDFserializer()
+        # serializer = RDFserializer()
+        serializer = rdfs
         dataset_xml = serializer.serialize_dataset(package, _format='xml')
 
         metadata = {}
         # Fixes the bug on having a large dataset being scrambled to individual
         # letters
-        for key, value in dataset_xml.items():
-            if not isinstance(value, list):
-                metadata[str(key)] = [value]
-            else:
-                metadata[str(key)] = value
+        # for key, value in dataset_xml.items():
+        #     if not isinstance(value, list):
+        #         metadata[str(key)] = [value]
+        #     else:
+        #         metadata[str(key)] = value
 
         return (common.Header('', dataset.id, dataset.metadata_created, [spec], False),
-                common.Metadata('', metadata), None)
+                common.Metadata('', dataset_xml), None)
 
     def getRecord(self, metadataPrefix, identifier):
         '''Simple getRecord for a dataset.
