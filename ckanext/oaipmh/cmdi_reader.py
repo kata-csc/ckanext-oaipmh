@@ -218,7 +218,6 @@ class CmdiReader(object):
             raise CmdiReaderException("Unexpected XML format: No resourceInfo -element found")
 
         metadata_identifiers = self._text_xpath(cmd, "//cmd:identificationInfo/cmd:identifier/text()")
-        data_identifiers = self._text_xpath(cmd, "//cmd:identificationInfo/cmd:url/text()")
 
         languages = self._text_xpath(cmd, "//cmd:corpusInfo/cmd:corpusMediaType/cmd:corpusTextInfo/cmd:languageInfo/cmd:languageId/text()")
 
@@ -247,15 +246,17 @@ class CmdiReader(object):
         access_request_URL = ''
         access_application_URL = ''
 
+        # data_identifiers = self._text_xpath(cmd, "//cmd:identificationInfo/cmd:url/text()")
+
         for pid in [CmdiReader._language_bank_urn_pid_enhancement(metadata_pid) for metadata_pid in metadata_identifiers]:
             if 'urn' in pid and not primary_pid:
                 pids.append(dict(id=pid, provider=provider, type='primary'))
                 primary_pid=pid
-            else:
-                pids.append(dict(id=pid, provider=provider, type='relation', relation='generalRelation'))
-
-        pids += [dict(id=CmdiReader._language_bank_urn_pid_enhancement(pid), provider=provider, type='relation',
-                      relation='generalRelation') for pid in data_identifiers]
+        #     else:
+        #         pids.append(dict(id=pid, provider=provider, type='relation', relation='generalRelation'))
+        #
+        # pids += [dict(id=CmdiReader._language_bank_urn_pid_enhancement(pid), provider=provider, type='relation',
+        #               relation='generalRelation') for pid in data_identifiers]
 
         license_identifier = CmdiReader._language_bank_license_enhancement(first(self._text_xpath(resource_info, "//cmd:distributionInfo/cmd:licenceInfo/cmd:licence/text()")) or 'notspecified')
         availability = CmdiReader._language_bank_availability_from_license(license_identifier)
