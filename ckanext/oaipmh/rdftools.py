@@ -1,6 +1,6 @@
 '''RDF reader and writer for OAI-PMH harvester and server interface
 '''
-from lxml.etree import SubElement
+from lxml import etree
 from oaipmh.metadata import MetadataReader
 from oaipmh.server import NS_XSI, nsdc, NS_DC
 
@@ -29,23 +29,16 @@ rdf_reader = MetadataReader(
                 'dc': NS_DC})
 
 
-def rdf_writer(element, metadata):
-    e_rdf = SubElement(element, nsrdf('RDF'),
-                       nsmap={'rdf': NSRDF, 'ow': NSOW, 'xsi': NS_XSI,
-                              'dc': NS_DC})
-    e_rdf.set('{%s}schemaLocation' % NS_XSI,
-              '%s http://www.openarchives.org/OAI/2.0/rdf.xsd' % RDF_SCHEMA)
-    rdf_pub = SubElement(e_rdf, nsow('Publication'))
-    map = metadata.getMap()
-    for ident in map.get('identifier', []):
-        if ident.startswith('http://'):
-            rdf_pub.set('{%s}about' % NSRDF, '%s' % (ident))
-    for name in ['title', 'creator', 'subject', 'description', 'publisher',
-                 'contributor', 'date', 'type', 'format', 'identifier',
-                 'source', 'language', 'relation', 'coverage', 'rights']:
-        for value in map.get(name, []):
-            e = SubElement(rdf_pub, nsdc(name))
-            e.text = value
+def dcat2rdf_writer(element, metadata):
+    ''' Parse metadata from ckanext-dcat to etree for pyoai (oaipmh) to consume
+    A bit ugly implementation for a ready xml string is parsed to lxml.etree
+    and back to a string again.
+
+    :param element: An etree element append to
+    :param metadata: Actually ready string of rdf xml
+    '''
+    e_dc = etree.fromstring(metadata)
+    element.append(e_dc)
 
 
 def nsrdf(name):

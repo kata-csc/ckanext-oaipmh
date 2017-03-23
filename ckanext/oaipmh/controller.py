@@ -11,7 +11,7 @@ from oaipmh import metadata
 from oaipmh.metadata import oai_dc_reader
 
 from oaipmh_server import CKANServer
-from rdftools import rdf_reader, rdf_writer
+from rdftools import rdf_reader, dcat2rdf_writer
 
 log = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ class OAIPMHController(BaseController):
                                                          oai_dc_writer)
                     else:
                         metadata_registry.registerReader('rdf', rdf_reader)
-                        metadata_registry.registerWriter('rdf', rdf_writer)
+                        metadata_registry.registerWriter('rdf', dcat2rdf_writer)
                 else:
                     metadata_registry.registerReader('oai_dc', oai_dc_reader)
                     metadata_registry.registerWriter('oai_dc', oai_dc_writer)
