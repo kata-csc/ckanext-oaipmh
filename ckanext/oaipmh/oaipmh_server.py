@@ -182,7 +182,7 @@ class CKANServer(ResumptionOAIPMH):
 
         return data
 
-    def listMetadataFormats(self):
+    def listMetadataFormats(self, identifier):
         '''List available metadata formats.
         '''
         return [('oai_dc',
