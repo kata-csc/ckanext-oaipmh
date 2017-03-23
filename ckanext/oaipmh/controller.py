@@ -2,14 +2,11 @@
 '''
 import logging
 
-from ckan.lib.base import BaseController, render
-
+import oaipmh.metadata as oaimd
+import oaipmh.server as oaisrv
 from pylons import request, response
 
-from oaipmh.server import BatchingServer, oai_dc_writer
-from oaipmh import metadata
-from oaipmh.metadata import oai_dc_reader
-
+from ckan.lib.base import BaseController, render
 from oaipmh_server import CKANServer
 from rdftools import rdf_reader, dcat2rdf_writer
 
@@ -28,21 +25,21 @@ class OAIPMHController(BaseController):
             verb = request.params['verb'] if request.params['verb'] else None
             if verb:
                 client = CKANServer()
-                metadata_registry = metadata.MetadataRegistry()
+                metadata_registry = oaimd.MetadataRegistry()
                 if 'metadataPrefix' in request.params:
                     if request.params['metadataPrefix'] == 'oai_dc':
                         metadata_registry.registerReader('oai_dc',
-                                                         oai_dc_reader)
+                                                         oaimd.oai_dc_reader)
                         metadata_registry.registerWriter('oai_dc',
-                                                         oai_dc_writer)
+                                                         oaisrv.oai_dc_writer)
                     else:
                         metadata_registry.registerReader('rdf', rdf_reader)
                         metadata_registry.registerWriter('rdf', dcat2rdf_writer)
                 else:
-                    metadata_registry.registerReader('oai_dc', oai_dc_reader)
-                    metadata_registry.registerWriter('oai_dc', oai_dc_writer)
-                serv = BatchingServer(client,
-                                      metadata_registry=metadata_registry)
+                    metadata_registry.registerReader('oai_dc', oaimd.oai_dc_reader)
+                    metadata_registry.registerWriter('oai_dc', oaisrv.oai_dc_writer)
+                serv = oaisrv.BatchingServer(client,
+                                             metadata_registry=metadata_registry)
                 parms = request.params.mixed()
                 res = serv.handleRequest(parms)
                 response.headers['content-type'] = 'text/xml; charset=utf-8'

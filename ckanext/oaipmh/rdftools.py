@@ -2,7 +2,7 @@
 '''
 from lxml import etree
 from oaipmh.metadata import MetadataReader
-from oaipmh.server import NS_XSI, nsdc, NS_DC
+from oaipmh.server import NS_DC
 
 NSRDF = 'http://www.openarchives.org/OAI/2.0/rdf/'
 NSOW = 'http://www.ontoweb.org/ontology/1#'
