@@ -250,7 +250,8 @@ class CKANServer(ResumptionOAIPMH):
         data = []
         groups = Session.query(Group).filter(Group.state == 'active')
         if cursor:
-            groups = groups[cursor:]
+            cursor_end = cursor+batch_size if cursor+batch_size < groups.count() else groups.count()
+            groups = groups[cursor:cursor_end]
         for dataset in groups:
             data.append((dataset.name, dataset.title, dataset.description))
         return data

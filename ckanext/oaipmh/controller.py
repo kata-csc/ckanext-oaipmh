@@ -39,7 +39,8 @@ class OAIPMHController(BaseController):
                     metadata_registry.registerReader('oai_dc', oaimd.oai_dc_reader)
                     metadata_registry.registerWriter('oai_dc', oaisrv.oai_dc_writer)
                 serv = oaisrv.BatchingServer(client,
-                                             metadata_registry=metadata_registry)
+                                             metadata_registry=metadata_registry,
+                                             resumption_batch_size=50)
                 parms = request.params.mixed()
                 res = serv.handleRequest(parms)
                 response.headers['content-type'] = 'text/xml; charset=utf-8'
