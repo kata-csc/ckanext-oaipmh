@@ -1,7 +1,6 @@
 '''OAI-PMH implementation for CKAN datasets and groups.
 '''
 # pylint: disable=E1101,E1103
-from datetime import datetime
 import json
 import logging
 
@@ -16,6 +15,7 @@ from ckan.logic import get_action
 from ckan.model import Package, Session, Group, PackageRevision
 from ckanext.dcat.processors import RDFSerializer
 from ckanext.kata import helpers
+import utils
 
 log = logging.getLogger(__name__)
 
@@ -28,13 +28,13 @@ class CKANServer(ResumptionOAIPMH):
         '''Return identification information for this server.
         '''
         return common.Identify(
-            repositoryName=config.get('site.title') if config.get('site.title') else 'repository',
-            baseURL=url_for(controller='ckanext.oaipmh.controller:OAIPMHController', action='index'),
+            repositoryName=config.get('ckan.site_title', 'repository'),
+            baseURL=config.get('ckan.site_url', None) + url_for(controller='ckanext.oaipmh.controller:OAIPMHController', action='index'),
             protocolVersion="2.0",
             adminEmails=[config.get('email_to')],
-            earliestDatestamp=datetime(2004, 1, 1),
+            earliestDatestamp=utils.get_earliest_datestamp(),
             deletedRecord='no',
-            granularity='YYYY-MM-DD',
+            granularity='YYYY-MM-DDThh:mm:ssZ',
             compression=['identity'])
 
     def _get_json_content(self, js):
@@ -125,7 +125,7 @@ class CKANServer(ResumptionOAIPMH):
             return self._record_for_dataset(package, spec)
         return self._record_for_dataset_dcat(package, spec)
 
-    def listIdentifiers(self, metadataPrefix, set=None, cursor=None,
+    def listIdentifiers(self, metadataPrefix=None, set=None, cursor=None,
                         from_=None, until=None, batch_size=None):
         '''List all identifiers for this repository.
         '''
@@ -165,7 +165,8 @@ class CKANServer(ResumptionOAIPMH):
                         filter(Package.name==PackageRevision.name).filter(Package.state=='active')
                 packages = packages.all()
         if cursor:
-            packages = packages[cursor:]
+            cursor_end = cursor + batch_size if cursor + batch_size < len(packages) else len(packages)
+            packages = packages[cursor:cursor_end]
         for package in packages:
             spec = package.name
             if group:
