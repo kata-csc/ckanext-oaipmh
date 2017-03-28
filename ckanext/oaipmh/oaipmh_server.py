@@ -242,7 +242,9 @@ class CKANServer(ResumptionOAIPMH):
                     if group and group.name:
                         spec = group.name
                     group = None
-            data.append(self._record_for_dataset(res, spec))
+            if metadataPrefix == 'oai_dc':
+                data.append(self._record_for_dataset(res, spec))
+            data.append(self._record_for_dataset_dcat(res, spec))
         return data
 
     def listSets(self, cursor=None, batch_size=None):
