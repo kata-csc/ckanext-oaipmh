@@ -21,6 +21,7 @@ log = logging.getLogger(__name__)
 
 rdfserializer = RDFSerializer()
 
+
 class CKANServer(ResumptionOAIPMH):
     '''A OAI-PMH implementation class for CKAN.
     '''
@@ -191,7 +192,7 @@ class CKANServer(ResumptionOAIPMH):
                  'http://www.openarchives.org/OAI/2.0/rdf.xsd',
                  'http://www.openarchives.org/OAI/2.0/rdf/')]
 
-    def listRecords(self, metadataPrefix, set=None, cursor=None, from_=None,
+    def listRecords(self, metadataPrefix=None, set=None, cursor=None, from_=None,
                     until=None, batch_size=None):
         '''Show a selection of records, basically lists all datasets.
         '''
@@ -231,7 +232,8 @@ class CKANServer(ResumptionOAIPMH):
                         filter(Package.type=='dataset').filter(Package.private!=True).\
                         filter(Package.name==PackageRevision.name).filter(Package.state=='active').all()
         if cursor:
-            packages = packages[cursor:]
+            cursor_end = cursor + batch_size if cursor + batch_size < len(packages) else len(packages)
+            packages = packages[cursor:cursor_end]
         for res in packages:
             spec = res.name
             if group:
