@@ -105,7 +105,10 @@ class TestOaipmhServer(WsgiAppCase, TestCase):
 
     _namespaces = {'o': 'http://www.openarchives.org/OAI/2.0/',
                    'oai_dc': "http://www.openarchives.org/OAI/2.0/oai_dc/",
-                   'dc': "http://purl.org/dc/elements/1.1/"}
+                   'dc': "http://purl.org/dc/elements/1.1/",
+                   'dct': "http://purl.org/dc/terms/",
+                   'rdf': "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+                   'rdfs': "http://www.w3.org/2000/01/rdf-schema#"}
 
     @classmethod
     def setup_class(cls):
@@ -156,6 +159,56 @@ class TestOaipmhServer(WsgiAppCase, TestCase):
             self.assertTrue(coverage.text in expected)
             found += 1
         self.assertEquals(3, found, "Unexpected coverage results")
+
+        get_action('organization_delete')({'user': 'test_coverage'}, {'id': organization['id']})
+
+    def test_coverage_spatial_rdf(self):
+        organization = get_action('organization_create')({'user': 'test_coverage'}, {'name': 'test-organization-coverage-rdf', 'title': "Test organization rdf"})
+        package_1_data = deepcopy(TEST_DATADICT)
+        package_1_data['owner_org'] = organization['name']
+        package_1_data['private'] = False
+        for pid in package_1_data.get('pids', []):
+            pid['id'] = utils.generate_pid()
+
+        package = get_action('package_create')({'user': 'test_coverage'}, package_1_data)
+        package_name = package['name']
+        url = url_for('/oai')
+        result = self.app.get(url, {'verb': 'GetRecord', 'identifier': package_name, 'metadataPrefix': 'rdf'})
+
+        root = lxml.etree.fromstring(result.body)
+        expected = ['Keilaniemi (populated place),Espoo (city)']
+
+        found = 0
+        for spatial in self._get_results(root, "//dct:spatial_ref/rdf:Description/dct:Location/rdf:Description/rdfs:label"):
+            self.assertTrue(spatial.text in expected)
+            found += 1
+        self.assertEquals(1, found, "Unexpected coverage results")
+
+        get_action('organization_delete')({'user': 'test_coverage'}, {'id': organization['id']})
+
+    def test_coverage_temporal_rdf(self):
+        """ For some reason _get_results(... "...*") finds temporal nodes four times.
+        """
+        organization = get_action('organization_create')({'user': 'test_coverage'}, {'name': 'test-organization-coverage-rdf2', 'title': "Test organization rdf 2"})
+        package_1_data = deepcopy(TEST_DATADICT)
+        package_1_data['owner_org'] = organization['name']
+        package_1_data['private'] = False
+        for pid in package_1_data.get('pids', []):
+            pid['id'] = utils.generate_pid()
+
+        package = get_action('package_create')({'user': 'test_coverage'}, package_1_data)
+        package_name = package['name']
+        url = url_for('/oai')
+        result = self.app.get(url, {'verb': 'GetRecord', 'identifier': package_name, 'metadataPrefix': 'rdf'})
+
+        root = lxml.etree.fromstring(result.body)
+        expected = ['2003-07-10T06:36:27-12:00', '2010-04-15T03:24:47+12:45']
+
+        found = 0
+        for temporal in self._get_results(root, "//dct:temporal/dct:PeriodOfTime/*"):
+            self.assertTrue(temporal.text in expected)
+            found += 1
+        self.assertEquals(4, found, "Unexpected coverage results: {f}".format(f=found))
 
         get_action('organization_delete')({'user': 'test_coverage'}, {'id': organization['id']})
 
