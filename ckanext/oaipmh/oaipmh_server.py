@@ -32,7 +32,7 @@ class CKANServer(ResumptionOAIPMH):
             repositoryName=config.get('ckan.site_title', 'repository'),
             baseURL=config.get('ckan.site_url', None) + url_for(controller='ckanext.oaipmh.controller:OAIPMHController', action='index'),
             protocolVersion="2.0",
-            adminEmails=[config.get('email_to')],
+            adminEmails='etsin@csc.fi',
             earliestDatestamp=utils.get_earliest_datestamp(),
             deletedRecord='no',
             granularity='YYYY-MM-DDThh:mm:ssZ',
