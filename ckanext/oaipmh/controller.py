@@ -26,21 +26,13 @@ class OAIPMHController(BaseController):
             if verb:
                 client = CKANServer()
                 metadata_registry = oaimd.MetadataRegistry()
-                if 'metadataPrefix' in request.params:
-                    if request.params['metadataPrefix'] == 'oai_dc':
-                        metadata_registry.registerReader('oai_dc',
-                                                         oaimd.oai_dc_reader)
-                        metadata_registry.registerWriter('oai_dc',
-                                                         oaisrv.oai_dc_writer)
-                    else:
-                        metadata_registry.registerReader('rdf', rdf_reader)
-                        metadata_registry.registerWriter('rdf', dcat2rdf_writer)
-                else:
-                    metadata_registry.registerReader('oai_dc', oaimd.oai_dc_reader)
-                    metadata_registry.registerWriter('oai_dc', oaisrv.oai_dc_writer)
+                metadata_registry.registerReader('oai_dc', oaimd.oai_dc_reader)
+                metadata_registry.registerWriter('oai_dc', oaisrv.oai_dc_writer)
+                metadata_registry.registerReader('rdf', rdf_reader)
+                metadata_registry.registerWriter('rdf', dcat2rdf_writer)
                 serv = oaisrv.BatchingServer(client,
                                              metadata_registry=metadata_registry,
-                                             resumption_batch_size=50)
+                                             resumption_batch_size=10)
                 parms = request.params.mixed()
                 res = serv.handleRequest(parms)
                 response.headers['content-type'] = 'text/xml; charset=utf-8'

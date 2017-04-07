@@ -122,9 +122,9 @@ class CKANServer(ResumptionOAIPMH):
             group = Group.get(package.owner_org)
             if group and group.name:
                 spec = group.name
-        if metadataPrefix == 'oai_dc':
-            return self._record_for_dataset(package, spec)
-        return self._record_for_dataset_dcat(package, spec)
+        if metadataPrefix == 'rdf':
+            return self._record_for_dataset_dcat(package, spec)
+        return self._record_for_dataset(package, spec)
 
     def listIdentifiers(self, metadataPrefix=None, set=None, cursor=None,
                         from_=None, until=None, batch_size=None):
@@ -165,9 +165,6 @@ class CKANServer(ResumptionOAIPMH):
                     packages = packages.filter(between(PackageRevision.revision_timestamp, from_, until)).\
                         filter(Package.name==PackageRevision.name).filter(Package.state=='active')
                 packages = packages.all()
-        if cursor:
-            cursor_end = cursor + batch_size if cursor + batch_size < len(packages) else len(packages)
-            packages = packages[cursor:cursor_end]
         for package in packages:
             spec = package.name
             if group:
@@ -231,9 +228,6 @@ class CKANServer(ResumptionOAIPMH):
                     packages = packages.filter(between(PackageRevision.revision_timestamp, from_, until)).\
                         filter(Package.type=='dataset').filter(Package.private!=True).\
                         filter(Package.name==PackageRevision.name).filter(Package.state=='active').all()
-        if cursor:
-            cursor_end = cursor + batch_size if cursor + batch_size < len(packages) else len(packages)
-            packages = packages[cursor:cursor_end]
         for res in packages:
             spec = res.name
             if group:
@@ -244,9 +238,10 @@ class CKANServer(ResumptionOAIPMH):
                     if group and group.name:
                         spec = group.name
                     group = None
-            if metadataPrefix == 'oai_dc':
+            if metadataPrefix == 'rdf':
+                data.append(self._record_for_dataset_dcat(res, spec))
+            else:
                 data.append(self._record_for_dataset(res, spec))
-            data.append(self._record_for_dataset_dcat(res, spec))
         return data
 
     def listSets(self, cursor=None, batch_size=None):
@@ -254,9 +249,6 @@ class CKANServer(ResumptionOAIPMH):
         '''
         data = []
         groups = Session.query(Group).filter(Group.state == 'active')
-        if cursor:
-            cursor_end = cursor+batch_size if cursor+batch_size < groups.count() else groups.count()
-            groups = groups[cursor:cursor_end]
         for dataset in groups:
             data.append((dataset.name, dataset.title, dataset.description))
         return data
