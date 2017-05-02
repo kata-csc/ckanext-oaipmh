@@ -5,6 +5,7 @@
 Functional tests for OAI-PMH harvester.
 """
 
+import datetime
 from unittest import TestCase
 
 import oaipmh.client
@@ -294,16 +295,28 @@ class TestOaipmhServer(WsgiAppCase, TestCase):
             pid['id'] = utils.generate_pid()
 
         url = url_for('/oai')
-        result = self.app.get(url, {'verb': 'ListIdentifiers', 'set': 'private-organization', 'metadataPrefix': 'oai_dc'})
 
+        result = self.app.get(url, {'verb': 'ListIdentifiers', 'set': 'private-organization', 'metadataPrefix': 'oai_dc'})
         root = lxml.etree.fromstring(result.body)
         self.assertFalse(root.xpath("//o:header", namespaces=self._namespaces))
+
+        now = datetime.datetime.isoformat(datetime.datetime.today())
+        result = self.app.get(url, {'verb': 'ListRecords', 'set': 'private-organization', 'metadataPrefix': 'rdf', 'until': now})
+        root = lxml.etree.fromstring(result.body)
+        self.assertFalse(root.xpath("//o:header", namespaces=self._namespaces))
+
         package2 = get_action('package_create')({'user': 'privateuser'}, package_2_data)
         result = self.app.get(url, {'verb': 'ListIdentifiers', 'set': 'private-organization', 'metadataPrefix': 'oai_dc'})
         root = lxml.etree.fromstring(result.body)
         for header in root.xpath("//o:header", namespaces=self._namespaces):
             identifier = header.xpath("string(o:identifier)", namespaces=self._namespaces)
             print identifier
+            self.assertTrue(identifier == package2['id'])
+
+        result = self.app.get(url, {'verb': 'ListRecords', 'metadataPrefix': 'rdf'})
+        root = lxml.etree.fromstring(result.body)
+        for header in root.xpath("//o:header", namespaces=self._namespaces):
+            identifier = header.xpath("string(o:identifier)", namespaces=self._namespaces)
             self.assertTrue(identifier == package2['id'])
 
         get_action('organization_delete')({'user': 'privateuser'}, {'id': organization['id']})

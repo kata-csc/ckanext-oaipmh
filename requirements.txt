@@ -1,4 +1,4 @@
-git+https://github.com/kata-csc/pyoai.git#egg=pyoai
+pyoai>=2.4.5
 lxml==3.6.0
 rdflib>=4.2.1
 beautifulsoup4>=4.5.1

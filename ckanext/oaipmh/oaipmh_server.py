@@ -111,6 +111,46 @@ class CKANServer(ResumptionOAIPMH):
         return (common.Header('', dataset.id, dataset.metadata_created, [spec], False),
                 common.Metadata('', metadata), None)
 
+    @staticmethod
+    def _filter_packages(set, cursor, from_, until, batch_size):
+        '''Get a part of datasets for "listNN" verbs.
+        '''
+        packages = []
+        group = None
+        if not set:
+            packages = Session.query(Package).filter(Package.type=='dataset'). \
+                filter(Package.state == 'active').filter(Package.private!=True)
+            if from_ and not until:
+                packages = packages.filter(PackageRevision.revision_timestamp > from_).\
+                    filter(Package.name==PackageRevision.name)
+            if until and not from_:
+                packages = packages.filter(PackageRevision.revision_timestamp < until).\
+                    filter(Package.name==PackageRevision.name)
+            if from_ and until:
+                packages = packages.filter(between(PackageRevision.revision_timestamp, from_, until)).\
+                    filter(Package.name==PackageRevision.name)
+            packages = packages.all()
+        else:
+            group = Group.get(set)
+            if group:
+                # Note that group.packages never returns private datasets regardless of 'with_private' parameter.
+                packages = group.packages(return_query=True, with_private=False).filter(Package.type=='dataset'). \
+                    filter(Package.state == 'active')
+                if from_ and not until:
+                    packages = packages.filter(PackageRevision.revision_timestamp > from_).\
+                        filter(Package.name==PackageRevision.name)
+                if until and not from_:
+                    packages = packages.filter(PackageRevision.revision_timestamp < until).\
+                        filter(Package.name==PackageRevision.name)
+                if from_ and until:
+                    packages = packages.filter(between(PackageRevision.revision_timestamp, from_, until)).\
+                        filter(Package.name==PackageRevision.name)
+                packages = packages.all()
+        if cursor is not None:
+            cursor_end = cursor + batch_size if cursor + batch_size < len(packages) else len(packages)
+            packages = packages[cursor:cursor_end]
+        return packages, group
+
     def getRecord(self, metadataPrefix, identifier):
         '''Simple getRecord for a dataset.
         '''
@@ -131,40 +171,7 @@ class CKANServer(ResumptionOAIPMH):
         '''List all identifiers for this repository.
         '''
         data = []
-        packages = []
-        group = None
-        if not set:
-            if not from_ and not until:
-                packages = Session.query(Package).filter(Package.type=='dataset').\
-                    filter(Package.private!=True).filter(Package.state=='active').all()
-            else:
-                if from_ and not until:
-                    packages = Session.query(Package).filter(Package.type=='dataset').filter(Package.private!=True).\
-                        filter(PackageRevision.revision_timestamp > from_).\
-                        filter(Package.name==PackageRevision.name).filter(Package.state=='active').all()
-                if until and not from_:
-                    packages = Session.query(Package).filter(Package.type=='dataset').filter(Package.private!=True).\
-                        filter(PackageRevision.revision_timestamp < until).\
-                        filter(Package.name==PackageRevision.name).filter(Package.state=='active').all()
-                if from_ and until:
-                    packages = Session.query(Package).filter(Package.type=='dataset').filter(Package.private!=True).\
-                        filter(between(PackageRevision.revision_timestamp, from_, until)).\
-                        filter(Package.name==PackageRevision.name).filter(Package.state=='active').all()
-        else:
-            group = Group.get(set)
-            if group:
-                packages = group.packages(return_query=True).filter(Package.type=='dataset').\
-                    filter(Package.private!=True).filter(Package.state=='active')
-                if from_ and not until:
-                    packages = packages.filter(PackageRevision.revision_timestamp > from_).\
-                        filter(Package.name==PackageRevision.name).filter(Package.state=='active')
-                if until and not from_:
-                    packages = packages.filter(PackageRevision.revision_timestamp < until).\
-                        filter(Package.name==PackageRevision.name).filter(Package.state=='active')
-                if from_ and until:
-                    packages = packages.filter(between(PackageRevision.revision_timestamp, from_, until)).\
-                        filter(Package.name==PackageRevision.name).filter(Package.state=='active')
-                packages = packages.all()
+        packages, group = self._filter_packages(set, cursor, from_, until, batch_size)
         for package in packages:
             spec = package.name
             if group:
@@ -174,9 +181,7 @@ class CKANServer(ResumptionOAIPMH):
                     group = Group.get(package.owner_org)
                     if group and group.name:
                         spec = group.name
-                    group = None
             data.append(common.Header('', package.id, package.metadata_created, [spec], False))
-
         return data
 
     def listMetadataFormats(self, identifier=None):
@@ -194,54 +199,20 @@ class CKANServer(ResumptionOAIPMH):
         '''Show a selection of records, basically lists all datasets.
         '''
         data = []
-        packages = []
-        group = None
-        if not set:
-            if not from_ and not until:
-                packages = Session.query(Package).filter(Package.type=='dataset').filter(Package.private!=True).\
-                    filter(Package.state=='active').all()
-            if from_ and not until:
-                packages = Session.query(Package).filter(Package.type=='dataset').filter(Package.private!=True).\
-                    filter(PackageRevision.revision_timestamp > from_).filter(Package.name==PackageRevision.name).\
-                    filter(Package.state=='active').all()
-            if until and not from_:
-                packages = Session.query(Package).filter(Package.type=='dataset').filter(Package.private!=True).\
-                    filter(PackageRevision.revision_timestamp < until).filter(Package.name==PackageRevision.name).\
-                    filter(Package.state=='active').all()
-            if from_ and until:
-                packages = Session.query(Package).filter(Package.type=='dataset').filter(Package.private!=True).\
-                    filter(between(PackageRevision.revision_timestamp, from_, until)).\
-                    filter(Package.name==PackageRevision.name).filter(Package.state=='active').all()
-        else:
-            group = Group.get(set)
-            if group:
-                packages = group.packages(return_query=True)
-                if from_ and not until:
-                    packages = packages.filter(PackageRevision.revision_timestamp > from_).\
-                        filter(Package.type=='dataset').filter(Package.private!=True).\
-                        filter(Package.name==PackageRevision.name).filter(Package.state=='active').all()
-                if until and not from_:
-                    packages = packages.filter(PackageRevision.revision_timestamp < until).\
-                        filter(Package.type=='dataset').filter(Package.private!=True).\
-                        filter(Package.name==PackageRevision.name).filter(Package.state=='active').all()
-                if from_ and until:
-                    packages = packages.filter(between(PackageRevision.revision_timestamp, from_, until)).\
-                        filter(Package.type=='dataset').filter(Package.private!=True).\
-                        filter(Package.name==PackageRevision.name).filter(Package.state=='active').all()
-        for res in packages:
-            spec = res.name
+        packages, group = self._filter_packages(set, cursor, from_, until, batch_size)
+        for package in packages:
+            spec = package.name
             if group:
                 spec = group.name
             else:
-                if res.owner_org:
-                    group = Group.get(res.owner_org)
+                if package.owner_org:
+                    group = Group.get(package.owner_org)
                     if group and group.name:
                         spec = group.name
-                    group = None
             if metadataPrefix == 'rdf':
-                data.append(self._record_for_dataset_dcat(res, spec))
+                data.append(self._record_for_dataset_dcat(package, spec))
             else:
-                data.append(self._record_for_dataset(res, spec))
+                data.append(self._record_for_dataset(package, spec))
         return data
 
     def listSets(self, cursor=None, batch_size=None):
@@ -249,6 +220,9 @@ class CKANServer(ResumptionOAIPMH):
         '''
         data = []
         groups = Session.query(Group).filter(Group.state == 'active')
+        if cursor is not None:
+            cursor_end = cursor+batch_size if cursor+batch_size < groups.count() else groups.count()
+            groups = groups[cursor:cursor_end]
         for dataset in groups:
             data.append((dataset.name, dataset.title, dataset.description))
         return data
