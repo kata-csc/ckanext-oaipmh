@@ -50,7 +50,8 @@ class CKANServer(ResumptionOAIPMH):
             json_data = json.loads(js)
             json_titles = list()
             for key, value in json_data.iteritems():
-                json_titles.append(value)
+                if value:
+                    json_titles.append(value)
             return json_titles
         except:
             return [js]
@@ -65,6 +66,63 @@ class CKANServer(ResumptionOAIPMH):
         dataset_xml = rdfserializer.serialize_dataset(package, _format='xml')
         return (common.Header('', dataset.id, dataset.metadata_created, [spec], False),
                 dataset_xml, None)
+
+
+    def _record_for_dataset_datacite(self, dataset, spec):
+        '''Show a tuple of a header and metadata for this dataset.
+        '''
+        package = get_action('package_show')({}, {'id': dataset.id})
+
+        coverage = []
+        temporal_begin = package.get('temporal_coverage_begin', '')
+        temporal_end = package.get('temporal_coverage_end', '')
+
+        geographic = package.get('geographic_coverage', '')
+        if geographic:
+            coverage.extend(geographic.split(','))
+        if temporal_begin or temporal_end:
+            coverage.append("%s/%s" % (temporal_begin, temporal_end))
+
+        identifier = [pid.get('id') for pid in package.get('pids', {}) if
+                pid.get('id', False) and pid.get('type', False) == 'primary']
+        pids = [pid.get('id') for pid in package.get('pids', {}) if pid.get('id', False) and pid.get('type', False) == 'primary']
+        pids.append(package.get('id'))
+        pids.append(config.get('ckan.site_url') + url_for(controller="package", action='read', id=package['name']))
+
+        publ_events = filter(lambda x: x.get('type') in [u'published', u'collection', u'creation'], package.get('event', []))
+        publ_date = publ_events[0].get('when') if publ_events else package.get('metadata_created')
+        publ_year = publ_date.split('-')[0]
+
+        dates = filter(lambda x: x.get('type') in [u'collection', u'creation', u'extended', u'changed', u'published',
+                                                   u'sent', u'received', u'modified'],
+                             package.get('event', []))
+
+        meta = {'titles': json.loads(package.get('title', None) or package.get('name')),
+                'creators': helpers.get_authors(package),
+                'publisher': [agent['name'] for agent in helpers.get_contacts(package) + helpers.get_distributors(package) if 'name' in agent],
+                'contributors': helpers.get_contributors(package),
+                'funders': helpers.get_funders(package),
+                'identifier': identifier,
+                'identifier/@identifierType': 'URN',
+                'dates': dates,
+                'language': [l.strip() for l in package.get('language').split(",")] if package.get('language', None) else None,
+                'description': self._get_json_content(package.get('notes')) if package.get('notes', None) else None,
+                'subjects': [tag.get('display_name') for tag in package['tags']] if package.get('tags', None) else None,
+                'publicationYear': publ_year,
+                'rights': [package['license_title']] if package.get('license_title', None) else None,
+                'coverage': coverage if coverage else None, }
+
+        metadata = {}
+        # Fixes the bug on having a large dataset being scrambled to individual
+        # letters
+        for key, value in meta.items():
+            if value and not isinstance(value, list):
+                metadata[str(key)] = [value]
+            else:
+                metadata[str(key)] = value
+        return (common.Header('', dataset.id, dataset.metadata_created, [spec], False),
+                common.Metadata('', metadata), None)
+
 
     def _record_for_dataset(self, dataset, spec):
         '''Show a tuple of a header and metadata for this dataset.
@@ -96,7 +154,7 @@ class CKANServer(ResumptionOAIPMH):
                 'subject': [tag.get('display_name') for tag in package['tags']] if package.get('tags', None) else None,
                 'date': [dataset.metadata_created.strftime('%Y-%m-%d')] if dataset.metadata_created else None,
                 'rights': [package['license_title']] if package.get('license_title', None) else None,
-                'coverage': coverage if coverage else None, }
+                'coverage': coverage if coverage else [], }
 
         iters = dataset.extras.items()
         meta = dict(iters + meta.items())
@@ -164,6 +222,8 @@ class CKANServer(ResumptionOAIPMH):
                 spec = group.name
         if metadataPrefix == 'rdf':
             return self._record_for_dataset_dcat(package, spec)
+        if metadataPrefix == 'datacite':
+            return self._record_for_dataset_datacite(package, spec)
         return self._record_for_dataset(package, spec)
 
     def listIdentifiers(self, metadataPrefix=None, set=None, cursor=None,
