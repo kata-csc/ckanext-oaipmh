@@ -12,7 +12,7 @@ from sqlalchemy import between
 
 from ckan.lib.helpers import url_for
 from ckan.logic import get_action
-from ckan.model import Package, Session, Group, PackageRevision
+from ckan.model import Package, Session, Group, PackageRevision, Tag
 from ckanext.dcat.processors import RDFSerializer
 from ckanext.kata import helpers
 import utils
@@ -188,6 +188,10 @@ class CKANServer(ResumptionOAIPMH):
                 packages = packages.filter(between(PackageRevision.revision_timestamp, from_, until)).\
                     filter(Package.name==PackageRevision.name)
             packages = packages.all()
+        elif set == 'openaire_data':
+            oa_tag = Session.query(Tag).filter(Tag.name == 'openaire_data').first()
+            if oa_tag:
+                packages = oa_tag.packages
         else:
             group = Group.get(set)
             if group:
@@ -222,7 +226,7 @@ class CKANServer(ResumptionOAIPMH):
                 spec = group.name
         if metadataPrefix == 'rdf':
             return self._record_for_dataset_dcat(package, spec)
-        if metadataPrefix == 'datacite':
+        if metadataPrefix == 'oai_datacite':
             return self._record_for_dataset_datacite(package, spec)
         return self._record_for_dataset(package, spec)
 
@@ -248,8 +252,11 @@ class CKANServer(ResumptionOAIPMH):
         '''List available metadata formats.
         '''
         return [('oai_dc',
-                'http://www.openarchives.org/OAI/2.0/oai_dc.xsd',
-                'http://www.openarchives.org/OAI/2.0/oai_dc/'),
+                 'http://www.openarchives.org/OAI/2.0/oai_dc.xsd',
+                 'http://www.openarchives.org/OAI/2.0/oai_dc/'),
+                ('oai_datacite',
+                 'http://schema.datacite.org/meta/kernel-3/metadata.xsd',
+                 'http://datacite.org/schema/kernel-3'),
                 ('rdf',
                  'http://www.openarchives.org/OAI/2.0/rdf.xsd',
                  'http://www.openarchives.org/OAI/2.0/rdf/')]
@@ -271,6 +278,8 @@ class CKANServer(ResumptionOAIPMH):
                         spec = group.name
             if metadataPrefix == 'rdf':
                 data.append(self._record_for_dataset_dcat(package, spec))
+            if metadataPrefix == 'oai_datacite':
+                data.append(self._record_for_dataset_datacite(package, spec))
             else:
                 data.append(self._record_for_dataset(package, spec))
         return data

@@ -30,7 +30,7 @@ class OAIPMHController(BaseController):
                 metadata_registry.registerWriter('oai_dc', oaisrv.oai_dc_writer)
                 metadata_registry.registerReader('rdf', rdf_reader)
                 metadata_registry.registerWriter('rdf', dcat2rdf_writer)
-                metadata_registry.registerWriter('datacite', datacite_writer)
+                metadata_registry.registerWriter('oai_datacite', datacite_writer)
                 serv = oaisrv.BatchingServer(client,
                                              metadata_registry=metadata_registry,
                                              resumption_batch_size=10)
