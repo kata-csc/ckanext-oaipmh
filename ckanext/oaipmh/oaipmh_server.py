@@ -292,6 +292,6 @@ class CKANServer(ResumptionOAIPMH):
         if cursor is not None:
             cursor_end = cursor+batch_size if cursor+batch_size < groups.count() else groups.count()
             groups = groups[cursor:cursor_end]
-        for dataset in groups:
-            data.append((dataset.name, dataset.title, dataset.description))
+        for group in groups:
+            data.append((group.name, group.title, group.description))
         return data
