@@ -288,6 +288,7 @@ class CKANServer(ResumptionOAIPMH):
         '''List all sets in this repository, where sets are groups.
         '''
         data = []
+        data.append(('openaire_data', 'OpenAIRE data', ''))
         groups = Session.query(Group).filter(Group.state == 'active')
         if cursor is not None:
             cursor_end = cursor+batch_size if cursor+batch_size < groups.count() else groups.count()
