@@ -98,7 +98,8 @@ def datacite_writer(element, metadata):
             if '/@' in k:
                 continue
             if k == 'creators':
-                append_agent(e_dc, 'creator', k, v)
+                e_agent_parent = SubElement(e_dc, nsdatacite('creators'))
+                append_agent(e_agent_parent, 'creator', k, v)
                 continue
             if k == 'titles':
                 primary_lang = 'eng'
