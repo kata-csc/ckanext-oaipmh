@@ -56,7 +56,7 @@ class CKANServer(ResumptionOAIPMH):
         except:
             return [js]
 
-    def _record_for_dataset_dcat(self, dataset, spec):
+    def _record_for_dataset_dcat(self, dataset, set_spec):
         '''Show a tuple of a header and metadata for this dataset.
         Note that dataset_xml (metadata) returned is just a string containing
         ready rdf xml. This is contrary to the common practice of pyoia's
@@ -64,11 +64,11 @@ class CKANServer(ResumptionOAIPMH):
         '''
         package = get_action('package_show')({}, {'id': dataset.id})
         dataset_xml = rdfserializer.serialize_dataset(package, _format='xml')
-        return (common.Header('', dataset.id, dataset.metadata_created, [spec], False),
+        return (common.Header('', dataset.id, dataset.metadata_created, set_spec, False),
                 dataset_xml, None)
 
 
-    def _record_for_dataset_datacite(self, dataset, spec):
+    def _record_for_dataset_datacite(self, dataset, set_spec):
         '''Show a tuple of a header and metadata for this dataset.
         '''
         package = get_action('package_show')({}, {'id': dataset.id})
@@ -120,11 +120,11 @@ class CKANServer(ResumptionOAIPMH):
                 metadata[str(key)] = [value]
             else:
                 metadata[str(key)] = value
-        return (common.Header('', dataset.id, dataset.metadata_created, [spec], False),
+        return (common.Header('', dataset.id, dataset.metadata_created, set_spec, False),
                 common.Metadata('', metadata), None)
 
 
-    def _record_for_dataset(self, dataset, spec):
+    def _record_for_dataset(self, dataset, set_spec):
         '''Show a tuple of a header and metadata for this dataset.
         '''
         package = get_action('package_show')({}, {'id': dataset.id})
@@ -166,7 +166,7 @@ class CKANServer(ResumptionOAIPMH):
                 metadata[str(key)] = [value]
             else:
                 metadata[str(key)] = value
-        return (common.Header('', dataset.id, dataset.metadata_created, [spec], False),
+        return (common.Header('', dataset.id, dataset.metadata_created, set_spec, False),
                 common.Metadata('', metadata), None)
 
     @staticmethod
@@ -174,7 +174,7 @@ class CKANServer(ResumptionOAIPMH):
         '''Get a part of datasets for "listNN" verbs.
         '''
         packages = []
-        group = None
+        setspc = None
         if not set:
             packages = Session.query(Package).filter(Package.type=='dataset'). \
                 filter(Package.state == 'active').filter(Package.private!=True)
@@ -192,6 +192,7 @@ class CKANServer(ResumptionOAIPMH):
             oa_tag = Session.query(Tag).filter(Tag.name == 'openaire_data').first()
             if oa_tag:
                 packages = oa_tag.packages
+            setspc = set
         else:
             group = Group.get(set)
             if group:
@@ -211,7 +212,7 @@ class CKANServer(ResumptionOAIPMH):
         if cursor is not None:
             cursor_end = cursor + batch_size if cursor + batch_size < len(packages) else len(packages)
             packages = packages[cursor:cursor_end]
-        return packages, group
+        return packages, setspc
 
     def getRecord(self, metadataPrefix, identifier):
         '''Simple getRecord for a dataset.
@@ -235,17 +236,18 @@ class CKANServer(ResumptionOAIPMH):
         '''List all identifiers for this repository.
         '''
         data = []
-        packages, group = self._filter_packages(set, cursor, from_, until, batch_size)
+        packages, setspc = self._filter_packages(set, cursor, from_, until, batch_size)
         for package in packages:
-            spec = package.name
-            if group:
-                spec = group.name
-            else:
-                if package.owner_org:
-                    group = Group.get(package.owner_org)
-                    if group and group.name:
-                        spec = group.name
-            data.append(common.Header('', package.id, package.metadata_created, [spec], False))
+            set_spec = []
+            if setspc:
+                set_spec.append(setspc)
+            if package.owner_org:
+                group = Group.get(package.owner_org)
+                if group and group.name:
+                    set_spec.append(group.name)
+            if not set_spec:
+                set_spec = [package.name]
+            data.append(common.Header('', package.id, package.metadata_created, set_spec, False))
         return data
 
     def listMetadataFormats(self, identifier=None):
@@ -266,29 +268,31 @@ class CKANServer(ResumptionOAIPMH):
         '''Show a selection of records, basically lists all datasets.
         '''
         data = []
-        packages, group = self._filter_packages(set, cursor, from_, until, batch_size)
+        packages, setspc = self._filter_packages(set, cursor, from_, until, batch_size)
         for package in packages:
-            spec = package.name
-            if group:
-                spec = group.name
-            else:
-                if package.owner_org:
-                    group = Group.get(package.owner_org)
-                    if group and group.name:
-                        spec = group.name
+            set_spec = []
+            if setspc:
+                set_spec.append(setspc)
+            if package.owner_org:
+                group = Group.get(package.owner_org)
+                if group and group.name:
+                    set_spec.append(group.name)
+            if not set_spec:
+                set_spec = [package.name]
             if metadataPrefix == 'rdf':
-                data.append(self._record_for_dataset_dcat(package, spec))
+                data.append(self._record_for_dataset_dcat(package, set_spec))
             if metadataPrefix == 'oai_datacite':
-                data.append(self._record_for_dataset_datacite(package, spec))
+                data.append(self._record_for_dataset_datacite(package, set_spec))
             else:
-                data.append(self._record_for_dataset(package, spec))
+                data.append(self._record_for_dataset(package, set_spec))
         return data
 
     def listSets(self, cursor=None, batch_size=None):
         '''List all sets in this repository, where sets are groups.
         '''
         data = []
-        data.append(('openaire_data', 'OpenAIRE data', ''))
+        if not cursor or cursor == 0:
+            data.append(('openaire_data', 'OpenAIRE data', ''))
         groups = Session.query(Group).filter(Group.state == 'active')
         if cursor is not None:
             cursor_end = cursor+batch_size if cursor+batch_size < groups.count() else groups.count()
