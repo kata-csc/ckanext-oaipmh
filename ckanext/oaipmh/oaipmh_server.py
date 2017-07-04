@@ -95,7 +95,8 @@ class CKANServer(ResumptionOAIPMH):
 
         dates = filter(lambda x: x.get('type') in [u'collection', u'creation', u'extended', u'changed', u'published',
                                                    u'sent', u'received', u'modified'],
-                             package.get('event', []))
+                       package.get('event', []))
+        dates.append({'when': package.get('metadata_created', package.get('metadata_modified', '')), 'type': 'published'})
 
         meta = {'titles': json.loads(package.get('title', None) or package.get('name')),
                 'creators': helpers.get_authors(package),
