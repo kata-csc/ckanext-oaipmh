@@ -8,7 +8,8 @@ from pylons import request, response
 
 from ckan.lib.base import BaseController, render
 from oaipmh_server import CKANServer
-from rdftools import rdf_reader, dcat2rdf_writer, datacite_writer
+from rdftools import rdf_reader, dcat2rdf_writer
+from datacite_writer import datacite_writer
 
 log = logging.getLogger(__name__)
 
