@@ -221,20 +221,20 @@ class CKANServer(ResumptionOAIPMH):
         package = Package.get(identifier)
         if not package:
             raise IdDoesNotExistError("No dataset with id %s" % identifier)
-        spec = []
+        set_spec = []
         if package.owner_org:
             group = Group.get(package.owner_org)
             if group and group.name:
-                spec.append(group.name)
+                set_spec.append(group.name)
         if 'openaire_data' in package.as_dict().get('tags'):
-            spec.append('openaire_data')
-        if not spec:
-            spec = [package.name]
+            set_spec.append('openaire_data')
+        if not set_spec:
+            set_spec = [package.name]
         if metadataPrefix == 'rdf':
-            return self._record_for_dataset_dcat(package, spec)
+            return self._record_for_dataset_dcat(package, set_spec)
         if metadataPrefix == 'oai_datacite':
-            return self._record_for_dataset_datacite(package, spec)
-        return self._record_for_dataset(package, spec)
+            return self._record_for_dataset_datacite(package, set_spec)
+        return self._record_for_dataset(package, set_spec)
 
     def listIdentifiers(self, metadataPrefix=None, set=None, cursor=None,
                         from_=None, until=None, batch_size=None):

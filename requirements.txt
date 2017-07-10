@@ -5,3 +5,4 @@ beautifulsoup4>=4.5.1
 pointfree>=1.1.1
 functionally>=1.0.1
 fn>=0.4.3
+iso-639>=0.4.5
