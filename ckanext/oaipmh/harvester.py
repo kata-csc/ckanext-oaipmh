@@ -266,13 +266,14 @@ class OAIPMHHarvester(HarvesterBase):
         package_ids = list(self.get_package_ids(set_ids, config, last_time, client))
         log.debug('Identifiers: %s', package_ids)
 
+        # Ensure that IDA datasets are not reharvested unless "recreate == True".
+        # TODO: Should this IDA specific part be somewhere else? Or can it be removed?
         if not self._recreate(harvest_job) and package_ids:
             converted_identifiers = {}
             for identifier in package_ids:
                 converted_identifiers[pid_to_name(identifier)] = identifier
                 if identifier.endswith(u'm'):
                     converted_identifiers[pid_to_name(u"%ss" % identifier[0:-1])] = identifier
-
             for package in model.Session.query(model.Package).filter(model.Package.name.in_(converted_identifiers.keys())).all():
                 converted_name = package.name
                 if converted_identifiers[converted_name] not in package_ids:
@@ -426,6 +427,7 @@ class OAIPMHHarvester(HarvesterBase):
                 package_dict['persist_schema'] = u'True'
             schema = self.get_schema(config, pkg)
             # schema['xpaths'] = [ignore_missing, ckanext.kata.converters.xpath_to_extras]
+            # TODO: Can't use ckanext-harvest's function. Have to write own one.
             result = self._create_or_update_package(package_dict,
                                                     harvest_object,
                                                     schema=schema,
